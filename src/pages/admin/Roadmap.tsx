@@ -137,6 +137,23 @@ export default function Roadmap() {
           </div>
         </div>
 
+        {/* Video Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Demonstração do Projeto
+          </h2>
+          <div className="flex justify-center">
+            <video
+              className="rounded-lg shadow-lg max-h-[600px] w-auto"
+              controls
+              preload="metadata"
+            >
+              <source src="/videos/demo.mp4" type="video/mp4" />
+              Seu navegador não suporta a reprodução de vídeos.
+            </video>
+          </div>
+        </div>
+
         {/* Phases */}
         <div className="space-y-6">
           {roadmapData.map((phase) => {
