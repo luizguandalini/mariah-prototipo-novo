@@ -94,7 +94,7 @@ export const roadmapData: RoadmapPhase[] = [
         title: 'Botão "Foto Avarias"',
         description:
           "Botão especial que adiciona borda vermelha nas fotos de problemas",
-        status: "todo",
+        status: "done",
       },
       {
         id: "task-2-5",
