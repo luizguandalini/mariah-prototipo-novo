@@ -20,6 +20,7 @@ import TodosLaudos from './pages/admin/TodosLaudos'
 import Configuracoes from './pages/admin/Configuracoes'
 import PDFSettings from './pages/admin/PDFSettings'
 import Relatorios from './pages/admin/Relatorios'
+import Roadmap from './pages/admin/Roadmap'
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
       <Route path="/admin/configuracoes" element={<Configuracoes />} />
       <Route path="/admin/pdf-settings" element={<PDFSettings />} />
       <Route path="/admin/relatorios" element={<Relatorios />} />
+      <Route path="/admin/roadmap" element={<Roadmap />} />
     </Routes>
   )
 }

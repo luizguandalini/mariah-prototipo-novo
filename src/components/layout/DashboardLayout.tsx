@@ -31,6 +31,7 @@ export default function DashboardLayout({ children, userType = 'user' }: Dashboa
     { path: '/admin/dashboard', icon: '📊', label: 'Dashboard' },
     { path: '/admin/usuarios', icon: '👥', label: 'Usuários' },
     { path: '/admin/laudos', icon: '📄', label: 'Todos os Laudos' },
+    { path: '/admin/roadmap', icon: '🗺️', label: 'Roadmap do Projeto' },
     { path: '/admin/configuracoes', icon: '⚙️', label: 'Configurações' },
     { path: '/admin/pdf-settings', icon: '📝', label: 'Config. PDF' },
     { path: '/admin/relatorios', icon: '📈', label: 'Relatórios' },
