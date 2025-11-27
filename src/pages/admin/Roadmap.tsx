@@ -75,15 +75,6 @@ export default function Roadmap() {
             Acompanhe o progresso de desenvolvimento do aplicativo de vistoria
             inteligente
           </p>
-          <div className="mt-4 inline-block bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-            <p className="text-sm text-blue-700">
-              💡 <strong>Atenção Dev:</strong> Para atualizar o progresso, edite
-              o arquivo{" "}
-              <code className="bg-blue-100 px-2 py-0.5 rounded">
-                src/data/roadmapData.ts
-              </code>
-            </p>
-          </div>
         </div>
 
         {/* Progress Overview */}
