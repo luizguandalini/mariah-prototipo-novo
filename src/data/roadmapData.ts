@@ -262,19 +262,19 @@ export const roadmapData: RoadmapPhase[] = [
         id: "task-7-2",
         title: "Abas de ambientes",
         description: "Filtros: Sala, Cozinha, Banheiro, Suíte, Sala Jantar",
-        status: "todo",
+        status: "done",
       },
       {
         id: "task-7-3",
         title: "Botão expandir foto",
         description: "Ícone em cada foto para visualizar em tela cheia",
-        status: "todo",
+        status: "done",
       },
       {
         id: "task-7-4",
         title: "Botão excluir foto",
         description: "Ícone de lixeira para remover fotos",
-        status: "todo",
+        status: "done",
       },
       {
         id: "task-7-5",
