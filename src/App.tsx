@@ -22,6 +22,7 @@ import Configuracoes from './pages/admin/Configuracoes'
 import PDFSettings from './pages/admin/PDFSettings'
 import Relatorios from './pages/admin/Relatorios'
 import Roadmap from './pages/admin/Roadmap'
+import GerenciarAmbientes from './pages/admin/GerenciarAmbientes'
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
         <Route path="/admin/pdf-settings" element={<PDFSettings />} />
         <Route path="/admin/relatorios" element={<Relatorios />} />
         <Route path="/admin/roadmap" element={<Roadmap />} />
+        <Route path="/admin/ambientes" element={<GerenciarAmbientes />} />
       </Routes>
     </AuthProvider>
   )

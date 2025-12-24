@@ -1,18 +1,27 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import { laudosService, DashboardStats, Laudo } from "../../services/laudos";
+import { authService } from "../../services/auth";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentLaudos, setRecentLaudos] = useState<Laudo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Redirecionar DEV e ADMIN para área administrativa
+    const currentUser = authService.getCurrentUser();
+    if (currentUser && (currentUser.role === 'DEV' || currentUser.role === 'ADMIN')) {
+      navigate('/admin/dashboard');
+      return;
+    }
+    
     loadDashboardData();
-  }, []);
+  }, [navigate]);
 
   const loadDashboardData = async () => {
     try {

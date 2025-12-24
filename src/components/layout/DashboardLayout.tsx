@@ -96,6 +96,7 @@ export default function DashboardLayout({
     { path: "/admin/dashboard", icon: "📊", label: "Dashboard" },
     { path: "/admin/usuarios", icon: "👥", label: "Usuários" },
     { path: "/admin/laudos", icon: "📄", label: "Todos os Laudos" },
+    { path: "/admin/ambientes", icon: "🏠", label: "Gerenciar Ambientes" },
     { path: "/admin/roadmap", icon: "🗺️", label: "Roadmap do Projeto" },
     { path: "/admin/configuracoes", icon: "⚙️", label: "Configurações" },
     { path: "/admin/pdf-settings", icon: "📝", label: "Config. PDF" },
