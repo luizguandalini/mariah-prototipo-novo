@@ -1,28 +1,25 @@
-import { Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Register from './pages/Register'
+import { Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 // Dashboard User
-import Dashboard from './pages/dashboard/Dashboard'
-import MeusLaudos from './pages/dashboard/MeusLaudos'
-import NovoLaudo from './pages/dashboard/NovoLaudo'
-import LaudoPreview from './pages/dashboard/LaudoPreview'
-import Perfil from './pages/dashboard/Perfil'
-import Creditos from './pages/dashboard/Creditos'
-import Pagamentos from './pages/dashboard/Pagamentos'
-import Suporte from './pages/dashboard/Suporte'
+import Dashboard from "./pages/dashboard/Dashboard";
+import MeusLaudos from "./pages/dashboard/MeusLaudos";
+import NovoLaudo from "./pages/dashboard/NovoLaudo";
+import LaudoPreview from "./pages/dashboard/LaudoPreview";
+import Perfil from "./pages/dashboard/Perfil";
+import Creditos from "./pages/dashboard/Creditos";
+import Pagamentos from "./pages/dashboard/Pagamentos";
+import Suporte from "./pages/dashboard/Suporte";
 
 // Dashboard Admin
-import AdminDashboard from './pages/admin/AdminDashboard'
-import Usuarios from './pages/admin/Usuarios'
-import TodosLaudos from './pages/admin/TodosLaudos'
-import Configuracoes from './pages/admin/Configuracoes'
-import PDFSettings from './pages/admin/PDFSettings'
-import Relatorios from './pages/admin/Relatorios'
-import Roadmap from './pages/admin/Roadmap'
-import GerenciarAmbientes from './pages/admin/GerenciarAmbientes'
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import Usuarios from "./pages/admin/Usuarios";
+import TodosLaudos from "./pages/admin/TodosLaudos";
+import PDFSettings from "./pages/admin/PDFSettings";
+import GerenciarAmbientes from "./pages/admin/GerenciarAmbientes";
 
 function App() {
   return (
@@ -36,7 +33,10 @@ function App() {
         {/* User Dashboard Routes */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/laudos" element={<MeusLaudos />} />
-        <Route path="/dashboard/laudos/:id/preview" element={<LaudoPreview />} />
+        <Route
+          path="/dashboard/laudos/:id/preview"
+          element={<LaudoPreview />}
+        />
         <Route path="/dashboard/novo-laudo" element={<NovoLaudo />} />
         <Route path="/dashboard/perfil" element={<Perfil />} />
         <Route path="/dashboard/creditos" element={<Creditos />} />
@@ -47,14 +47,11 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/usuarios" element={<Usuarios />} />
         <Route path="/admin/laudos" element={<TodosLaudos />} />
-        <Route path="/admin/configuracoes" element={<Configuracoes />} />
         <Route path="/admin/pdf-settings" element={<PDFSettings />} />
-        <Route path="/admin/relatorios" element={<Relatorios />} />
-        <Route path="/admin/roadmap" element={<Roadmap />} />
         <Route path="/admin/ambientes" element={<GerenciarAmbientes />} />
       </Routes>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;
