@@ -1,28 +1,28 @@
-import { api } from './api';
-import { 
-  Ambiente, 
+import { api } from "./api";
+import {
+  Ambiente,
   ItemAmbiente,
   CreateAmbienteDto,
   UpdateAmbienteDto,
   CreateItemAmbienteDto,
-  UpdateItemAmbienteDto
-} from '../types/ambiente';
+  UpdateItemAmbienteDto,
+} from "../types/ambiente";
 
 export const ambientesService = {
   // ========== AMBIENTES ==========
-  
+
   /**
    * Listar todos os ambientes ativos
    */
   async listarAmbientes(): Promise<Ambiente[]> {
-    return await api.get('/ambientes', true);
+    return await api.get("/ambientes", true);
   },
 
   /**
    * Listar todos os ambientes com árvore completa de itens e sub-itens
    */
   async listarAmbientesComArvore(): Promise<Ambiente[]> {
-    return await api.get('/ambientes/arvore-completa', true);
+    return await api.get("/ambientes/arvore-completa", true);
   },
 
   /**
@@ -36,14 +36,27 @@ export const ambientesService = {
    * Criar novo ambiente (apenas DEV e ADMIN)
    */
   async criarAmbiente(data: CreateAmbienteDto): Promise<Ambiente> {
-    return await api.post('/ambientes', data, true);
+    return await api.post("/ambientes", data, true);
   },
 
   /**
    * Atualizar ambiente (apenas DEV e ADMIN)
    */
-  async atualizarAmbiente(id: string, data: UpdateAmbienteDto): Promise<Ambiente> {
+  async atualizarAmbiente(
+    id: string,
+    data: UpdateAmbienteDto
+  ): Promise<Ambiente> {
     return await api.put(`/ambientes/${id}`, data, true);
+  },
+
+  /**
+   * Atualizar apenas tipos do ambiente (otimizado - retorna apenas id e tipos)
+   */
+  async atualizarTiposAmbiente(
+    id: string,
+    data: { tiposUso?: string[]; tiposImovel?: string[] }
+  ): Promise<{ id: string; tiposUso?: string[]; tiposImovel?: string[] }> {
+    return await api.patch(`/ambientes/${id}/tipos`, data, true);
   },
 
   /**
@@ -72,15 +85,26 @@ export const ambientesService = {
   /**
    * Criar novo item em um ambiente (apenas DEV e ADMIN)
    */
-  async criarItem(ambienteId: string, data: CreateItemAmbienteDto): Promise<ItemAmbiente> {
+  async criarItem(
+    ambienteId: string,
+    data: CreateItemAmbienteDto
+  ): Promise<ItemAmbiente> {
     return await api.post(`/ambientes/${ambienteId}/itens`, data, true);
   },
 
   /**
    * Atualizar item (apenas DEV e ADMIN)
    */
-  async atualizarItem(ambienteId: string, itemId: string, data: UpdateItemAmbienteDto): Promise<ItemAmbiente> {
-    return await api.put(`/ambientes/${ambienteId}/itens/${itemId}`, data, true);
+  async atualizarItem(
+    ambienteId: string,
+    itemId: string,
+    data: UpdateItemAmbienteDto
+  ): Promise<ItemAmbiente> {
+    return await api.put(
+      `/ambientes/${ambienteId}/itens/${itemId}`,
+      data,
+      true
+    );
   },
 
   /**
