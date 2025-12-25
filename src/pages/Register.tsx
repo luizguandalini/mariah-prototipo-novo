@@ -1,37 +1,35 @@
-import { useState, FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import Button from '../components/ui/Button'
-import { useAuth } from '../contexts/AuthContext'
+import { useState, FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import Button from "../components/ui/Button";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Register() {
-  const navigate = useNavigate()
-  const { register } = useAuth()
-  
+  const navigate = useNavigate();
+  const { register } = useAuth();
+
   const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    senha: '',
-    cpf: '',
-    telefone: '',
-  })
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+    nome: "",
+    email: "",
+    senha: "",
+  });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
     try {
-      await register(formData)
-      navigate('/dashboard')
+      await register(formData);
+      navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar conta')
+      setError(err instanceof Error ? err.message : "Erro ao criar conta");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center p-4">
@@ -74,14 +72,19 @@ export default function Register() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Nome completo
               </label>
               <input
                 type="text"
                 id="name"
                 value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
                 placeholder="Seu nome"
                 required
@@ -90,14 +93,19 @@ export default function Register() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email
               </label>
               <input
                 type="email"
                 id="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
                 placeholder="seu@email.com"
                 required
@@ -106,14 +114,19 @@ export default function Register() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Senha
               </label>
               <input
                 type="password"
                 id="password"
                 value={formData.senha}
-                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, senha: e.target.value })
+                }
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
                 placeholder="Mínimo 6 caracteres"
                 required
@@ -131,31 +144,34 @@ export default function Register() {
                 disabled={isLoading}
               />
               <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
-                Eu concordo com os{' '}
+                Eu concordo com os{" "}
                 <a href="#" className="text-primary hover:text-primary-dark">
                   Termos de Uso
-                </a>{' '}
-                e{' '}
+                </a>{" "}
+                e{" "}
                 <a href="#" className="text-primary hover:text-primary-dark">
                   Política de Privacidade
                 </a>
               </label>
             </div>
 
-            <Button 
-              type="submit" 
-              variant="primary" 
-              size="lg" 
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Criando conta...' : 'Criar Conta Grátis'}
+              {isLoading ? "Criando conta..." : "Criar Conta Grátis"}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-gray-600">
-            Já tem uma conta?{' '}
-            <Link to="/login" className="text-primary font-semibold hover:text-primary-dark">
+            Já tem uma conta?{" "}
+            <Link
+              to="/login"
+              className="text-primary font-semibold hover:text-primary-dark"
+            >
               Fazer login
             </Link>
           </p>
@@ -168,5 +184,5 @@ export default function Register() {
         </div>
       </motion.div>
     </div>
-  )
+  );
 }

@@ -21,6 +21,13 @@ export default function Usuarios() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [quantidadeImagens, setQuantidadeImagens] = useState(0);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [novoUsuario, setNovoUsuario] = useState({
+    nome: "",
+    email: "",
+    senha: "",
+    role: "USUARIO" as "ADMIN" | "USUARIO",
+  });
 
   const limit = 10;
 
@@ -108,6 +115,40 @@ export default function Usuarios() {
     return colors[role] || colors.USUARIO;
   };
 
+  const handleCriarUsuario = async () => {
+    try {
+      await usersService.criarUsuario(novoUsuario);
+      setShowCreateModal(false);
+      setNovoUsuario({ nome: "", email: "", senha: "", role: "USUARIO" });
+      await carregarUsuarios();
+      alert("✅ Usuário criado com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao criar usuário:", error);
+
+      // Tratamento de erros específicos
+      const errorMessage = error.response?.data?.message || error.message;
+
+      if (typeof errorMessage === "string") {
+        if (
+          errorMessage.includes("Email já cadastrado") ||
+          errorMessage.includes("já cadastrado")
+        ) {
+          alert("❌ Este email já está cadastrado no sistema!");
+        } else if (errorMessage.includes("DEV")) {
+          alert("❌ Não é permitido criar usuário DEV via interface.");
+        } else {
+          alert(`❌ ${errorMessage}`);
+        }
+      } else if (Array.isArray(errorMessage)) {
+        alert(`❌ ${errorMessage.join(", ")}`);
+      } else {
+        alert(
+          "❌ Erro ao criar usuário. Verifique os dados e tente novamente."
+        );
+      }
+    }
+  };
+
   return (
     <DashboardLayout userType="admin">
       <div className="space-y-6">
@@ -115,8 +156,13 @@ export default function Usuarios() {
           <h2 className="text-3xl font-bold text-gray-900">
             Gerenciar Usuários
           </h2>
-          <div className="text-sm text-gray-600">
-            Total: <span className="font-semibold">{total}</span> usuários
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Total: <span className="font-semibold">{total}</span> usuários
+            </div>
+            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+              ➕ Novo Usuário
+            </Button>
           </div>
         </div>
 
@@ -375,6 +421,112 @@ export default function Usuarios() {
                   <Button
                     variant="outline"
                     onClick={() => setShowEditModal(false)}
+                    className="flex-1"
+                  >
+                    ❌ Cancelar
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Modal Criar Usuário */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                ➕ Criar Novo Usuário
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome Completo
+                  </label>
+                  <input
+                    type="text"
+                    value={novoUsuario.nome}
+                    onChange={(e) =>
+                      setNovoUsuario({ ...novoUsuario, nome: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="João Silva"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={novoUsuario.email}
+                    onChange={(e) =>
+                      setNovoUsuario({ ...novoUsuario, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="joao@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Senha
+                  </label>
+                  <input
+                    type="password"
+                    value={novoUsuario.senha}
+                    onChange={(e) =>
+                      setNovoUsuario({ ...novoUsuario, senha: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nível de Acesso
+                  </label>
+                  <select
+                    value={novoUsuario.role}
+                    onChange={(e) =>
+                      setNovoUsuario({
+                        ...novoUsuario,
+                        role: e.target.value as any,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="USUARIO">USUARIO</option>
+                    <option value="ADMIN">ADMIN</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="primary"
+                    onClick={handleCriarUsuario}
+                    className="flex-1"
+                  >
+                    ✅ Criar Usuário
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setNovoUsuario({
+                        nome: "",
+                        email: "",
+                        senha: "",
+                        role: "USUARIO",
+                      });
+                    }}
                     className="flex-1"
                   >
                     ❌ Cancelar

@@ -57,6 +57,18 @@ class UsersService {
   }
 
   /**
+   * Criar novo usuário (via auth/register)
+   */
+  async criarUsuario(data: {
+    nome: string;
+    email: string;
+    senha: string;
+    role?: "ADMIN" | "USUARIO";
+  }): Promise<User> {
+    return api.post<User>("/auth/register", data, false);
+  }
+
+  /**
    * Atualiza dados do usuário
    */
   async updateUser(id: string, data: Partial<User>): Promise<User> {
