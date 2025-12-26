@@ -6,6 +6,8 @@ import {
   UpdateAmbienteDto,
   CreateItemAmbienteDto,
   UpdateItemAmbienteDto,
+  TipoUso,
+  TipoImovel,
 } from "../types/ambiente";
 
 export const ambientesService = {
@@ -23,6 +25,35 @@ export const ambientesService = {
    */
   async listarAmbientesComArvore(): Promise<Ambiente[]> {
     return await api.get("/ambientes/arvore-completa", true);
+  },
+
+  /**
+   * Listar ambientes com árvore completa paginados (scroll infinito)
+   */
+  async listarAmbientesComArvorePaginado(
+    limit: number = 10,
+    offset: number = 0
+  ): Promise<{ data: Ambiente[]; total: number; hasMore: boolean }> {
+    return await api.get(
+      `/ambientes/arvore-completa/paginado?limit=${limit}&offset=${offset}`,
+      true
+    );
+  },
+
+  /**
+   * Reordenar múltiplos ambientes (drag-and-drop)
+   */
+  async reordenarAmbientes(
+    reordenacao: { id: string; ordem: number }[]
+  ): Promise<void> {
+    return await api.patch("/ambientes/reordenar", reordenacao, true);
+  },
+
+  /**
+   * Mover um ambiente para uma nova posição (otimizado)
+   */
+  async moverAmbiente(id: string, novaOrdem: number): Promise<void> {
+    return await api.patch(`/ambientes/${id}/mover/${novaOrdem}`, {}, true);
   },
 
   /**
@@ -55,7 +86,7 @@ export const ambientesService = {
   async atualizarTiposAmbiente(
     id: string,
     data: { tiposUso?: string[]; tiposImovel?: string[] }
-  ): Promise<{ id: string; tiposUso?: string[]; tiposImovel?: string[] }> {
+  ): Promise<{ id: string; tiposUso?: TipoUso[]; tiposImovel?: TipoImovel[] }> {
     return await api.patch(`/ambientes/${id}/tipos`, data, true);
   },
 
@@ -65,7 +96,7 @@ export const ambientesService = {
   async adicionarTipoUso(
     id: string,
     tipo: string
-  ): Promise<{ id: string; tiposUso: string[] }> {
+  ): Promise<{ id: string; tiposUso: TipoUso[] }> {
     return await api.post(`/ambientes/${id}/tipos-uso/${tipo}`, {}, true);
   },
 
@@ -75,7 +106,7 @@ export const ambientesService = {
   async removerTipoUso(
     id: string,
     tipo: string
-  ): Promise<{ id: string; tiposUso: string[] }> {
+  ): Promise<{ id: string; tiposUso: TipoUso[] }> {
     return await api.delete(`/ambientes/${id}/tipos-uso/${tipo}`, true);
   },
 
@@ -85,7 +116,7 @@ export const ambientesService = {
   async adicionarTipoImovel(
     id: string,
     tipo: string
-  ): Promise<{ id: string; tiposImovel: string[] }> {
+  ): Promise<{ id: string; tiposImovel: TipoImovel[] }> {
     return await api.post(`/ambientes/${id}/tipos-imovel/${tipo}`, {}, true);
   },
 
@@ -95,7 +126,7 @@ export const ambientesService = {
   async removerTipoImovel(
     id: string,
     tipo: string
-  ): Promise<{ id: string; tiposImovel: string[] }> {
+  ): Promise<{ id: string; tiposImovel: TipoImovel[] }> {
     return await api.delete(`/ambientes/${id}/tipos-imovel/${tipo}`, true);
   },
 

@@ -1,6 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import { ambientesService } from "../../services/ambientes";
@@ -26,9 +43,324 @@ interface DialogState {
   parentId?: string;
 }
 
+// Componente para item arrastável
+function SortableAmbienteCard({
+  ambiente,
+  expandedAmbientes,
+  toggleAmbiente,
+  handleToggleTipoUso,
+  handleToggleTipoImovel,
+  abrirDialog,
+  confirmarDelete,
+  renderItem,
+  setDialogGrupo,
+  setDialogEditarAmbientes,
+}: {
+  ambiente: Ambiente;
+  expandedAmbientes: Set<string>;
+  toggleAmbiente: (id: string) => void;
+  handleToggleTipoUso: (id: string, tipo: TipoUso) => void;
+  handleToggleTipoImovel: (id: string, tipo: TipoImovel) => void;
+  abrirDialog: (
+    type: DialogType,
+    mode: "create" | "edit",
+    data?: Ambiente | ItemAmbiente,
+    ambienteId?: string,
+    parentId?: string
+  ) => void;
+  confirmarDelete: (
+    type: "ambiente" | "item",
+    id: string,
+    ambienteId?: string
+  ) => void;
+  renderItem: (
+    item: ItemAmbiente,
+    ambienteId: string,
+    nivel?: number
+  ) => JSX.Element;
+  setDialogGrupo: (state: {
+    open: boolean;
+    ambienteId?: string;
+    inputAmbiente?: string;
+  }) => void;
+  setDialogEditarAmbientes: (state: {
+    open: boolean;
+    ambientes: Ambiente[];
+  }) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: ambiente.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`bg-white rounded-xl border-2 ${
+          isDragging ? "border-purple-500 shadow-2xl" : "border-gray-200"
+        } overflow-hidden shadow-sm`}
+      >
+        {/* Header do Ambiente */}
+        <div className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1">
+              {/* Handle para arrastar */}
+              <button
+                {...attributes}
+                {...listeners}
+                className="drag-handle text-gray-600 hover:text-gray-800 hover:bg-gray-200 bg-gray-100 rounded p-2 transition-all shadow-sm"
+                title="Arrastar para reordenar"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle cx="9" cy="5" r="1.5" fill="currentColor" />
+                  <circle cx="9" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="9" cy="19" r="1.5" fill="currentColor" />
+                  <circle cx="15" cy="5" r="1.5" fill="currentColor" />
+                  <circle cx="15" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="15" cy="19" r="1.5" fill="currentColor" />
+                </svg>
+              </button>
+              <span
+                className="text-2xl cursor-pointer"
+                onClick={() => toggleAmbiente(ambiente.id)}
+              >
+                📁
+              </span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3
+                    className="text-xl font-bold text-gray-900 cursor-pointer"
+                    onClick={() => toggleAmbiente(ambiente.id)}
+                  >
+                    {ambiente.nome}
+                  </h3>
+
+                  {/* Badge indicando grupo */}
+                  {ambiente.isGrupo && (
+                    <span
+                      className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700 rounded"
+                      title={`Grupo de ambientes: ${ambiente.ambientes
+                        ?.map((a) => a.nome)
+                        .join(", ")}`}
+                    >
+                      👥 Grupo ({ambiente.ambientes?.length || 0})
+                    </span>
+                  )}
+
+                  {/* Botão + para Agrupar Ambientes */}
+                  <button
+                    onClick={() =>
+                      setDialogGrupo({
+                        open: true,
+                        ambienteId: ambiente.id,
+                        inputAmbiente: "",
+                      })
+                    }
+                    className="ml-2 w-7 h-7 flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white rounded-full font-bold text-lg transition-all shadow-md hover:shadow-lg"
+                    title="Agrupar com outros ambientes"
+                  >
+                    +
+                  </button>
+
+                  {/* Tipos de Uso - TODOS visíveis, clique para toggle */}
+                  <div className="flex gap-1 items-center">
+                    {Object.values(TipoUso).map((tipo) => (
+                      <button
+                        key={tipo}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleTipoUso(ambiente.id, tipo);
+                        }}
+                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
+                          ambiente.tiposUso?.includes(tipo)
+                            ? "bg-blue-500 text-white shadow-md"
+                            : "bg-blue-100 text-blue-400 opacity-60 hover:opacity-100"
+                        }`}
+                        title={
+                          ambiente.tiposUso?.includes(tipo)
+                            ? "Clique para desativar"
+                            : "Clique para ativar"
+                        }
+                      >
+                        🏢 {tipo}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Tipos de Imóvel - TODOS visíveis, clique para toggle */}
+                  <div className="flex gap-1 items-center">
+                    {Object.values(TipoImovel).map((tipo) => (
+                      <button
+                        key={tipo}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleTipoImovel(ambiente.id, tipo);
+                        }}
+                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
+                          ambiente.tiposImovel?.includes(tipo)
+                            ? "bg-green-500 text-white shadow-md"
+                            : "bg-green-100 text-green-400 opacity-60 hover:opacity-100"
+                        }`}
+                        title={
+                          ambiente.tiposImovel?.includes(tipo)
+                            ? "Clique para desativar"
+                            : "Clique para ativar"
+                        }
+                      >
+                        🏠 {tipo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {ambiente.descricao && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {ambiente.descricao}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                  ambiente.ativo
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {ambiente.ativo ? "Ativo" : "Inativo"}
+              </span>
+              <span className="px-3 py-1 text-sm font-semibold bg-purple-100 text-purple-700 rounded-full">
+                {ambiente.itens?.length || 0} itens
+              </span>
+              <span
+                className={`transform transition-transform ${
+                  expandedAmbientes.has(ambiente.id) ? "rotate-180" : ""
+                }`}
+              >
+                ▼
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Conteúdo do Ambiente */}
+        <AnimatePresence>
+          {expandedAmbientes.has(ambiente.id) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="p-5">
+                {/* Botões de Ação do Ambiente */}
+                <div className="flex gap-2 mb-4 pb-4 border-b border-gray-200">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      const ambienteIdParaItem =
+                        ambiente.isGrupo &&
+                        ambiente.ambientes &&
+                        ambiente.ambientes.length > 0
+                          ? ambiente.ambientes[0].id
+                          : ambiente.id;
+                      abrirDialog(
+                        "item",
+                        "create",
+                        undefined,
+                        ambienteIdParaItem
+                      );
+                    }}
+                  >
+                    ➕ Adicionar Item
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      // Para grupos, coletar todos os ambientes do grupo
+                      if (ambiente.isGrupo && ambiente.ambientes) {
+                        setDialogEditarAmbientes({
+                          open: true,
+                          ambientes: ambiente.ambientes,
+                        });
+                      } else {
+                        // Para ambiente individual, criar array com 1 elemento
+                        setDialogEditarAmbientes({
+                          open: true,
+                          ambientes: [ambiente],
+                        });
+                      }
+                    }}
+                  >
+                    ✏️ Editar Ambiente
+                  </Button>
+                  <button
+                    onClick={() => confirmarDelete("ambiente", ambiente.id)}
+                    className="px-4 py-2 text-sm font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border-2 border-red-200"
+                  >
+                    🗑️ Deletar Ambiente
+                  </button>
+                </div>
+
+                {/* Lista de Itens */}
+                {ambiente.itens && ambiente.itens.length > 0 ? (
+                  <div className="space-y-3">
+                    {ambiente.itens.map((item) =>
+                      renderItem(
+                        item,
+                        ambiente.isGrupo && ambiente.ambientes?.[0]?.id
+                          ? ambiente.ambientes[0].id
+                          : ambiente.id
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <p>📋 Nenhum item cadastrado neste ambiente</p>
+                    <p className="text-sm mt-1">
+                      Clique em "Adicionar Item" para começar
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function GerenciarAmbientes() {
+  // @ts-ignore - TypeScript tem problemas de inferência com enums retornados da API, mas os tipos estão corretos em runtime
   const [ambientes, setAmbientes] = useState<Ambiente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const limit = 10;
+  const observerTarget = useRef<HTMLDivElement>(null);
+
   const [expandedAmbientes, setExpandedAmbientes] = useState<Set<string>>(
     new Set()
   );
@@ -43,6 +375,7 @@ export default function GerenciarAmbientes() {
     inputAmbiente?: string;
   }>({ open: false, inputAmbiente: "" });
 
+  // @ts-ignore - TypeScript tem problemas de inferência com enums retornados da API, mas os tipos estão corretos em runtime
   const [dialogEditarAmbientes, setDialogEditarAmbientes] = useState<{
     open: boolean;
     ambientes: Ambiente[];
@@ -65,22 +398,118 @@ export default function GerenciarAmbientes() {
     tiposImovel: [] as TipoImovel[],
   });
 
+  // Configurar sensores para drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Precisa mover 8px para ativar o drag
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     carregarAmbientes();
   }, []);
 
+  // Scroll infinito com Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          carregarMaisAmbientes();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasMore, loadingMore, loading, offset]);
+
   const carregarAmbientes = async () => {
     try {
       setLoading(true);
-      const data = await ambientesService.listarAmbientesComArvore();
-      setAmbientes(data);
+      const response = await ambientesService.listarAmbientesComArvorePaginado(
+        limit,
+        0
+      );
+      // Forçar tipo correto - API retorna strings mas são enums válidos
+      setAmbientes(response.data as unknown as Ambiente[]);
+      setHasMore(response.hasMore);
+      setOffset(limit);
       // Expandir todos por padrão
-      setExpandedAmbientes(new Set(data.map((a) => a.id)));
+      setExpandedAmbientes(new Set(response.data.map((a) => a.id)));
     } catch (error) {
       toast.error("Erro ao carregar ambientes");
       console.error("Erro ao carregar ambientes:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const carregarMaisAmbientes = async () => {
+    if (loadingMore || !hasMore) return;
+
+    try {
+      setLoadingMore(true);
+      const response = await ambientesService.listarAmbientesComArvorePaginado(
+        limit,
+        offset
+      );
+      // Forçar tipo correto - API retorna strings mas são enums válidos
+      setAmbientes((prev) => [
+        ...prev,
+        ...(response.data as unknown as Ambiente[]),
+      ]);
+      setHasMore(response.hasMore);
+      setOffset((prev) => prev + limit);
+      // Expandir novos ambientes
+      setExpandedAmbientes((prev) => {
+        const newSet = new Set(prev);
+        response.data.forEach((a) => newSet.add(a.id));
+        return newSet;
+      });
+    } catch (error) {
+      toast.error("Erro ao carregar mais ambientes");
+      console.error("Erro ao carregar mais ambientes:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = ambientes.findIndex((a) => a.id === active.id);
+    const newIndex = ambientes.findIndex((a) => a.id === over.id);
+
+    // Atualizar ordem localmente primeiro para feedback imediato
+    const reordered = arrayMove(ambientes, oldIndex, newIndex);
+    setAmbientes(reordered as Ambiente[]);
+
+    // Enviar para backend apenas o item movido e sua nova posição
+    try {
+      await ambientesService.moverAmbiente(active.id as string, newIndex);
+      toast.success("Ordem atualizada!");
+    } catch (error) {
+      toast.error("Erro ao atualizar ordem");
+      console.error("Erro ao reordenar:", error);
+      // Reverter em caso de erro
+      carregarAmbientes();
     }
   };
 
@@ -361,11 +790,15 @@ export default function GerenciarAmbientes() {
         ? await ambientesService.removerTipoUso(ambienteIdReal, tipo)
         : await ambientesService.adicionarTipoUso(ambienteIdReal, tipo);
 
+      // Forçar o tipo correto - o backend retorna strings mas sabemos que são TipoUso válidos
+      const tiposUsoAtualizados = resultado.tiposUso as unknown as TipoUso[];
+
       // Atualizar localmente APÓS sucesso da API
-      setAmbientes((prev) =>
-        prev.map((a) =>
-          a.id === ambienteId ? { ...a, tiposUso: resultado.tiposUso } : a
-        )
+      setAmbientes(
+        (prev) =>
+          prev.map((a) =>
+            a.id === ambienteId ? { ...a, tiposUso: tiposUsoAtualizados } : a
+          ) as unknown as Ambiente[]
       );
 
       toast.success(`${tipo} ${estaRemovendo ? "removido" : "adicionado"}!`);
@@ -397,11 +830,18 @@ export default function GerenciarAmbientes() {
         ? await ambientesService.removerTipoImovel(ambienteIdReal, tipo)
         : await ambientesService.adicionarTipoImovel(ambienteIdReal, tipo);
 
+      // Forçar o tipo correto - o backend retorna strings mas sabemos que são TipoImovel válidos
+      const tiposImovelAtualizados =
+        resultado.tiposImovel as unknown as TipoImovel[];
+
       // Atualizar localmente APÓS sucesso da API
-      setAmbientes((prev) =>
-        prev.map((a) =>
-          a.id === ambienteId ? { ...a, tiposImovel: resultado.tiposImovel } : a
-        )
+      setAmbientes(
+        (prev) =>
+          prev.map((a) =>
+            a.id === ambienteId
+              ? { ...a, tiposImovel: tiposImovelAtualizados }
+              : a
+          ) as unknown as Ambiente[]
       );
 
       toast.success(`${tipo} ${estaRemovendo ? "removido" : "adicionado"}!`);
@@ -522,6 +962,9 @@ export default function GerenciarAmbientes() {
             <p className="text-gray-600 mt-1">
               Configure ambientes, itens e prompts para análise de laudos
             </p>
+            <p className="text-sm text-purple-600 mt-1">
+              ↕️ Arraste os blocos para reorganizar
+            </p>
           </div>
           <Button
             variant="primary"
@@ -545,230 +988,52 @@ export default function GerenciarAmbientes() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {ambientes.map((ambiente) => (
-              <motion.div
-                key={ambiente.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden shadow-sm"
-              >
-                {/* Header do Ambiente */}
-                <div className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <span
-                        className="text-2xl cursor-pointer"
-                        onClick={() => toggleAmbiente(ambiente.id)}
-                      >
-                        📁
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3
-                            className="text-xl font-bold text-gray-900 cursor-pointer"
-                            onClick={() => toggleAmbiente(ambiente.id)}
-                          >
-                            {ambiente.nome}
-                          </h3>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={ambientes.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {ambientes.map((ambiente) => (
+                  <SortableAmbienteCard
+                    key={ambiente.id}
+                    ambiente={ambiente}
+                    expandedAmbientes={expandedAmbientes}
+                    toggleAmbiente={toggleAmbiente}
+                    handleToggleTipoUso={handleToggleTipoUso}
+                    handleToggleTipoImovel={handleToggleTipoImovel}
+                    abrirDialog={abrirDialog}
+                    confirmarDelete={confirmarDelete}
+                    renderItem={renderItem}
+                    setDialogGrupo={setDialogGrupo}
+                    setDialogEditarAmbientes={setDialogEditarAmbientes}
+                  />
+                ))}
+              </div>
+            </SortableContext>
 
-                          {/* Badge indicando grupo */}
-                          {ambiente.isGrupo && (
-                            <span
-                              className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700 rounded"
-                              title={`Grupo de ambientes: ${ambiente.ambientes
-                                ?.map((a) => a.nome)
-                                .join(", ")}`}
-                            >
-                              👥 Grupo ({ambiente.ambientes?.length || 0})
-                            </span>
-                          )}
+            {/* Indicador de carregamento de mais items */}
+            {loadingMore && (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                <p className="mt-2 text-gray-600">Carregando mais...</p>
+              </div>
+            )}
 
-                          {/* Botão + para Agrupar Ambientes */}
-                          <button
-                            onClick={() =>
-                              setDialogGrupo({
-                                open: true,
-                                ambienteId: ambiente.id,
-                                inputAmbiente: "",
-                              })
-                            }
-                            className="ml-2 w-7 h-7 flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white rounded-full font-bold text-lg transition-all shadow-md hover:shadow-lg"
-                            title="Agrupar com outros ambientes"
-                          >
-                            +
-                          </button>
+            {/* Observer target para scroll infinito */}
+            <div ref={observerTarget} className="h-4" />
 
-                          {/* Tipos de Uso - TODOS visíveis, clique para toggle */}
-                          <div className="flex gap-1 items-center">
-                            {Object.values(TipoUso).map((tipo) => (
-                              <button
-                                key={tipo}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleTipoUso(ambiente.id, tipo);
-                                }}
-                                className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
-                                  ambiente.tiposUso?.includes(tipo)
-                                    ? "bg-blue-500 text-white shadow-md"
-                                    : "bg-blue-100 text-blue-400 opacity-60 hover:opacity-100"
-                                }`}
-                                title={
-                                  ambiente.tiposUso?.includes(tipo)
-                                    ? "Clique para desativar"
-                                    : "Clique para ativar"
-                                }
-                              >
-                                🏢 {tipo}
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Tipos de Imóvel - TODOS visíveis, clique para toggle */}
-                          <div className="flex gap-1 items-center">
-                            {Object.values(TipoImovel).map((tipo) => (
-                              <button
-                                key={tipo}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleTipoImovel(ambiente.id, tipo);
-                                }}
-                                className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
-                                  ambiente.tiposImovel?.includes(tipo)
-                                    ? "bg-green-500 text-white shadow-md"
-                                    : "bg-green-100 text-green-400 opacity-60 hover:opacity-100"
-                                }`}
-                                title={
-                                  ambiente.tiposImovel?.includes(tipo)
-                                    ? "Clique para desativar"
-                                    : "Clique para ativar"
-                                }
-                              >
-                                🏠 {tipo}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        {ambiente.descricao && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {ambiente.descricao}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                          ambiente.ativo
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {ambiente.ativo ? "Ativo" : "Inativo"}
-                      </span>
-                      <span className="px-3 py-1 text-sm font-semibold bg-purple-100 text-purple-700 rounded-full">
-                        {ambiente.itens?.length || 0} itens
-                      </span>
-                      <span
-                        className={`transform transition-transform ${
-                          expandedAmbientes.has(ambiente.id) ? "rotate-180" : ""
-                        }`}
-                      >
-                        ▼
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Conteúdo do Ambiente */}
-                <AnimatePresence>
-                  {expandedAmbientes.has(ambiente.id) && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="p-5">
-                        {/* Botões de Ação do Ambiente */}
-                        <div className="flex gap-2 mb-4 pb-4 border-b border-gray-200">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              const ambienteIdParaItem =
-                                ambiente.isGrupo &&
-                                ambiente.ambientes &&
-                                ambiente.ambientes.length > 0
-                                  ? ambiente.ambientes[0].id
-                                  : ambiente.id;
-                              abrirDialog(
-                                "item",
-                                "create",
-                                undefined,
-                                ambienteIdParaItem
-                              );
-                            }}
-                          >
-                            ➕ Adicionar Item
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              // Para grupos, coletar todos os ambientes do grupo
-                              if (ambiente.isGrupo && ambiente.ambientes) {
-                                setDialogEditarAmbientes({
-                                  open: true,
-                                  ambientes: ambiente.ambientes,
-                                });
-                              } else {
-                                // Para ambiente individual, criar array com 1 elemento
-                                setDialogEditarAmbientes({
-                                  open: true,
-                                  ambientes: [ambiente],
-                                });
-                              }
-                            }}
-                          >
-                            ✏️ Editar Ambiente
-                          </Button>
-                          <button
-                            onClick={() =>
-                              confirmarDelete("ambiente", ambiente.id)
-                            }
-                            className="px-4 py-2 text-sm font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border-2 border-red-200"
-                          >
-                            🗑️ Deletar Ambiente
-                          </button>
-                        </div>
-
-                        {/* Lista de Itens */}
-                        {ambiente.itens && ambiente.itens.length > 0 ? (
-                          <div className="space-y-3">
-                            {ambiente.itens.map((item) =>
-                              renderItem(
-                                item,
-                                ambiente.isGrupo && ambiente.ambientes?.[0]?.id
-                                  ? ambiente.ambientes[0].id
-                                  : ambiente.id
-                              )
-                            )}
-                          </div>
-                        ) : (
-                          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                            <p className="text-gray-600">
-                              📝 Nenhum item cadastrado neste ambiente.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-          </div>
+            {/* Mensagem de fim */}
+            {!hasMore && ambientes.length > 0 && (
+              <div className="text-center py-6 text-gray-500">
+                <p>✓ Todos os ambientes foram carregados</p>
+              </div>
+            )}
+          </DndContext>
         )}
       </div>
 
