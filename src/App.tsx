@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { Toaster } from "sonner";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -24,6 +25,7 @@ import GerenciarAmbientes from "./pages/admin/GerenciarAmbientes";
 function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" richColors expand={true} />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />

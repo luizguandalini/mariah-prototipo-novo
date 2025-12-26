@@ -60,10 +60,66 @@ export const ambientesService = {
   },
 
   /**
+   * Adicionar tipo de uso (REST - mais eficiente)
+   */
+  async adicionarTipoUso(
+    id: string,
+    tipo: string
+  ): Promise<{ id: string; tiposUso: string[] }> {
+    return await api.post(`/ambientes/${id}/tipos-uso/${tipo}`, {}, true);
+  },
+
+  /**
+   * Remover tipo de uso (REST - mais eficiente)
+   */
+  async removerTipoUso(
+    id: string,
+    tipo: string
+  ): Promise<{ id: string; tiposUso: string[] }> {
+    return await api.delete(`/ambientes/${id}/tipos-uso/${tipo}`, true);
+  },
+
+  /**
+   * Adicionar tipo de imóvel (REST - mais eficiente)
+   */
+  async adicionarTipoImovel(
+    id: string,
+    tipo: string
+  ): Promise<{ id: string; tiposImovel: string[] }> {
+    return await api.post(`/ambientes/${id}/tipos-imovel/${tipo}`, {}, true);
+  },
+
+  /**
+   * Remover tipo de imóvel (REST - mais eficiente)
+   */
+  async removerTipoImovel(
+    id: string,
+    tipo: string
+  ): Promise<{ id: string; tiposImovel: string[] }> {
+    return await api.delete(`/ambientes/${id}/tipos-imovel/${tipo}`, true);
+  },
+
+  /**
    * Deletar ambiente (apenas DEV e ADMIN)
    */
   async deletarAmbiente(id: string): Promise<void> {
     await api.delete(`/ambientes/${id}`, true);
+  },
+
+  /**
+   * Agrupar ambiente com outro (existente ou novo)
+   * Se o nomeAmbiente já existe: apenas agrupa
+   * Se não existe: cria com mesmas configs do ambiente :id e agrupa
+   */
+  async agruparCom(
+    ambienteId: string,
+    nomeAmbiente: string
+  ): Promise<Ambiente> {
+    return await api.put(
+      `/ambientes/${ambienteId}/agrupar-com`,
+      { nomeAmbiente },
+      true
+    );
   },
 
   // ========== ITENS DE AMBIENTE ==========

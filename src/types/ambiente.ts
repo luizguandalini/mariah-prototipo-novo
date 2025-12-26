@@ -21,6 +21,11 @@ export interface Ambiente {
   createdAt: string;
   updatedAt: string;
   itens?: ItemAmbiente[];
+  // Propriedades de grupo
+  isGrupo?: boolean;
+  grupoId?: string;
+  ambientes?: { id: string; nome: string }[];
+  nomes?: string[];
 }
 
 export interface ItemAmbiente {

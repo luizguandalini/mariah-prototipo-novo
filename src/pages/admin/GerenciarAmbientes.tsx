@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import { ambientesService } from "../../services/ambientes";
@@ -36,6 +37,23 @@ export default function GerenciarAmbientes() {
     type: null,
     mode: "create",
   });
+  const [dialogGrupo, setDialogGrupo] = useState<{
+    open: boolean;
+    ambienteId?: string;
+    inputAmbiente?: string;
+  }>({ open: false, inputAmbiente: "" });
+
+  const [dialogEditarAmbientes, setDialogEditarAmbientes] = useState<{
+    open: boolean;
+    ambientes: Ambiente[];
+  }>({ open: false, ambientes: [] });
+
+  const [dialogConfirm, setDialogConfirm] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
 
   // Estados do formulário
   const [formData, setFormData] = useState({
@@ -45,13 +63,6 @@ export default function GerenciarAmbientes() {
     ativo: true,
     tiposUso: [] as TipoUso[],
     tiposImovel: [] as TipoImovel[],
-  });
-
-  // Estado de notificação
-  const [notification, setNotification] = useState({
-    show: false,
-    message: "",
-    type: "success" as "success" | "error" | "info",
   });
 
   useEffect(() => {
@@ -66,22 +77,11 @@ export default function GerenciarAmbientes() {
       // Expandir todos por padrão
       setExpandedAmbientes(new Set(data.map((a) => a.id)));
     } catch (error) {
-      mostrarNotificacao("Erro ao carregar ambientes", "error");
+      toast.error("Erro ao carregar ambientes");
       console.error("Erro ao carregar ambientes:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const mostrarNotificacao = (
-    message: string,
-    type: "success" | "error" | "info"
-  ) => {
-    setNotification({ show: true, message, type });
-    setTimeout(
-      () => setNotification({ show: false, message: "", type: "success" }),
-      4000
-    );
   };
 
   const toggleAmbiente = (id: string) => {
@@ -94,6 +94,54 @@ export default function GerenciarAmbientes() {
       }
       return newSet;
     });
+  };
+
+  const handleAgruparAmbientes = async () => {
+    if (!dialogGrupo.ambienteId || !dialogGrupo.inputAmbiente?.trim()) {
+      toast.error("Digite o nome do ambiente para agrupar");
+      return;
+    }
+
+    try {
+      const nomeAmbiente = dialogGrupo.inputAmbiente.trim();
+
+      // Encontrar o ambiente correto
+      const ambiente = ambientes.find((a) => a.id === dialogGrupo.ambienteId);
+
+      // Se for um grupo, usar o ID do primeiro ambiente do grupo
+      const ambienteIdReal =
+        ambiente?.isGrupo && ambiente.ambientes && ambiente.ambientes.length > 0
+          ? ambiente.ambientes[0].id
+          : dialogGrupo.ambienteId;
+
+      await ambientesService.agruparCom(ambienteIdReal, nomeAmbiente);
+
+      const ambienteExiste = ambientes.some(
+        (a) => a.nome.toLowerCase() === nomeAmbiente.toLowerCase()
+      );
+
+      toast.success(
+        ambienteExiste
+          ? `Ambientes agrupados com sucesso!`
+          : `Ambiente "${nomeAmbiente}" criado e agrupado!`
+      );
+      setDialogGrupo({ open: false, inputAmbiente: "" });
+      await carregarAmbientes();
+    } catch (error: any) {
+      console.error("Erro ao agrupar ambientes:", error);
+
+      // Extrair mensagem de erro clara do backend
+      let mensagemErro = "Não foi possível agrupar os ambientes";
+
+      if (error?.response?.data?.message) {
+        // Usar mensagem do backend diretamente (já está clara e didática)
+        mensagemErro = error.response.data.message;
+      } else if (error?.message) {
+        mensagemErro = error.message;
+      }
+
+      toast.error(mensagemErro);
+    }
   };
 
   const abrirDialog = (
@@ -155,7 +203,7 @@ export default function GerenciarAmbientes() {
                 : undefined,
           };
           await ambientesService.criarAmbiente(data);
-          mostrarNotificacao("Ambiente criado com sucesso!", "success");
+          toast.success("Ambiente criado com sucesso!");
         } else if (dialog.mode === "edit" && dialog.data) {
           const data: UpdateAmbienteDto = {
             nome: formData.nome,
@@ -165,7 +213,7 @@ export default function GerenciarAmbientes() {
             tiposImovel: formData.tiposImovel,
           };
           await ambientesService.atualizarAmbiente(dialog.data.id, data);
-          mostrarNotificacao("Ambiente atualizado com sucesso!", "success");
+          toast.success("Ambiente atualizado com sucesso!");
         }
       } else if (
         (dialog.type === "item" || dialog.type === "subitem") &&
@@ -179,7 +227,7 @@ export default function GerenciarAmbientes() {
             ativo: formData.ativo,
           };
           await ambientesService.criarItem(dialog.ambienteId, data);
-          mostrarNotificacao("Item criado com sucesso!", "success");
+          toast.success("Item criado com sucesso!");
         } else if (dialog.mode === "edit" && dialog.data) {
           const data: UpdateItemAmbienteDto = {
             nome: formData.nome,
@@ -191,7 +239,7 @@ export default function GerenciarAmbientes() {
             dialog.data.id,
             data
           );
-          mostrarNotificacao("Item atualizado com sucesso!", "success");
+          toast.success("Item atualizado com sucesso!");
         }
       }
 
@@ -199,11 +247,35 @@ export default function GerenciarAmbientes() {
       fecharDialog();
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
-      mostrarNotificacao(
-        error?.response?.data?.message || "Erro ao salvar",
-        "error"
-      );
+
+      // Extrair mensagem clara do backend
+      let mensagemErro = "Não foi possível salvar";
+
+      if (error?.response?.data?.message) {
+        // Usar mensagem do backend (já formatada)
+        mensagemErro = error.response.data.message;
+      } else if (error?.message) {
+        mensagemErro = error.message;
+      }
+
+      toast.error(mensagemErro);
     }
+  };
+
+  const confirmarDelete = (
+    type: "ambiente" | "item",
+    id: string,
+    ambienteId?: string
+  ) => {
+    const ambiente = ambientes.find((a) => a.id === id);
+    const nomeItem = ambiente?.nome || "este item";
+
+    setDialogConfirm({
+      open: true,
+      title: "⚠️ Confirmar Exclusão",
+      message: `Tem certeza que deseja deletar "${nomeItem}"? Esta ação não pode ser desfeita.`,
+      onConfirm: () => handleDelete(type, id, ambienteId),
+    });
   };
 
   const handleDelete = async (
@@ -211,30 +283,59 @@ export default function GerenciarAmbientes() {
     id: string,
     ambienteId?: string
   ) => {
-    if (
-      !window.confirm(
-        "Tem certeza que deseja deletar? Esta ação não pode ser desfeita."
-      )
-    ) {
-      return;
-    }
+    setDialogConfirm({
+      open: false,
+      title: "",
+      message: "",
+      onConfirm: () => {},
+    });
 
     try {
       if (type === "ambiente") {
-        await ambientesService.deletarAmbiente(id);
-        mostrarNotificacao("Ambiente deletado com sucesso!", "success");
+        const ambiente = ambientes.find((a) => a.id === id);
+
+        // Se for um grupo, deletar todos os ambientes do grupo
+        if (
+          ambiente?.isGrupo &&
+          ambiente.ambientes &&
+          ambiente.ambientes.length > 0
+        ) {
+          for (const amb of ambiente.ambientes) {
+            await ambientesService.deletarAmbiente(amb.id);
+          }
+        } else {
+          await ambientesService.deletarAmbiente(id);
+        }
+
+        // Fechar dialog de edição ANTES de mostrar notificação
+        setDialogEditarAmbientes({ open: false, ambientes: [] });
+
+        toast.success("Ambiente deletado com sucesso!");
       } else if (type === "item" && ambienteId) {
-        await ambientesService.deletarItem(ambienteId, id);
-        mostrarNotificacao("Item deletado com sucesso!", "success");
+        const ambiente = ambientes.find((a) => a.id === ambienteId);
+
+        // Se for um grupo, deletar o item do primeiro ambiente do grupo
+        if (
+          ambiente?.isGrupo &&
+          ambiente.ambientes &&
+          ambiente.ambientes.length > 0
+        ) {
+          await ambientesService.deletarItem(ambiente.ambientes[0].id, id);
+        } else {
+          await ambientesService.deletarItem(ambienteId, id);
+        }
+
+        toast.success("Item deletado com sucesso!");
       }
 
       await carregarAmbientes();
     } catch (error: any) {
       console.error("Erro ao deletar:", error);
-      mostrarNotificacao(
-        error?.response?.data?.message || "Erro ao deletar",
-        "error"
-      );
+
+      // Fechar dialog mesmo em caso de erro
+      setDialogEditarAmbientes({ open: false, ambientes: [] });
+
+      toast.error(error?.response?.data?.message || "Erro ao deletar");
     }
   };
 
@@ -247,32 +348,30 @@ export default function GerenciarAmbientes() {
       if (!ambiente) return;
 
       const tiposAtuais = ambiente.tiposUso || [];
-      const novosTipos = tiposAtuais.includes(tipo)
-        ? tiposAtuais.filter((t) => t !== tipo)
-        : [...tiposAtuais, tipo];
+      const estaRemovendo = tiposAtuais.includes(tipo);
 
-      // Atualização local otimista (ANTES da request)
+      // Se for um grupo, usar ID do primeiro ambiente
+      const ambienteIdReal =
+        ambiente.isGrupo && ambiente.ambientes && ambiente.ambientes.length > 0
+          ? ambiente.ambientes[0].id
+          : ambienteId;
+
+      // Chamar endpoint REST específico (mais eficiente!)
+      const resultado = estaRemovendo
+        ? await ambientesService.removerTipoUso(ambienteIdReal, tipo)
+        : await ambientesService.adicionarTipoUso(ambienteIdReal, tipo);
+
+      // Atualizar localmente APÓS sucesso da API
       setAmbientes((prev) =>
         prev.map((a) =>
-          a.id === ambienteId ? { ...a, tiposUso: novosTipos } : a
+          a.id === ambienteId ? { ...a, tiposUso: resultado.tiposUso } : a
         )
       );
 
-      // Request otimizada - endpoint específico que retorna apenas id e tipos
-      await ambientesService.atualizarTiposAmbiente(ambienteId, {
-        tiposUso: novosTipos,
-      });
-
-      mostrarNotificacao(
-        `Tipo de uso ${
-          tiposAtuais.includes(tipo) ? "removido" : "adicionado"
-        }!`,
-        "success"
-      );
+      toast.success(`${tipo} ${estaRemovendo ? "removido" : "adicionado"}!`);
     } catch (error: any) {
       console.error("Erro ao atualizar tipo de uso:", error);
-      mostrarNotificacao("Erro ao atualizar tipo de uso", "error");
-      await carregarAmbientes(); // Recarrega em caso de erro
+      toast.error("Erro ao atualizar tipo de uso");
     }
   };
 
@@ -285,32 +384,30 @@ export default function GerenciarAmbientes() {
       if (!ambiente) return;
 
       const tiposAtuais = ambiente.tiposImovel || [];
-      const novosTipos = tiposAtuais.includes(tipo)
-        ? tiposAtuais.filter((t) => t !== tipo)
-        : [...tiposAtuais, tipo];
+      const estaRemovendo = tiposAtuais.includes(tipo);
 
-      // Atualização local otimista (ANTES da request)
+      // Se for um grupo, usar ID do primeiro ambiente
+      const ambienteIdReal =
+        ambiente.isGrupo && ambiente.ambientes && ambiente.ambientes.length > 0
+          ? ambiente.ambientes[0].id
+          : ambienteId;
+
+      // Chamar endpoint REST específico (mais eficiente!)
+      const resultado = estaRemovendo
+        ? await ambientesService.removerTipoImovel(ambienteIdReal, tipo)
+        : await ambientesService.adicionarTipoImovel(ambienteIdReal, tipo);
+
+      // Atualizar localmente APÓS sucesso da API
       setAmbientes((prev) =>
         prev.map((a) =>
-          a.id === ambienteId ? { ...a, tiposImovel: novosTipos } : a
+          a.id === ambienteId ? { ...a, tiposImovel: resultado.tiposImovel } : a
         )
       );
 
-      // Request otimizada - endpoint específico que retorna apenas id e tipos
-      await ambientesService.atualizarTiposAmbiente(ambienteId, {
-        tiposImovel: novosTipos,
-      });
-
-      mostrarNotificacao(
-        `Tipo de imóvel ${
-          tiposAtuais.includes(tipo) ? "removido" : "adicionado"
-        }!`,
-        "success"
-      );
+      toast.success(`${tipo} ${estaRemovendo ? "removido" : "adicionado"}!`);
     } catch (error: any) {
       console.error("Erro ao atualizar tipo de imóvel:", error);
-      mostrarNotificacao("Erro ao atualizar tipo de imóvel", "error");
-      await carregarAmbientes(); // Recarrega em caso de erro
+      toast.error("Erro ao atualizar tipo de imóvel");
     }
   };
 
@@ -381,7 +478,16 @@ export default function GerenciarAmbientes() {
                   ✏️ Editar
                 </button>
                 <button
-                  onClick={() => handleDelete("item", item.id, ambienteId)}
+                  onClick={() => {
+                    const itemNome = item.nome;
+                    setDialogConfirm({
+                      open: true,
+                      title: "⚠️ Confirmar Exclusão",
+                      message: `Tem certeza que deseja deletar o item "${itemNome}"? Esta ação não pode ser desfeita.`,
+                      onConfirm: () =>
+                        handleDelete("item", item.id, ambienteId),
+                    });
+                  }}
                   className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
                   title="Deletar"
                 >
@@ -425,26 +531,6 @@ export default function GerenciarAmbientes() {
           </Button>
         </div>
 
-        {/* Notificação */}
-        <AnimatePresence>
-          {notification.show && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={`p-4 rounded-lg border-2 ${
-                notification.type === "success"
-                  ? "bg-green-50 border-green-200 text-green-800"
-                  : notification.type === "error"
-                  ? "bg-red-50 border-red-200 text-red-800"
-                  : "bg-blue-50 border-blue-200 text-blue-800"
-              }`}
-            >
-              {notification.message}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Lista de Ambientes */}
         {loading ? (
           <div className="text-center py-12">
@@ -468,50 +554,100 @@ export default function GerenciarAmbientes() {
                 className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden shadow-sm"
               >
                 {/* Header do Ambiente */}
-                <div
-                  className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => toggleAmbiente(ambiente.id)}
-                >
+                <div className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
-                      <span className="text-2xl">📁</span>
+                      <span
+                        className="text-2xl cursor-pointer"
+                        onClick={() => toggleAmbiente(ambiente.id)}
+                      >
+                        📁
+                      </span>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-xl font-bold text-gray-900">
+                          <h3
+                            className="text-xl font-bold text-gray-900 cursor-pointer"
+                            onClick={() => toggleAmbiente(ambiente.id)}
+                          >
                             {ambiente.nome}
                           </h3>
 
-                          {/* Badges de Tipos de Uso */}
-                          {ambiente.tiposUso &&
-                            ambiente.tiposUso.length > 0 && (
-                              <div className="flex gap-1">
-                                {ambiente.tiposUso.map((tipo) => (
-                                  <span
-                                    key={tipo}
-                                    className="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded"
-                                    title="Tipo de Uso"
-                                  >
-                                    🏢 {tipo}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                          {/* Badge indicando grupo */}
+                          {ambiente.isGrupo && (
+                            <span
+                              className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700 rounded"
+                              title={`Grupo de ambientes: ${ambiente.ambientes
+                                ?.map((a) => a.nome)
+                                .join(", ")}`}
+                            >
+                              👥 Grupo ({ambiente.ambientes?.length || 0})
+                            </span>
+                          )}
 
-                          {/* Badges de Tipos de Imóvel */}
-                          {ambiente.tiposImovel &&
-                            ambiente.tiposImovel.length > 0 && (
-                              <div className="flex gap-1">
-                                {ambiente.tiposImovel.map((tipo) => (
-                                  <span
-                                    key={tipo}
-                                    className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded"
-                                    title="Tipo de Imóvel"
-                                  >
-                                    🏠 {tipo}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                          {/* Botão + para Agrupar Ambientes */}
+                          <button
+                            onClick={() =>
+                              setDialogGrupo({
+                                open: true,
+                                ambienteId: ambiente.id,
+                                inputAmbiente: "",
+                              })
+                            }
+                            className="ml-2 w-7 h-7 flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white rounded-full font-bold text-lg transition-all shadow-md hover:shadow-lg"
+                            title="Agrupar com outros ambientes"
+                          >
+                            +
+                          </button>
+
+                          {/* Tipos de Uso - TODOS visíveis, clique para toggle */}
+                          <div className="flex gap-1 items-center">
+                            {Object.values(TipoUso).map((tipo) => (
+                              <button
+                                key={tipo}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleTipoUso(ambiente.id, tipo);
+                                }}
+                                className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
+                                  ambiente.tiposUso?.includes(tipo)
+                                    ? "bg-blue-500 text-white shadow-md"
+                                    : "bg-blue-100 text-blue-400 opacity-60 hover:opacity-100"
+                                }`}
+                                title={
+                                  ambiente.tiposUso?.includes(tipo)
+                                    ? "Clique para desativar"
+                                    : "Clique para ativar"
+                                }
+                              >
+                                🏢 {tipo}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Tipos de Imóvel - TODOS visíveis, clique para toggle */}
+                          <div className="flex gap-1 items-center">
+                            {Object.values(TipoImovel).map((tipo) => (
+                              <button
+                                key={tipo}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleTipoImovel(ambiente.id, tipo);
+                                }}
+                                className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
+                                  ambiente.tiposImovel?.includes(tipo)
+                                    ? "bg-green-500 text-white shadow-md"
+                                    : "bg-green-100 text-green-400 opacity-60 hover:opacity-100"
+                                }`}
+                                title={
+                                  ambiente.tiposImovel?.includes(tipo)
+                                    ? "Clique para desativar"
+                                    : "Clique para ativar"
+                                }
+                              >
+                                🏠 {tipo}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                         {ambiente.descricao && (
                           <p className="text-sm text-gray-600 mt-1">
@@ -554,89 +690,52 @@ export default function GerenciarAmbientes() {
                       transition={{ duration: 0.2 }}
                     >
                       <div className="p-5">
-                        {/* Seletores de Tipos */}
-                        <div className="mb-4 space-y-3">
-                          {/* Tipos de Uso */}
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-2">
-                              🏢 TIPOS DE USO
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.values(TipoUso).map((tipo) => (
-                                <button
-                                  key={tipo}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleTipoUso(ambiente.id, tipo);
-                                  }}
-                                  className={`px-3 py-1.5 text-sm rounded-lg font-semibold transition-all ${
-                                    ambiente.tiposUso?.includes(tipo)
-                                      ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
-                                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                  }`}
-                                >
-                                  {tipo}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Tipos de Imóvel */}
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-2">
-                              🏠 TIPOS DE IMÓVEL
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.values(TipoImovel).map((tipo) => (
-                                <button
-                                  key={tipo}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleTipoImovel(ambiente.id, tipo);
-                                  }}
-                                  className={`px-3 py-1.5 text-sm rounded-lg font-semibold transition-all ${
-                                    ambiente.tiposImovel?.includes(tipo)
-                                      ? "bg-green-500 text-white shadow-md hover:bg-green-600"
-                                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                  }`}
-                                >
-                                  {tipo}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
                         {/* Botões de Ação do Ambiente */}
                         <div className="flex gap-2 mb-4 pb-4 border-b border-gray-200">
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() =>
+                            onClick={() => {
+                              const ambienteIdParaItem =
+                                ambiente.isGrupo &&
+                                ambiente.ambientes &&
+                                ambiente.ambientes.length > 0
+                                  ? ambiente.ambientes[0].id
+                                  : ambiente.id;
                               abrirDialog(
                                 "item",
                                 "create",
                                 undefined,
-                                ambiente.id
-                              )
-                            }
+                                ambienteIdParaItem
+                              );
+                            }}
                           >
                             ➕ Adicionar Item
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() =>
-                              abrirDialog("ambiente", "edit", ambiente)
-                            }
+                            onClick={() => {
+                              // Para grupos, coletar todos os ambientes do grupo
+                              if (ambiente.isGrupo && ambiente.ambientes) {
+                                setDialogEditarAmbientes({
+                                  open: true,
+                                  ambientes: ambiente.ambientes,
+                                });
+                              } else {
+                                // Para ambiente individual, criar array com 1 elemento
+                                setDialogEditarAmbientes({
+                                  open: true,
+                                  ambientes: [ambiente],
+                                });
+                              }
+                            }}
                           >
                             ✏️ Editar Ambiente
                           </Button>
                           <button
                             onClick={() =>
-                              handleDelete("ambiente", ambiente.id)
+                              confirmarDelete("ambiente", ambiente.id)
                             }
                             className="px-4 py-2 text-sm font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border-2 border-red-200"
                           >
@@ -648,7 +747,12 @@ export default function GerenciarAmbientes() {
                         {ambiente.itens && ambiente.itens.length > 0 ? (
                           <div className="space-y-3">
                             {ambiente.itens.map((item) =>
-                              renderItem(item, ambiente.id)
+                              renderItem(
+                                item,
+                                ambiente.isGrupo && ambiente.ambientes?.[0]?.id
+                                  ? ambiente.ambientes[0].id
+                                  : ambiente.id
+                              )
                             )}
                           </div>
                         ) : (
@@ -739,66 +843,6 @@ export default function GerenciarAmbientes() {
                           placeholder="Descrição opcional..."
                         />
                       </div>
-
-                      {/* Tipos de Uso */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          🏢 Tipos de Uso
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.values(TipoUso).map((tipo) => (
-                            <button
-                              key={tipo}
-                              type="button"
-                              onClick={() => {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  tiposUso: prev.tiposUso.includes(tipo)
-                                    ? prev.tiposUso.filter((t) => t !== tipo)
-                                    : [...prev.tiposUso, tipo],
-                                }));
-                              }}
-                              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                                formData.tiposUso.includes(tipo)
-                                  ? "bg-blue-500 text-white shadow-md"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
-                            >
-                              {tipo}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Tipos de Imóvel */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          🏠 Tipos de Imóvel
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.values(TipoImovel).map((tipo) => (
-                            <button
-                              key={tipo}
-                              type="button"
-                              onClick={() => {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  tiposImovel: prev.tiposImovel.includes(tipo)
-                                    ? prev.tiposImovel.filter((t) => t !== tipo)
-                                    : [...prev.tiposImovel, tipo],
-                                }));
-                              }}
-                              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                                formData.tiposImovel.includes(tipo)
-                                  ? "bg-green-500 text-white shadow-md"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
-                            >
-                              {tipo}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                     </>
                   )}
 
@@ -862,6 +906,404 @@ export default function GerenciarAmbientes() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Dialog de Agrupamento de Ambientes */}
+      <AnimatePresence>
+        {dialogGrupo.open && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() =>
+                setDialogGrupo({
+                  open: false,
+                  inputAmbiente: "",
+                })
+              }
+              className="fixed inset-0 bg-black/50 z-40"
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+                {/* Header */}
+                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
+                  <h3 className="text-2xl font-bold text-purple-900">
+                    ➕ Agrupar Ambientes
+                  </h3>
+                  <p className="text-sm text-purple-700 mt-1">
+                    Selecione os ambientes que devem compartilhar a mesma
+                    configuração
+                  </p>
+                </div>
+
+                {/* Conteúdo */}
+                <div className="p-6">
+                  <div className="mb-4 p-3 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      💡 <strong>Como funciona:</strong> Digite o nome de um
+                      ambiente existente para agrupar, ou digite um novo nome
+                      para criar e agrupar automaticamente.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Nome do ambiente:
+                      </label>
+                      <input
+                        type="text"
+                        value={dialogGrupo.inputAmbiente || ""}
+                        onChange={(e) =>
+                          setDialogGrupo({
+                            ...dialogGrupo,
+                            inputAmbiente: e.target.value,
+                          })
+                        }
+                        placeholder="Digite ou selecione um ambiente..."
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none text-lg"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Sugestões de Ambientes Existentes */}
+                    {dialogGrupo.inputAmbiente &&
+                      dialogGrupo.inputAmbiente.trim().length > 0 && (
+                        <div className="max-h-48 overflow-y-auto border-2 border-gray-200 rounded-lg">
+                          {ambientes
+                            .filter((a) => {
+                              const ambienteAtual = ambientes.find(
+                                (amb) => amb.id === dialogGrupo.ambienteId
+                              );
+
+                              // Não mostrar o próprio ambiente
+                              if (a.id === dialogGrupo.ambienteId) return false;
+
+                              // Se o ambiente atual é um grupo, não mostrar ambientes que já estão nesse grupo
+                              if (
+                                ambienteAtual?.isGrupo &&
+                                ambienteAtual.ambientes
+                              ) {
+                                const nomesNoGrupo =
+                                  ambienteAtual.ambientes.map((amb) =>
+                                    amb.nome.toLowerCase()
+                                  );
+                                if (nomesNoGrupo.includes(a.nome.toLowerCase()))
+                                  return false;
+                              }
+
+                              // Filtrar por nome digitado
+                              return a.nome
+                                .toLowerCase()
+                                .includes(
+                                  dialogGrupo.inputAmbiente!.toLowerCase()
+                                );
+                            })
+                            .map((ambiente) => (
+                              <button
+                                key={ambiente.id}
+                                onClick={() =>
+                                  setDialogGrupo({
+                                    ...dialogGrupo,
+                                    inputAmbiente: ambiente.nome,
+                                  })
+                                }
+                                className="w-full flex items-center gap-3 p-3 hover:bg-purple-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                              >
+                                <span className="text-2xl">📁</span>
+                                <div className="flex-1">
+                                  <p className="font-semibold text-gray-900">
+                                    {ambiente.nome}
+                                  </p>
+                                  <div className="flex gap-1 mt-1">
+                                    {ambiente.tiposUso
+                                      ?.slice(0, 2)
+                                      .map((tipo) => (
+                                        <span
+                                          key={tipo}
+                                          className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded"
+                                        >
+                                          {tipo}
+                                        </span>
+                                      ))}
+                                    {ambiente.tiposImovel
+                                      ?.slice(0, 2)
+                                      .map((tipo) => (
+                                        <span
+                                          key={tipo}
+                                          className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded"
+                                        >
+                                          {tipo}
+                                        </span>
+                                      ))}
+                                  </div>
+                                </div>
+                                <span className="text-sm text-gray-500">
+                                  Existente
+                                </span>
+                              </button>
+                            ))}
+
+                          {/* Opção de criar novo */}
+                          {ambientes.filter(
+                            (a) =>
+                              a.id !== dialogGrupo.ambienteId &&
+                              a.nome.toLowerCase() ===
+                                dialogGrupo.inputAmbiente?.toLowerCase()
+                          ).length === 0 && (
+                            <div className="p-3 bg-green-50 border-t-2 border-green-200">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl">✨</span>
+                                <div>
+                                  <p className="font-semibold text-green-900">
+                                    Criar "{dialogGrupo.inputAmbiente}"
+                                  </p>
+                                  <p className="text-xs text-green-700">
+                                    Novo ambiente será criado e agrupado
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Botões */}
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={() =>
+                        setDialogGrupo({
+                          open: false,
+                          inputAmbiente: "",
+                        })
+                      }
+                      className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleAgruparAmbientes}
+                      disabled={!dialogGrupo.inputAmbiente?.trim()}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Agrupar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Dialog de Editar Ambientes */}
+      <AnimatePresence>
+        {dialogEditarAmbientes.open && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() =>
+                setDialogEditarAmbientes({ open: false, ambientes: [] })
+              }
+              className="fixed inset-0 bg-black/50 z-40"
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-purple-600">
+                  <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                    ✏️ Editar Ambientes Cadastrados
+                  </h3>
+                  <p className="text-purple-100 mt-1">
+                    Renomeie ou remova os ambientes abaixo
+                  </p>
+                </div>
+
+                {/* Lista de Ambientes */}
+                <div className="p-6 space-y-3">
+                  {dialogEditarAmbientes.ambientes.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <p className="text-lg">📭 Nenhum ambiente para editar</p>
+                    </div>
+                  ) : (
+                    dialogEditarAmbientes.ambientes.map((ambiente) => (
+                      <motion.div
+                        key={ambiente.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-2 border-purple-200 rounded-lg p-4"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          {/* Info do Ambiente */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">📁</span>
+                              <h4 className="text-lg font-bold text-gray-900">
+                                {ambiente.nome}
+                              </h4>
+                            </div>
+                            {ambiente.descricao && (
+                              <p className="text-sm text-gray-600 mt-1 ml-8">
+                                {ambiente.descricao}
+                              </p>
+                            )}
+                            <div className="flex gap-2 mt-2 ml-8">
+                              {ambiente.tiposUso?.map((tipo) => (
+                                <span
+                                  key={tipo}
+                                  className="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded"
+                                >
+                                  🏢 {tipo}
+                                </span>
+                              ))}
+                              {ambiente.tiposImovel?.map((tipo) => (
+                                <span
+                                  key={tipo}
+                                  className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded"
+                                >
+                                  🏠 {tipo}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Botões de Ação */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setDialogEditarAmbientes({
+                                  open: false,
+                                  ambientes: [],
+                                });
+                                abrirDialog("ambiente", "edit", ambiente);
+                              }}
+                              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                              title="Renomear ambiente"
+                            >
+                              ✏️ Renomear
+                            </button>
+                            <button
+                              onClick={() => {
+                                // Primeiro fechar o modal de edição
+                                setDialogEditarAmbientes({
+                                  open: false,
+                                  ambientes: [],
+                                });
+                                // Depois abrir confirmação de delete
+                                setTimeout(() => {
+                                  confirmarDelete("ambiente", ambiente.id);
+                                }, 100);
+                              }}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                              title="Remover ambiente"
+                            >
+                              🗑️ Remover
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t border-gray-200 bg-gray-50">
+                  <button
+                    onClick={() =>
+                      setDialogEditarAmbientes({ open: false, ambientes: [] })
+                    }
+                    className="w-full px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Dialog de Confirmação Customizado */}
+      <AnimatePresence>
+        {dialogConfirm.open && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+                {/* Header */}
+                <div className="p-6 bg-gradient-to-r from-red-500 to-red-600">
+                  <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                    {dialogConfirm.title}
+                  </h3>
+                </div>
+
+                {/* Conteúdo */}
+                <div className="p-6">
+                  <p className="text-gray-700 text-lg leading-relaxed">
+                    {dialogConfirm.message}
+                  </p>
+                </div>
+
+                {/* Botões */}
+                <div className="p-6 bg-gray-50 flex gap-3">
+                  <button
+                    onClick={() =>
+                      setDialogConfirm({
+                        open: false,
+                        title: "",
+                        message: "",
+                        onConfirm: () => {},
+                      })
+                    }
+                    className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={dialogConfirm.onConfirm}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                  >
+                    Confirmar
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>

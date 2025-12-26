@@ -1,11 +1,11 @@
 /**
  * Cliente HTTP para comunicação com o backend
- * 
+ *
  * Este serviço centraliza todas as requisições HTTP ao backend,
  * gerenciando tokens de autenticação e tratamento de erros.
  */
 
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG } from "../config/api";
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
@@ -22,21 +22,21 @@ class ApiService {
    * Obtém o token de autenticação armazenado
    */
   private getAuthToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return localStorage.getItem("auth_token");
   }
 
   /**
    * Define o token de autenticação
    */
   setAuthToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+    localStorage.setItem("auth_token", token);
   }
 
   /**
    * Remove o token de autenticação
    */
   clearAuthToken(): void {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem("auth_token");
   }
 
   /**
@@ -73,15 +73,30 @@ class ApiService {
       // Trata erros HTTP
       if (!response.ok) {
         const error = await response.json().catch(() => ({
-          message: 'Erro ao processar requisição',
+          message: "Erro ao processar requisição",
         }));
         throw new Error(error.message || `HTTP Error: ${response.status}`);
       }
 
-      // Retorna resposta JSON
-      return await response.json();
+      // Se a resposta não tem conteúdo (204 No Content ou DELETE bem-sucedido)
+      if (
+        response.status === 204 ||
+        response.headers.get("content-length") === "0"
+      ) {
+        return {} as T;
+      }
+
+      // Verifica se há conteúdo para parsear
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const text = await response.text();
+        return text ? JSON.parse(text) : ({} as T);
+      }
+
+      // Retorna objeto vazio se não for JSON
+      return {} as T;
     } catch (error) {
-      console.error('API Request Error:', error);
+      console.error("API Request Error:", error);
       throw error;
     }
   }
@@ -91,7 +106,7 @@ class ApiService {
    */
   async get<T>(endpoint: string, requiresAuth = false): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'GET',
+      method: "GET",
       requiresAuth,
     });
   }
@@ -105,7 +120,7 @@ class ApiService {
     requiresAuth = false
   ): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
       requiresAuth,
     });
@@ -120,7 +135,7 @@ class ApiService {
     requiresAuth = false
   ): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
       requiresAuth,
     });
@@ -135,7 +150,7 @@ class ApiService {
     requiresAuth = false
   ): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(data),
       requiresAuth,
     });
@@ -146,7 +161,7 @@ class ApiService {
    */
   async delete<T>(endpoint: string, requiresAuth = false): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'DELETE',
+      method: "DELETE",
       requiresAuth,
     });
   }
