@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import LaudoDetalhes from "../../components/LaudoDetalhes";
 import { laudosService, type Laudo } from "../../services/laudos";
 
 export default function TodosLaudos() {
@@ -76,8 +77,15 @@ export default function TodosLaudos() {
         text: "text-gray-800",
         label: "Não Iniciado",
       },
+      paralisado: {
+        bg: "bg-red-100",
+        text: "text-red-800",
+        label: "Paralisado",
+      },
     };
-    const { bg, text, label } = config[status as keyof typeof config];
+    const statusConfig =
+      config[status as keyof typeof config] || config.nao_iniciado;
+    const { bg, text, label } = statusConfig;
     return (
       <span
         className={`px-3 py-1 rounded-full text-xs font-semibold ${bg} ${text}`}
@@ -117,111 +125,125 @@ export default function TodosLaudos() {
             <p className="text-gray-600 text-lg">Nenhum laudo encontrado</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      ID
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Endereço
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Ambientes
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Fotos
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Data
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {laudosPaginados.map((laudo) => (
-                    <tr key={laudo.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-mono text-gray-500">
-                        {laudo.id.substring(0, 8)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        <div>
-                          <div className="font-medium">
-                            {laudo.rua}
-                            {laudo.numero && `, ${laudo.numero}`}
-                          </div>
-                          {laudo.complemento && (
-                            <div className="text-gray-500 text-xs">
-                              {laudo.complemento}
+          <>
+            {/* Grid de Cards */}
+            <div className="grid grid-cols-1 gap-4">
+              {laudosPaginados.map((laudo) => (
+                <div
+                  key={laudo.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        {getStatusBadge(mapStatus(laudo.status))}
+                        <span className="text-xs text-gray-400 font-mono">
+                          ID: {laudo.id.substring(0, 8)}
+                        </span>
+                      </div>
+
+                      <div className="mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          {laudo.rua || laudo.endereco}
+                          {laudo.numero && `, ${laudo.numero}`}
+                        </h3>
+                        <div className="text-sm text-gray-600 space-y-0.5">
+                          {laudo.complemento && <div>{laudo.complemento}</div>}
+                          {laudo.bairro && (
+                            <div>
+                              <span className="text-gray-400">Bairro:</span>{" "}
+                              {laudo.bairro}
                             </div>
                           )}
-                          <div className="text-gray-500 text-xs mt-1">
-                            {laudo.bairro && <span>{laudo.bairro}</span>}
+                          <div className="flex gap-4">
                             {laudo.cidade && (
                               <span>
-                                {laudo.bairro && " • "}
+                                <span className="text-gray-400">Cidade:</span>{" "}
                                 {laudo.cidade}
                               </span>
                             )}
                             {laudo.estado && (
                               <span>
-                                {(laudo.bairro || laudo.cidade) && " • "}
+                                <span className="text-gray-400">Estado:</span>{" "}
                                 {laudo.estado}
                               </span>
                             )}
                             {laudo.cep && (
                               <span>
-                                {(laudo.bairro ||
-                                  laudo.cidade ||
-                                  laudo.estado) &&
-                                  " • "}
-                                CEP {laudo.cep}
+                                <span className="text-gray-400">CEP:</span>{" "}
+                                {laudo.cep}
                               </span>
                             )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {laudo.totalAmbientes}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {laudo.totalFotos}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {formatDate(laudo.createdAt)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {getStatusBadge(mapStatus(laudo.status))}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() =>
-                            handleDeleteLaudo(
-                              laudo.id,
-                              laudo.rua || laudo.endereco
-                            )
-                          }
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
-                        >
-                          🗑️ Deletar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                        <div>
+                          <span className="text-gray-400">Ambientes:</span>{" "}
+                          <span className="font-medium text-gray-900">
+                            {laudo.totalAmbientes}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Fotos:</span>{" "}
+                          <span className="font-medium text-gray-900">
+                            {laudo.totalFotos}
+                          </span>
+                        </div>
+                        {laudo.tamanho && (
+                          <div>
+                            <span className="text-gray-400">Tamanho:</span>{" "}
+                            <span className="font-medium text-gray-900">
+                              {laudo.tamanho}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-gray-400">Data:</span>{" "}
+                          <span className="font-medium text-gray-900">
+                            {formatDate(laudo.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2">
+                      {mapStatus(laudo.status) === "concluido" &&
+                        laudo.pdfUrl && (
+                          <a
+                            href={laudo.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium text-center whitespace-nowrap"
+                          >
+                            📄 Ver PDF
+                          </a>
+                        )}
+                      <button
+                        onClick={() =>
+                          handleDeleteLaudo(
+                            laudo.id,
+                            laudo.rua || laudo.endereco
+                          )
+                        }
+                        className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium whitespace-nowrap"
+                      >
+                        🗑️ Deletar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Detalhes do Laudo (Expansível) */}
+                  <LaudoDetalhes laudo={laudo} />
+                </div>
+              ))}
             </div>
 
             {/* Paginação */}
             {totalPaginas > 1 && (
-              <div className="flex items-center justify-between border-t border-gray-100 p-4">
+              <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-6">
                 <div className="text-sm text-gray-600">
                   Mostrando {indexInicio + 1} a{" "}
                   {Math.min(indexFim, laudos.length)} de {laudos.length} laudos
@@ -276,7 +298,7 @@ export default function TodosLaudos() {
                 </div>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </DashboardLayout>

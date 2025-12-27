@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
-import { laudosService, Laudo } from "../../services/laudos";
+import LaudoDetalhes from "../../components/LaudoDetalhes";
+import { laudosService, type Laudo } from "../../services/laudos";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 
@@ -95,7 +96,9 @@ export default function MeusLaudos() {
         icon: "⏸️",
       },
     };
-    const { bg, text, label } = config[status as keyof typeof config];
+    const statusConfig =
+      config[status as keyof typeof config] || config.nao_iniciado;
+    const { bg, text, label } = statusConfig;
     return (
       <span
         className={`px-3 py-1 rounded-full text-xs font-semibold ${bg} ${text}`}
@@ -262,7 +265,7 @@ export default function MeusLaudos() {
 
                         <div className="mb-3">
                           <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                            {laudo.rua}
+                            {laudo.rua || laudo.endereco}
                             {laudo.numero && `, ${laudo.numero}`}
                           </h3>
                           <div className="text-sm text-gray-600 space-y-0.5">
@@ -371,6 +374,8 @@ export default function MeusLaudos() {
                         </Button>
                       </div>
                     </div>
+                    {/* Detalhes do Laudo (Expansível) */}
+                    <LaudoDetalhes laudo={laudo} />{" "}
                   </motion.div>
                 );
               })}
