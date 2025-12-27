@@ -34,6 +34,25 @@ export default function MeusLaudos() {
     }
   };
 
+  const handleDeleteLaudo = async (id: string, endereco: string) => {
+    if (
+      !window.confirm(
+        `Tem certeza que deseja deletar o laudo de "${endereco}"? Esta ação não pode ser desfeita.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await laudosService.deleteLaudo(id);
+      // Atualiza a lista removendo o laudo deletado
+      setLaudos((prevLaudos) => prevLaudos.filter((l) => l.id !== id));
+    } catch (err: any) {
+      alert(err.message || "Erro ao deletar laudo");
+      console.error("Erro ao deletar laudo:", err);
+    }
+  };
+
   const mapStatus = (
     status: string
   ): "nao_iniciado" | "processando" | "concluido" | "paralisado" => {
@@ -241,9 +260,43 @@ export default function MeusLaudos() {
                           {getStatusBadge(status)}
                         </div>
 
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          {laudo.endereco}
-                        </h3>
+                        <div className="mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                            {laudo.rua}
+                            {laudo.numero && `, ${laudo.numero}`}
+                          </h3>
+                          <div className="text-sm text-gray-600 space-y-0.5">
+                            {laudo.complemento && (
+                              <div>{laudo.complemento}</div>
+                            )}
+                            {laudo.bairro && (
+                              <div>
+                                <span className="text-gray-400">Bairro:</span>{" "}
+                                {laudo.bairro}
+                              </div>
+                            )}
+                            <div className="flex gap-4">
+                              {laudo.cidade && (
+                                <span>
+                                  <span className="text-gray-400">Cidade:</span>{" "}
+                                  {laudo.cidade}
+                                </span>
+                              )}
+                              {laudo.estado && (
+                                <span>
+                                  <span className="text-gray-400">Estado:</span>{" "}
+                                  {laudo.estado}
+                                </span>
+                              )}
+                              {laudo.cep && (
+                                <span>
+                                  <span className="text-gray-400">CEP:</span>{" "}
+                                  {laudo.cep}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
                           <div>
@@ -303,6 +356,19 @@ export default function MeusLaudos() {
                             </Button>
                           </Link>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="whitespace-nowrap text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                          onClick={() =>
+                            handleDeleteLaudo(
+                              laudo.id,
+                              laudo.rua || laudo.endereco
+                            )
+                          }
+                        >
+                          🗑️ Deletar
+                        </Button>
                       </div>
                     </div>
                   </motion.div>

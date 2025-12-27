@@ -27,6 +27,24 @@ export default function TodosLaudos() {
     }
   };
 
+  const handleDeleteLaudo = async (id: string, endereco: string) => {
+    if (
+      !window.confirm(
+        `Tem certeza que deseja deletar o laudo de "${endereco}"? Esta ação não pode ser desfeita.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await laudosService.deleteLaudo(id);
+      setLaudos((prevLaudos) => prevLaudos.filter((l) => l.id !== id));
+    } catch (err: any) {
+      alert(err.message || "Erro ao deletar laudo");
+      console.error("Erro ao deletar laudo:", err);
+    }
+  };
+
   const mapStatus = (status: string) => {
     const mapping: Record<string, string> = {
       NAO_INICIADO: "nao_iniciado",
@@ -122,6 +140,9 @@ export default function TodosLaudos() {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                       Status
                     </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -131,7 +152,41 @@ export default function TodosLaudos() {
                         {laudo.id.substring(0, 8)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {laudo.endereco}
+                        <div>
+                          <div className="font-medium">
+                            {laudo.rua}
+                            {laudo.numero && `, ${laudo.numero}`}
+                          </div>
+                          {laudo.complemento && (
+                            <div className="text-gray-500 text-xs">
+                              {laudo.complemento}
+                            </div>
+                          )}
+                          <div className="text-gray-500 text-xs mt-1">
+                            {laudo.bairro && <span>{laudo.bairro}</span>}
+                            {laudo.cidade && (
+                              <span>
+                                {laudo.bairro && " • "}
+                                {laudo.cidade}
+                              </span>
+                            )}
+                            {laudo.estado && (
+                              <span>
+                                {(laudo.bairro || laudo.cidade) && " • "}
+                                {laudo.estado}
+                              </span>
+                            )}
+                            {laudo.cep && (
+                              <span>
+                                {(laudo.bairro ||
+                                  laudo.cidade ||
+                                  laudo.estado) &&
+                                  " • "}
+                                CEP {laudo.cep}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {laudo.totalAmbientes}
@@ -144,6 +199,19 @@ export default function TodosLaudos() {
                       </td>
                       <td className="px-6 py-4">
                         {getStatusBadge(mapStatus(laudo.status))}
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() =>
+                            handleDeleteLaudo(
+                              laudo.id,
+                              laudo.rua || laudo.endereco
+                            )
+                          }
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          🗑️ Deletar
+                        </button>
                       </td>
                     </tr>
                   ))}
