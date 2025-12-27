@@ -48,6 +48,13 @@ class LaudosService {
   }
 
   /**
+   * Obtém todos os laudos do sistema (Admin/Dev)
+   */
+  async getAllLaudos(): Promise<Laudo[]> {
+    return api.get<Laudo[]>("/laudos", true);
+  }
+
+  /**
    * Obtém um laudo específico por ID
    */
   async getLaudo(id: string): Promise<Laudo> {

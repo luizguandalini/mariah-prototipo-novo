@@ -95,6 +95,7 @@ export default function DashboardLayout({
   const adminMenuItems: MenuItem[] = [
     { path: "/admin/dashboard", icon: "📊", label: "Dashboard" },
     { path: "/admin/usuarios", icon: "👥", label: "Usuários" },
+    { path: "/dashboard/laudos", icon: "📋", label: "Meus Laudos" },
     { path: "/admin/laudos", icon: "📄", label: "Todos os Laudos" },
     { path: "/admin/ambientes", icon: "🏠", label: "Gerenciar Ambientes" },
     { path: "/admin/pdf-settings", icon: "📝", label: "Config. PDF" },
