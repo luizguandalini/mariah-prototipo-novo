@@ -21,6 +21,7 @@ import Usuarios from "./pages/admin/Usuarios";
 import TodosLaudos from "./pages/admin/TodosLaudos";
 import PDFSettings from "./pages/admin/PDFSettings";
 import GerenciarAmbientes from "./pages/admin/GerenciarAmbientes";
+import GerenciarDetalhesLaudo from "./pages/admin/GerenciarDetalhesLaudo";
 
 function App() {
   return (
@@ -51,6 +52,10 @@ function App() {
         <Route path="/admin/laudos" element={<TodosLaudos />} />
         <Route path="/admin/pdf-settings" element={<PDFSettings />} />
         <Route path="/admin/ambientes" element={<GerenciarAmbientes />} />
+        <Route
+          path="/admin/detalhes-laudo"
+          element={<GerenciarDetalhesLaudo />}
+        />
       </Routes>
     </AuthProvider>
   );

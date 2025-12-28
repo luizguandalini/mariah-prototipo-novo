@@ -98,6 +98,7 @@ export default function DashboardLayout({
     { path: "/dashboard/laudos", icon: "📋", label: "Meus Laudos" },
     { path: "/admin/laudos", icon: "📄", label: "Todos os Laudos" },
     { path: "/admin/ambientes", icon: "🏠", label: "Gerenciar Ambientes" },
+    { path: "/admin/detalhes-laudo", icon: "📋", label: "Detalhes do Laudo" },
     { path: "/admin/pdf-settings", icon: "📝", label: "Config. PDF" },
   ];
 
