@@ -147,6 +147,21 @@ class LaudosService {
   }
 
   /**
+   * Atualiza apenas os detalhes do questionário de um laudo
+   */
+  async updateLaudoDetalhes(id: string, detalhes: {
+    atestado?: string;
+    analisesHidraulicas?: Partial<AnalisesHidraulicas>;
+    analisesEletricas?: Partial<AnalisesEletricas>;
+    sistemaAr?: Partial<SistemaAr>;
+    mecanismosAbertura?: Partial<MecanismosAbertura>;
+    revestimentos?: Partial<Revestimentos>;
+    mobilias?: Partial<Mobilias>;
+  }): Promise<Laudo> {
+    return api.patch<Laudo>(`/laudos/${id}/detalhes`, detalhes, true);
+  }
+
+  /**
    * Deleta um laudo
    */
   async deleteLaudo(id: string): Promise<void> {
