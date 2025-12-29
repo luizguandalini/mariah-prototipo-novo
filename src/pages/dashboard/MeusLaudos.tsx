@@ -81,26 +81,26 @@ export default function MeusLaudos() {
   const getStatusBadge = (status: string) => {
     const config = {
       concluido: {
-        bg: "bg-green-100",
-        text: "text-green-800",
+        bg: "bg-green-500/10",
+        text: "text-green-500 border border-green-500/20",
         label: "✅ Concluído",
         icon: "✅",
       },
       processando: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
+        bg: "bg-yellow-500/10",
+        text: "text-yellow-500 border border-yellow-500/20",
         label: "⏳ Processando",
         icon: "⏳",
       },
       nao_iniciado: {
-        bg: "bg-gray-100",
-        text: "text-gray-800",
+        bg: "bg-[var(--bg-primary)]",
+        text: "text-[var(--text-secondary)] border border-[var(--border-color)]",
         label: "📝 Não Iniciado",
         icon: "📝",
       },
       paralisado: {
-        bg: "bg-red-100",
-        text: "text-red-800",
+        bg: "bg-red-500/10",
+        text: "text-red-500 border border-red-500/20",
         label: "⏸️ Paralisado",
         icon: "⏸️",
       },
@@ -163,10 +163,10 @@ export default function MeusLaudos() {
           className="flex items-center justify-between"
         >
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2 transition-colors">
               Meus Laudos
             </h2>
-            <p className="text-gray-600">
+            <p className="text-[var(--text-secondary)]">
               Gerencie todos os seus laudos imobiliários
             </p>
           </div>
@@ -182,7 +182,7 @@ export default function MeusLaudos() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-100 p-4"
+          className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 transition-all"
         >
           <div className="flex flex-wrap gap-2">
             {[
@@ -210,7 +210,7 @@ export default function MeusLaudos() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filtroStatus === filtro.key
                     ? "bg-primary text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] border border-[var(--border-color)]"
                 }`}
               >
                 {filtro.label}
@@ -224,7 +224,7 @@ export default function MeusLaudos() {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600">Carregando laudos...</p>
+              <p className="text-[var(--text-secondary)]">Carregando laudos...</p>
             </div>
           </div>
         ) : error ? (
@@ -235,8 +235,8 @@ export default function MeusLaudos() {
             </Button>
           </div>
         ) : laudosFiltrados.length === 0 ? (
-          <div className="bg-gray-50 rounded-xl p-12 text-center">
-            <p className="text-gray-600 mb-4">
+          <div className="bg-[var(--bg-secondary)] rounded-xl p-12 text-center border border-[var(--border-color)] transition-all">
+            <p className="text-[var(--text-secondary)] mb-4">
               {filtroStatus === "todos"
                 ? "Nenhum laudo encontrado. Comece criando seu primeiro laudo!"
                 : "Nenhum laudo encontrado com este status."}
@@ -258,7 +258,7 @@ export default function MeusLaudos() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+                    className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 hover:shadow-md transition-all"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -267,36 +267,36 @@ export default function MeusLaudos() {
                         </div>
 
                         <div className="mb-3">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
                             {laudo.rua || laudo.endereco}
                             {laudo.numero && `, ${laudo.numero}`}
                           </h3>
-                          <div className="text-sm text-gray-600 space-y-0.5">
+                          <div className="text-sm text-[var(--text-secondary)] space-y-0.5">
                             {laudo.complemento && (
                               <div>{laudo.complemento}</div>
                             )}
                             {laudo.bairro && (
                               <div>
-                                <span className="text-gray-400">Bairro:</span>{" "}
+                                <span className="opacity-70">Bairro:</span>{" "}
                                 {laudo.bairro}
                               </div>
                             )}
                             <div className="flex gap-4">
                               {laudo.cidade && (
                                 <span>
-                                  <span className="text-gray-400">Cidade:</span>{" "}
+                                  <span className="opacity-70">Cidade:</span>{" "}
                                   {laudo.cidade}
                                 </span>
                               )}
                               {laudo.estado && (
                                 <span>
-                                  <span className="text-gray-400">Estado:</span>{" "}
+                                  <span className="opacity-70">Estado:</span>{" "}
                                   {laudo.estado}
                                 </span>
                               )}
                               {laudo.cep && (
                                 <span>
-                                  <span className="text-gray-400">CEP:</span>{" "}
+                                  <span className="opacity-70">CEP:</span>{" "}
                                   {laudo.cep}
                                 </span>
                               )}
@@ -304,30 +304,30 @@ export default function MeusLaudos() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-[var(--text-secondary)]">
                           <div>
-                            <span className="text-gray-400">Ambientes:</span>{" "}
-                            <span className="font-medium text-gray-900">
+                            <span className="opacity-70">Ambientes:</span>{" "}
+                            <span className="font-medium text-[var(--text-primary)]">
                               {laudo.totalAmbientes}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-400">Fotos:</span>{" "}
-                            <span className="font-medium text-gray-900">
+                            <span className="opacity-70">Fotos:</span>{" "}
+                            <span className="font-medium text-[var(--text-primary)]">
                               {laudo.totalFotos}
                             </span>
                           </div>
                           {laudo.tamanho && (
                             <div>
-                              <span className="text-gray-400">Tamanho:</span>{" "}
-                              <span className="font-medium text-gray-900">
+                              <span className="opacity-70">Tamanho:</span>{" "}
+                              <span className="font-medium text-[var(--text-primary)]">
                                 {laudo.tamanho}
                               </span>
                             </div>
                           )}
                           <div>
-                            <span className="text-gray-400">Data:</span>{" "}
-                            <span className="font-medium text-gray-900">
+                            <span className="opacity-70">Data:</span>{" "}
+                            <span className="font-medium text-[var(--text-primary)]">
                               {formatDate(laudo.createdAt)}
                             </span>
                           </div>
@@ -395,8 +395,8 @@ export default function MeusLaudos() {
 
             {/* Paginação */}
             {totalPaginas > 1 && (
-              <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 p-4 mt-6">
-                <div className="text-sm text-gray-600">
+              <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 mt-6 transition-all">
+                <div className="text-sm text-[var(--text-secondary)]">
                   Mostrando {indexInicio + 1} a{" "}
                   {Math.min(indexFim, laudosFiltrados.length)} de{" "}
                   {laudosFiltrados.length} laudos
@@ -405,7 +405,7 @@ export default function MeusLaudos() {
                   <button
                     onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
                     disabled={paginaAtual === 1}
-                    className="px-4 py-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    className="px-4 py-2 rounded-lg border border-[var(--border-color)] text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--bg-primary)] transition-colors"
                   >
                     ← Anterior
                   </button>
@@ -415,10 +415,10 @@ export default function MeusLaudos() {
                         <button
                           key={pagina}
                           onClick={() => setPaginaAtual(pagina)}
-                          className={`px-3 py-2 rounded-lg ${
+                          className={`px-3 py-2 rounded-lg transition-colors ${
                             paginaAtual === pagina
                               ? "bg-primary text-white"
-                              : "border border-gray-300 hover:bg-gray-50"
+                              : "border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-primary)]"
                           }`}
                         >
                           {pagina}
@@ -431,7 +431,7 @@ export default function MeusLaudos() {
                       setPaginaAtual((p) => Math.min(totalPaginas, p + 1))
                     }
                     disabled={paginaAtual === totalPaginas}
-                    className="px-4 py-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    className="px-4 py-2 rounded-lg border border-[var(--border-color)] text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--bg-primary)] transition-colors"
                   >
                     Próxima →
                   </button>

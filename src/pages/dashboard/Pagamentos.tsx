@@ -9,11 +9,11 @@ export default function Pagamentos() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      aprovado: 'bg-green-100 text-green-800',
-      pendente: 'bg-yellow-100 text-yellow-800',
-      recusado: 'bg-red-100 text-red-800'
+      aprovado: 'bg-green-500/10 text-green-500 border border-green-500/20',
+      pendente: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20',
+      recusado: 'bg-red-500/10 text-red-500 border border-red-500/20'
     }
-    return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status as keyof typeof styles]}`}>
+    return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status as keyof typeof styles]} transition-colors`}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   }
@@ -21,25 +21,25 @@ export default function Pagamentos() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-gray-900">Histórico de Pagamentos</h2>
+        <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">Histórico de Pagamentos</h2>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] transition-all">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-[var(--bg-primary)] border-b border-[var(--border-color)]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Data</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Descrição</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Valor</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Data</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Descrição</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Valor</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pagamentos.map((pag) => (
-                  <tr key={pag.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">{pag.data}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{pag.descricao}</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">R$ {pag.valor}</td>
+                  <tr key={pag.id} className="hover:bg-[var(--bg-primary)] transition-colors border-b border-[var(--border-color)] last:border-0">
+                    <td className="px-6 py-4 text-sm text-[var(--text-primary)]">{pag.data}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">{pag.descricao}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-[var(--text-primary)]">R$ {pag.valor}</td>
                     <td className="px-6 py-4">{getStatusBadge(pag.status)}</td>
                   </tr>
                 ))}

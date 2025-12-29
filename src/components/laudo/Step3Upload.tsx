@@ -42,19 +42,19 @@ export default function Step3Upload({ onNext, onBack, ambientes }: Step3Props) {
   const currentImages = uploadedImages[currentAmbiente?.id] || []
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">Upload de Imagens</h3>
-      <p className="text-gray-600 mb-6">
-        Ambiente {ambienteAtual + 1} de {ambientes.length}: <strong>{currentAmbiente?.nome}</strong>
+    <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 transition-all">
+      <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Upload de Imagens</h3>
+      <p className="text-[var(--text-secondary)] mb-6">
+        Ambiente {ambienteAtual + 1} de {ambientes.length}: <strong className="text-[var(--text-primary)]">{currentAmbiente?.nome}</strong>
       </p>
 
       {/* Progress */}
       <div className="mb-6">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
+        <div className="flex justify-between text-sm text-[var(--text-secondary)] mb-2">
           <span>Progresso</span>
           <span>{ambienteAtual + 1}/{ambientes.length}</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-[var(--bg-primary)] rounded-full h-2">
           <div
             className="bg-primary h-2 rounded-full transition-all"
             style={{ width: `${((ambienteAtual + 1) / ambientes.length) * 100}%` }}
@@ -63,7 +63,7 @@ export default function Step3Upload({ onNext, onBack, ambientes }: Step3Props) {
       </div>
 
       {/* Upload Area */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6 hover:border-primary transition-colors">
+      <div className="border-2 border-dashed border-[var(--border-color)] bg-[var(--bg-primary)] rounded-lg p-8 text-center mb-6 hover:border-primary transition-colors cursor-pointer group">
         <input
           type="file"
           multiple
@@ -73,11 +73,11 @@ export default function Step3Upload({ onNext, onBack, ambientes }: Step3Props) {
           id="file-upload"
         />
         <label htmlFor="file-upload" className="cursor-pointer">
-          <div className="text-5xl mb-4">📸</div>
-          <p className="text-lg font-medium text-gray-900 mb-2">
+          <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">📸</div>
+          <p className="text-lg font-medium text-[var(--text-primary)] mb-2">
             Clique para selecionar imagens
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-[var(--text-secondary)]">
             Você pode selecionar múltiplas imagens de uma vez. Sem limite de quantidade.
           </p>
         </label>
@@ -99,7 +99,7 @@ export default function Step3Upload({ onNext, onBack, ambientes }: Step3Props) {
                 />
                 <button
                   onClick={() => handleRemoveImage(currentAmbiente.id, index)}
-                  className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
                 >
                   ×
                 </button>
@@ -113,7 +113,7 @@ export default function Step3Upload({ onNext, onBack, ambientes }: Step3Props) {
       )}
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t border-gray-200">
+      <div className="flex justify-between pt-6 border-t border-[var(--border-color)]">
         <Button variant="outline" size="lg" onClick={onBack}>
           ← Voltar
         </Button>

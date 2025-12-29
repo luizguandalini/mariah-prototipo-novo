@@ -13,8 +13,8 @@ export default function AdminDashboard() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Dashboard Admin</h2>
-          <p className="text-gray-600">Visão geral do sistema Mariah</p>
+          <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">Dashboard Admin</h2>
+          <p className="text-[var(--text-secondary)] transition-colors">Visão geral do sistema Mariah</p>
         </div>
 
         {/* Stats */}
@@ -25,29 +25,29 @@ export default function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+              className="bg-[var(--bg-secondary)] rounded-xl shadow-sm p-6 border border-[var(--border-color)] transition-all"
             >
               <div className="flex items-center justify-between mb-4">
                 <span className="text-3xl">{stat.icon}</span>
-                <span className="text-sm font-semibold text-green-600">{stat.change}</span>
+                <span className="text-sm font-semibold text-green-500">{stat.change}</span>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-              <p className="text-sm text-gray-600">{stat.label}</p>
+              <h3 className="text-3xl font-bold text-[var(--text-primary)] mb-1 transition-colors">{stat.value}</h3>
+              <p className="text-sm text-[var(--text-secondary)] transition-colors">{stat.label}</p>
             </motion.div>
           ))}
         </div>
 
         {/* Laudos Recentes */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Laudos em Processamento</h3>
+        <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 transition-colors duration-300">
+          <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4">Laudos em Processamento</h3>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div key={i} className="flex items-center justify-between p-4 bg-[var(--bg-primary)] rounded-lg border border-[var(--border-color)] transition-colors hover:shadow-md">
                 <div>
-                  <p className="font-semibold">Laudo #{1000 + i}</p>
-                  <p className="text-sm text-gray-600">Usuário: João Silva</p>
+                  <p className="font-semibold text-[var(--text-primary)]">Laudo #{1000 + i}</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Usuário: João Silva</p>
                 </div>
-                <span className="text-sm text-yellow-600 font-medium">Processando...</span>
+                <span className="text-sm text-yellow-500 font-medium animate-pulse">Processando...</span>
               </div>
             ))}
           </div>

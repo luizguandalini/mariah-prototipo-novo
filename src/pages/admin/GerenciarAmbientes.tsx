@@ -55,6 +55,7 @@ function SortableAmbienteCard({
   renderItem,
   setDialogGrupo,
   setDialogEditarAmbientes,
+  ambientes,
 }: {
   ambiente: Ambiente;
   expandedAmbientes: Set<string>;
@@ -87,6 +88,7 @@ function SortableAmbienteCard({
     open: boolean;
     ambientes: Ambiente[];
   }) => void;
+  ambientes: Ambiente[];
 }) {
   const {
     attributes,
@@ -108,19 +110,19 @@ function SortableAmbienteCard({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`bg-white rounded-xl border-2 ${
-          isDragging ? "border-purple-500 shadow-2xl" : "border-gray-200"
+        className={`bg-[var(--bg-secondary)] rounded-xl border-2 transition-all duration-300 ${
+          isDragging ? "border-primary shadow-2xl" : "border-[var(--border-color)]"
         } overflow-hidden shadow-sm`}
       >
         {/* Header do Ambiente */}
-        <div className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+        <div className="p-5 bg-gradient-to-r from-[var(--bg-primary)] to-[var(--bg-secondary)] border-b border-[var(--border-color)] transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
               {/* Handle para arrastar */}
               <button
                 {...attributes}
                 {...listeners}
-                className="drag-handle text-gray-600 hover:text-gray-800 hover:bg-gray-200 bg-gray-100 rounded p-2 transition-all shadow-sm"
+                className="drag-handle text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] bg-[var(--bg-primary)] border border-[var(--border-color)] rounded p-2 transition-all shadow-sm"
                 title="Arrastar para reordenar"
               >
                 <svg
@@ -147,7 +149,7 @@ function SortableAmbienteCard({
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3
-                    className="text-xl font-bold text-gray-900 cursor-pointer"
+                    className="text-xl font-bold text-[var(--text-primary)] cursor-pointer"
                     onClick={() => toggleAmbiente(ambiente.id)}
                   >
                     {ambiente.nome}
@@ -156,7 +158,7 @@ function SortableAmbienteCard({
                   {/* Badge indicando grupo */}
                   {ambiente.isGrupo && (
                     <span
-                      className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700 rounded"
+                      className="px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary-dark dark:text-primary rounded border border-primary/20"
                       title={`Grupo de ambientes: ${ambiente.ambientes
                         ?.map((a) => a.nome)
                         .join(", ")}`}
@@ -174,7 +176,7 @@ function SortableAmbienteCard({
                         inputAmbiente: "",
                       })
                     }
-                    className="ml-2 w-7 h-7 flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white rounded-full font-bold text-lg transition-all shadow-md hover:shadow-lg"
+                    className="ml-2 w-7 h-7 flex items-center justify-center bg-primary hover:bg-primary-dark text-white rounded-full font-bold text-lg transition-all shadow-md hover:shadow-lg"
                     title="Agrupar com outros ambientes"
                   >
                     +
@@ -189,10 +191,10 @@ function SortableAmbienteCard({
                           e.stopPropagation();
                           handleToggleTipoUso(ambiente.id, tipo);
                         }}
-                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
+                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all border ${
                           ambiente.tiposUso?.includes(tipo)
-                            ? "bg-blue-500 text-white shadow-md"
-                            : "bg-blue-100 text-blue-400 opacity-60 hover:opacity-100"
+                            ? "bg-blue-500 text-white border-blue-600 shadow-md"
+                            : "bg-blue-500/10 text-blue-500 border-blue-500/20 opacity-60 hover:opacity-100"
                         }`}
                         title={
                           ambiente.tiposUso?.includes(tipo)
@@ -214,10 +216,10 @@ function SortableAmbienteCard({
                           e.stopPropagation();
                           handleToggleTipoImovel(ambiente.id, tipo);
                         }}
-                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all ${
+                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all border ${
                           ambiente.tiposImovel?.includes(tipo)
-                            ? "bg-green-500 text-white shadow-md"
-                            : "bg-green-100 text-green-400 opacity-60 hover:opacity-100"
+                            ? "bg-green-500 text-white border-green-600 shadow-md"
+                            : "bg-green-500/10 text-green-500 border-green-500/20 opacity-60 hover:opacity-100"
                         }`}
                         title={
                           ambiente.tiposImovel?.includes(tipo)
@@ -231,7 +233,7 @@ function SortableAmbienteCard({
                   </div>
                 </div>
                 {ambiente.descricao && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-[var(--text-secondary)] opacity-70 mt-1">
                     {ambiente.descricao}
                   </p>
                 )}
@@ -239,15 +241,15 @@ function SortableAmbienteCard({
             </div>
             <div className="flex items-center gap-3">
               <span
-                className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                className={`px-3 py-1 text-sm font-semibold rounded-full border transition-colors ${
                   ambiente.ativo
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-600"
+                    ? "bg-green-500/10 text-green-500 border-green-500/20"
+                    : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
                 }`}
               >
                 {ambiente.ativo ? "Ativo" : "Inativo"}
               </span>
-              <span className="px-3 py-1 text-sm font-semibold bg-purple-100 text-purple-700 rounded-full">
+              <span className="px-3 py-1 text-sm font-semibold bg-primary/10 text-primary border border-primary/20 rounded-full transition-colors">
                 {ambiente.itens?.length || 0} itens
               </span>
               <span
@@ -272,7 +274,7 @@ function SortableAmbienteCard({
             >
               <div className="p-5">
                 {/* Botões de Ação do Ambiente */}
-                <div className="flex gap-2 mb-4 pb-4 border-b border-gray-200">
+                <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-[var(--border-color)]">
                   <Button
                     size="sm"
                     variant="secondary"
@@ -297,11 +299,13 @@ function SortableAmbienteCard({
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      // Para grupos, coletar todos os ambientes do grupo
+                      // Para grupos, coletar todos os ambientes do grupo (completos)
                       if (ambiente.isGrupo && ambiente.ambientes) {
+                        const idsNoGrupo = ambiente.ambientes.map(a => a.id);
+                        const ambientesCompletos = ambientes.filter(a => idsNoGrupo.includes(a.id));
                         setDialogEditarAmbientes({
                           open: true,
-                          ambientes: ambiente.ambientes,
+                          ambientes: ambientesCompletos,
                         });
                       } else {
                         // Para ambiente individual, criar array com 1 elemento
@@ -316,7 +320,7 @@ function SortableAmbienteCard({
                   </Button>
                   <button
                     onClick={() => confirmarDelete("ambiente", ambiente.id)}
-                    className="px-4 py-2 text-sm font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border-2 border-red-200"
+                    className="px-4 py-2 text-sm font-semibold bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
                   >
                     🗑️ Deletar Ambiente
                   </button>
@@ -335,9 +339,9 @@ function SortableAmbienteCard({
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-center py-8 text-[var(--text-secondary)] bg-[var(--bg-primary)] rounded-lg border-2 border-dashed border-[var(--border-color)] transition-colors">
                     <p>📋 Nenhum item cadastrado neste ambiente</p>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm mt-1 opacity-70">
                       Clique em "Adicionar Item" para começar
                     </p>
                   </div>
@@ -864,8 +868,8 @@ export default function GerenciarAmbientes() {
         className={`mb-3 ${nivel > 0 ? "ml-8" : ""}`}
       >
         <div
-          className={`bg-white border-2 ${
-            nivel === 0 ? "border-gray-200" : "border-gray-300"
+          className={`bg-[var(--bg-secondary)] border-2 transition-all duration-300 ${
+            nivel === 0 ? "border-[var(--border-color)]" : "border-[var(--border-color)] opacity-90"
           } rounded-lg p-4 shadow-sm`}
         >
           <div className="flex items-start gap-3">
@@ -873,29 +877,29 @@ export default function GerenciarAmbientes() {
 
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <h4 className="text-lg font-semibold text-gray-900">
+                <h4 className="text-lg font-bold text-[var(--text-primary)] transition-colors">
                   {item.nome}
                 </h4>
                 <span
-                  className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                  className={`px-2 py-0.5 text-xs font-semibold rounded border transition-colors ${
                     item.ativo
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-600"
+                      ? "bg-green-500/10 text-green-500 border-green-500/20"
+                      : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
                   }`}
                 >
                   {item.ativo ? "Ativo" : "Inativo"}
                 </span>
               </div>
 
-              <div className="bg-gray-50 border border-gray-200 rounded p-3 mb-3">
-                <p className="text-xs font-semibold text-gray-600 mb-1">
+              <div className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded p-3 mb-3 transition-colors">
+                <p className="text-xs font-bold text-[var(--text-secondary)] opacity-60 mb-1">
                   PROMPT:
                 </p>
-                <p className="text-sm text-gray-700 font-mono">{item.prompt}</p>
+                <p className="text-sm text-[var(--text-primary)] font-mono break-words">{item.prompt}</p>
               </div>
 
               <div className="flex gap-2">
-                <button
+                 <button
                   onClick={() =>
                     abrirDialog(
                       "subitem",
@@ -905,14 +909,14 @@ export default function GerenciarAmbientes() {
                       item.id
                     )
                   }
-                  className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                  className="px-3 py-1.5 text-sm bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded hover:bg-blue-500 hover:text-white transition-all shadow-sm"
                   title="Adicionar sub-item"
                 >
                   ➕ Sub-item
                 </button>
                 <button
                   onClick={() => abrirDialog("item", "edit", item, ambienteId)}
-                  className="px-3 py-1.5 text-sm bg-amber-50 text-amber-600 rounded hover:bg-amber-100 transition-colors"
+                  className="px-3 py-1.5 text-sm bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded hover:bg-amber-500 hover:text-white transition-all shadow-sm"
                   title="Editar"
                 >
                   ✏️ Editar
@@ -928,7 +932,7 @@ export default function GerenciarAmbientes() {
                         handleDelete("item", item.id, ambienteId),
                     });
                   }}
-                  className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                  className="px-3 py-1.5 text-sm bg-red-500/10 text-red-500 border border-red-500/20 rounded hover:bg-red-500 hover:text-white transition-all shadow-sm"
                   title="Deletar"
                 >
                   🗑️ Deletar
@@ -954,15 +958,15 @@ export default function GerenciarAmbientes() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">
+            <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">
               🏠 Gerenciar Ambientes
             </h2>
-            <p className="text-gray-600 mt-1">
+            <p className="text-[var(--text-secondary)] opacity-70 mt-1">
               Configure ambientes, itens e prompts para análise de laudos
             </p>
-            <p className="text-sm text-purple-600 mt-1">
+            <p className="text-sm text-primary font-medium mt-1">
               ↕️ Arraste os blocos para reorganizar
             </p>
           </div>
@@ -976,13 +980,13 @@ export default function GerenciarAmbientes() {
 
         {/* Lista de Ambientes */}
         {loading ? (
-          <div className="text-center py-12">
+          <div className="text-center py-24 transition-colors">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <p className="mt-4 text-gray-600">Carregando ambientes...</p>
+            <p className="mt-4 text-[var(--text-secondary)] font-medium">Carregando ambientes...</p>
           </div>
         ) : ambientes.length === 0 ? (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
-            <p className="text-blue-800">
+          <div className="bg-blue-500/10 border-2 border-blue-500/20 rounded-xl p-8 text-center transition-colors">
+            <p className="text-blue-500 font-medium">
               ℹ️ Nenhum ambiente cadastrado. Clique em "Novo Ambiente" para
               começar.
             </p>
@@ -1011,6 +1015,7 @@ export default function GerenciarAmbientes() {
                     renderItem={renderItem}
                     setDialogGrupo={setDialogGrupo}
                     setDialogEditarAmbientes={setDialogEditarAmbientes}
+                    ambientes={ambientes}
                   />
                 ))}
               </div>
@@ -1019,8 +1024,8 @@ export default function GerenciarAmbientes() {
             {/* Indicador de carregamento de mais items */}
             {loadingMore && (
               <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                <p className="mt-2 text-gray-600">Carregando mais...</p>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="mt-2 text-[var(--text-secondary)]">Carregando mais...</p>
               </div>
             )}
 
@@ -1029,7 +1034,7 @@ export default function GerenciarAmbientes() {
 
             {/* Mensagem de fim */}
             {!hasMore && ambientes.length > 0 && (
-              <div className="text-center py-6 text-gray-500">
+              <div className="text-center py-6 text-[var(--text-secondary)] opacity-50">
                 <p>✓ Todos os ambientes foram carregados</p>
               </div>
             )}
@@ -1047,7 +1052,7 @@ export default function GerenciarAmbientes() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={fecharDialog}
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
             />
 
             {/* Modal */}
@@ -1057,10 +1062,10 @@ export default function GerenciarAmbientes() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+             <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)] transition-all">
                 {/* Header */}
-                <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-2xl font-bold text-gray-900">
+                <div className="p-6 border-b border-[var(--border-color)]">
+                  <h3 className="text-2xl font-bold text-[var(--text-primary)]">
                     {dialog.mode === "create" ? "➕ Criar" : "✏️ Editar"}{" "}
                     {dialog.type === "ambiente"
                       ? "Ambiente"
@@ -1071,9 +1076,9 @@ export default function GerenciarAmbientes() {
                 </div>
 
                 {/* Formulário */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
                       Nome *
                     </label>
                     <input
@@ -1082,7 +1087,7 @@ export default function GerenciarAmbientes() {
                       onChange={(e) =>
                         setFormData({ ...formData, nome: e.target.value })
                       }
-                      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                      className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all placeholder:opacity-50"
                       required
                       autoFocus
                       placeholder="Digite o nome..."
@@ -1091,8 +1096,8 @@ export default function GerenciarAmbientes() {
 
                   {dialog.type === "ambiente" && (
                     <>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                       <div>
+                        <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
                           Descrição
                         </label>
                         <textarea
@@ -1103,7 +1108,7 @@ export default function GerenciarAmbientes() {
                               descricao: e.target.value,
                             })
                           }
-                          className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+                          className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none resize-none transition-all placeholder:opacity-50"
                           rows={3}
                           placeholder="Descrição opcional..."
                         />
@@ -1112,8 +1117,8 @@ export default function GerenciarAmbientes() {
                   )}
 
                   {(dialog.type === "item" || dialog.type === "subitem") && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                     <div>
+                      <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
                         Prompt de IA *
                       </label>
                       <textarea
@@ -1121,18 +1126,18 @@ export default function GerenciarAmbientes() {
                         onChange={(e) =>
                           setFormData({ ...formData, prompt: e.target.value })
                         }
-                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none font-mono text-sm"
+                        className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none resize-none font-mono text-sm transition-all placeholder:opacity-50"
                         rows={5}
                         required
                         placeholder="Digite o prompt para análise deste item..."
                       />
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-[var(--text-secondary)] opacity-60 mt-1">
                         Este prompt será usado pela IA para analisar este item
                       </p>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                   <div className="flex items-center gap-3 p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg transition-colors">
                     <input
                       type="checkbox"
                       id="ativo"
@@ -1140,11 +1145,11 @@ export default function GerenciarAmbientes() {
                       onChange={(e) =>
                         setFormData({ ...formData, ativo: e.target.checked })
                       }
-                      className="w-5 h-5 text-primary rounded border-gray-300 focus:ring-2 focus:ring-primary"
+                      className="w-5 h-5 text-primary rounded border-[var(--border-color)] focus:ring-2 focus:ring-primary"
                     />
                     <label
                       htmlFor="ativo"
-                      className="text-sm font-semibold text-gray-700 cursor-pointer"
+                      className="text-sm font-bold text-[var(--text-primary)] cursor-pointer"
                     >
                       Ativo
                     </label>
@@ -1152,20 +1157,20 @@ export default function GerenciarAmbientes() {
 
                   {/* Botões */}
                   <div className="flex gap-3 pt-4">
-                    <button
+                     <button
                       type="button"
                       onClick={fecharDialog}
-                      className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition-colors"
+                      className="flex-1 px-6 py-3 text-[var(--text-primary)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg font-bold transition-all"
                     >
                       Cancelar
                     </button>
-                    <button
+                     <button
                       type="submit"
                       disabled={
                         !formData.nome ||
                         (dialog.type !== "ambiente" && !formData.prompt)
                       }
-                      className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                       {dialog.mode === "create" ? "Criar" : "Salvar"}
                     </button>
@@ -1202,22 +1207,22 @@ export default function GerenciarAmbientes() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+               <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-md w-full border border-[var(--border-color)] transition-all overflow-hidden">
                 {/* Header */}
-                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
-                  <h3 className="text-2xl font-bold text-purple-900">
+                <div className="p-6 border-b border-[var(--border-color)] bg-gradient-to-r from-primary/10 to-primary/20">
+                  <h3 className="text-2xl font-bold text-primary">
                     ➕ Agrupar Ambientes
                   </h3>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <p className="text-sm text-primary opacity-80 mt-1">
                     Selecione os ambientes que devem compartilhar a mesma
                     configuração
                   </p>
                 </div>
 
                 {/* Conteúdo */}
-                <div className="p-6">
-                  <div className="mb-4 p-3 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
+                 <div className="p-6">
+                  <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <p className="text-sm text-blue-500">
                       💡 <strong>Como funciona:</strong> Digite o nome de um
                       ambiente existente para agrupar, ou digite um novo nome
                       para criar e agrupar automaticamente.
@@ -1225,11 +1230,11 @@ export default function GerenciarAmbientes() {
                   </div>
 
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                     <div>
+                      <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
                         Nome do ambiente:
                       </label>
-                      <input
+                       <input
                         type="text"
                         value={dialogGrupo.inputAmbiente || ""}
                         onChange={(e) =>
@@ -1239,7 +1244,7 @@ export default function GerenciarAmbientes() {
                           })
                         }
                         placeholder="Digite ou selecione um ambiente..."
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none text-lg"
+                        className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none text-lg transition-all"
                         autoFocus
                       />
                     </div>
@@ -1278,7 +1283,7 @@ export default function GerenciarAmbientes() {
                                 );
                             })
                             .map((ambiente) => (
-                              <button
+                               <button
                                 key={ambiente.id}
                                 onClick={() =>
                                   setDialogGrupo({
@@ -1286,11 +1291,11 @@ export default function GerenciarAmbientes() {
                                     inputAmbiente: ambiente.nome,
                                   })
                                 }
-                                className="w-full flex items-center gap-3 p-3 hover:bg-purple-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                                className="w-full flex items-center gap-3 p-3 hover:bg-primary/10 transition-colors text-left border-b border-[var(--border-color)] last:border-0"
                               >
                                 <span className="text-2xl">📁</span>
                                 <div className="flex-1">
-                                  <p className="font-semibold text-gray-900">
+                                  <p className="font-bold text-[var(--text-primary)]">
                                     {ambiente.nome}
                                   </p>
                                   <div className="flex gap-1 mt-1">
@@ -1348,7 +1353,7 @@ export default function GerenciarAmbientes() {
                   </div>
 
                   {/* Botões */}
-                  <div className="flex gap-3 mt-6">
+                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={() =>
                         setDialogGrupo({
@@ -1356,14 +1361,14 @@ export default function GerenciarAmbientes() {
                           inputAmbiente: "",
                         })
                       }
-                      className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition-colors"
+                      className="flex-1 px-6 py-3 text-[var(--text-primary)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg font-bold transition-all"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={handleAgruparAmbientes}
                       disabled={!dialogGrupo.inputAmbiente?.trim()}
-                      className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Agrupar
                     </button>
@@ -1397,21 +1402,21 @@ export default function GerenciarAmbientes() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+               <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)] transition-all">
                 {/* Header */}
-                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-purple-600">
+                <div className="p-6 border-b border-[var(--border-color)] bg-primary transition-colors">
                   <h3 className="text-2xl font-bold text-white flex items-center gap-3">
                     ✏️ Editar Ambientes Cadastrados
                   </h3>
-                  <p className="text-purple-100 mt-1">
+                  <p className="text-white/80 mt-1">
                     Renomeie ou remova os ambientes abaixo
                   </p>
                 </div>
 
                 {/* Lista de Ambientes */}
                 <div className="p-6 space-y-3">
-                  {dialogEditarAmbientes.ambientes.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                   {dialogEditarAmbientes.ambientes.length === 0 ? (
+                    <div className="text-center py-12 text-[var(--text-secondary)] opacity-50">
                       <p className="text-lg">📭 Nenhum ambiente para editar</p>
                     </div>
                   ) : (
@@ -1420,27 +1425,27 @@ export default function GerenciarAmbientes() {
                         key={ambiente.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-2 border-purple-200 rounded-lg p-4"
+                        className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg p-4 transition-colors hover:border-primary/50"
                       >
                         <div className="flex items-center justify-between gap-4">
                           {/* Info do Ambiente */}
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-2xl">📁</span>
-                              <h4 className="text-lg font-bold text-gray-900">
+                              <h4 className="text-lg font-bold text-[var(--text-primary)] transition-colors">
                                 {ambiente.nome}
                               </h4>
                             </div>
                             {ambiente.descricao && (
-                              <p className="text-sm text-gray-600 mt-1 ml-8">
+                              <p className="text-sm text-[var(--text-secondary)] mt-1 ml-8 opacity-70">
                                 {ambiente.descricao}
                               </p>
                             )}
-                            <div className="flex gap-2 mt-2 ml-8">
+                            <div className="flex flex-wrap gap-2 mt-2 ml-8">
                               {ambiente.tiposUso?.map((tipo) => (
                                 <span
                                   key={tipo}
-                                  className="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded"
+                                  className="px-2 py-0.5 text-xs font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded transition-colors"
                                 >
                                   🏢 {tipo}
                                 </span>
@@ -1448,7 +1453,7 @@ export default function GerenciarAmbientes() {
                               {ambiente.tiposImovel?.map((tipo) => (
                                 <span
                                   key={tipo}
-                                  className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded"
+                                  className="px-2 py-0.5 text-xs font-semibold bg-green-500/10 text-green-500 border border-green-500/20 rounded transition-colors"
                                 >
                                   🏠 {tipo}
                                 </span>
@@ -1457,7 +1462,7 @@ export default function GerenciarAmbientes() {
                           </div>
 
                           {/* Botões de Ação */}
-                          <div className="flex gap-2">
+                           <div className="flex gap-2">
                             <button
                               onClick={() => {
                                 setDialogEditarAmbientes({
@@ -1466,7 +1471,7 @@ export default function GerenciarAmbientes() {
                                 });
                                 abrirDialog("ambiente", "edit", ambiente);
                               }}
-                              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                              className="px-4 py-2 bg-primary text-white rounded-lg font-bold transition-all shadow-md hover:bg-primary-dark flex items-center gap-2"
                               title="Renomear ambiente"
                             >
                               ✏️ Renomear
@@ -1483,7 +1488,7 @@ export default function GerenciarAmbientes() {
                                   confirmarDelete("ambiente", ambiente.id);
                                 }, 100);
                               }}
-                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                              className="px-4 py-2 bg-red-500 text-white rounded-lg font-bold transition-all shadow-md hover:bg-red-600 flex items-center gap-2"
                               title="Remover ambiente"
                             >
                               🗑️ Remover
@@ -1496,12 +1501,12 @@ export default function GerenciarAmbientes() {
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <div className="p-6 border-t border-[var(--border-color)] bg-[var(--bg-primary)] transition-colors">
                   <button
                     onClick={() =>
                       setDialogEditarAmbientes({ open: false, ambientes: [] })
                     }
-                    className="w-full px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors"
+                    className="w-full px-6 py-3 bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-lg font-bold transition-all"
                   >
                     Fechar
                   </button>
@@ -1532,9 +1537,9 @@ export default function GerenciarAmbientes() {
               transition={{ type: "spring", duration: 0.3 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+              <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-[var(--border-color)] transition-all">
                 {/* Header */}
-                <div className="p-6 bg-gradient-to-r from-red-500 to-red-600">
+                <div className="p-6 bg-red-500 border-b border-red-600 transition-colors">
                   <h3 className="text-2xl font-bold text-white flex items-center gap-3">
                     {dialogConfirm.title}
                   </h3>
@@ -1542,13 +1547,13 @@ export default function GerenciarAmbientes() {
 
                 {/* Conteúdo */}
                 <div className="p-6">
-                  <p className="text-gray-700 text-lg leading-relaxed">
+                  <p className="text-[var(--text-primary)] text-lg leading-relaxed font-medium transition-colors">
                     {dialogConfirm.message}
                   </p>
                 </div>
 
-                {/* Botões */}
-                <div className="p-6 bg-gray-50 flex gap-3">
+                 {/* Botões */}
+                <div className="p-6 bg-[var(--bg-primary)] border-t border-[var(--border-color)] flex gap-3 transition-colors">
                   <button
                     onClick={() =>
                       setDialogConfirm({
@@ -1558,13 +1563,13 @@ export default function GerenciarAmbientes() {
                         onConfirm: () => {},
                       })
                     }
-                    className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-all"
+                    className="flex-1 px-6 py-3 bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-lg font-bold transition-all"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={dialogConfirm.onConfirm}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                    className="flex-1 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold transition-all shadow-md"
                   >
                     Confirmar
                   </button>

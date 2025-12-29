@@ -3,18 +3,50 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-primary: #f9fafb;
+    --bg-secondary: #ffffff;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --border-color: #e5e7eb;
+    --accent-color: #A156E1;
+    --accent-dark: #5C2896;
+    --card-bg: #ffffff;
+    --header-bg: rgba(255, 255, 255, 0.8);
+  }
+
+  .dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+    --accent-color: #A156E1;
+    --accent-dark: #5C2896;
+    --card-bg: #1e293b;
+    --header-bg: rgba(15, 23, 42, 0.8);
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    @apply antialiased;
   }
 }
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(135deg, #A156E1 0%, #5C2896 100%);
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-dark) 100%);
   }
 
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #A156E1 0%, #5C2896 100%);
+    background-image: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-dark) 100%);
+  }
+
+  .bg-glass {
+    @apply backdrop-blur-md;
+    background-color: var(--header-bg);
   }
 }

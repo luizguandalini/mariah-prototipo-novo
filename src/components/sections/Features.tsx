@@ -35,7 +35,7 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="sobre" className="py-12 md:py-20 bg-gradient-to-br from-gray-50 to-purple-50">
+    <section id="sobre" className="py-12 md:py-20 bg-[var(--bg-primary)] transition-colors duration-300">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -43,10 +43,10 @@ export default function Features() {
           viewport={{ once: true }}
           className="text-center mb-10 md:mb-16"
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 text-[var(--text-primary)]">
             Por que escolher a <span className="gradient-text">Mariah</span>?
           </h2>
-          <p className="text-base md:text-xl text-gray-600 max-w-2xl mx-auto px-4">
+          <p className="text-base md:text-xl text-[var(--text-secondary)] max-w-2xl mx-auto px-4">
             Tecnologia de ponta aliada à experiência do mercado imobiliário.
             Conheça os diferenciais que fazem a diferença.
           </p>
@@ -61,11 +61,11 @@ export default function Features() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -5 }}
-              className="bg-white rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl transition-all"
+              className="bg-[var(--bg-secondary)] rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl border border-[var(--border-color)] transition-all"
             >
               <div className="text-4xl md:text-5xl mb-3 md:mb-4">{feature.icon}</div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-gray-900">{feature.title}</h3>
-              <p className="text-sm md:text-base text-gray-600">{feature.description}</p>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-[var(--text-primary)]">{feature.title}</h3>
+              <p className="text-sm md:text-base text-[var(--text-secondary)]">{feature.description}</p>
             </motion.div>
           ))}
         </div>

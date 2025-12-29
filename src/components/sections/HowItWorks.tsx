@@ -29,7 +29,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="como-funciona" className="py-12 md:py-20 bg-white">
+    <section id="como-funciona" className="py-12 md:py-20 bg-[var(--bg-secondary)] transition-colors duration-300">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -37,10 +37,10 @@ export default function HowItWorks() {
           viewport={{ once: true }}
           className="text-center mb-10 md:mb-16"
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 text-[var(--text-primary)]">
             Como <span className="gradient-text">Funciona</span>
           </h2>
-          <p className="text-base md:text-xl text-gray-600 max-w-2xl mx-auto px-4">
+          <p className="text-base md:text-xl text-[var(--text-secondary)] max-w-2xl mx-auto px-4">
             Gerar laudos imobiliários nunca foi tão simples. Veja como a Mariah
             transforma suas fotos em relatórios profissionais.
           </p>
@@ -61,11 +61,11 @@ export default function HowItWorks() {
                 <div className="hidden lg:block absolute top-12 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary to-primary-dark opacity-20"></div>
               )}
 
-              <div className="relative bg-gradient-to-br from-purple-50 to-white rounded-2xl p-5 md:p-6 h-full border border-purple-100 hover:shadow-lg transition-shadow">
+              <div className="relative bg-[var(--bg-primary)] rounded-2xl p-5 md:p-6 h-full border border-[var(--border-color)] hover:shadow-lg transition-all duration-300">
                 <div className="text-4xl md:text-5xl mb-3 md:mb-4">{step.icon}</div>
-                <div className="text-3xl md:text-5xl font-bold text-primary/20 mb-2">{step.number}</div>
-                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-gray-900">{step.title}</h3>
-                <p className="text-sm md:text-base text-gray-600">{step.description}</p>
+                <div className="text-3xl md:text-5xl font-bold text-primary/10 mb-2">{step.number}</div>
+                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-[var(--text-primary)]">{step.title}</h3>
+                <p className="text-sm md:text-base text-[var(--text-secondary)]">{step.description}</p>
               </div>
             </motion.div>
           ))}

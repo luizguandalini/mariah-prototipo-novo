@@ -58,16 +58,16 @@ export default function Step4Revisao({ onSubmit, onBack, laudoData }: Step4Props
             <span className="text-gray-600">Tipo:</span> <strong>{laudoData.vistoriaInfo?.tipo || 'N/A'}</strong>
           </div>
           <div>
-            <span className="text-gray-600">Uso:</span> <strong>{laudoData.vistoriaInfo?.uso || 'N/A'}</strong>
+            <span className="text-[var(--text-secondary)]">Uso:</span> <strong className="text-[var(--text-primary)]">{laudoData.vistoriaInfo?.uso || 'N/A'}</strong>
           </div>
           <div className="col-span-2">
-            <span className="text-gray-600">Endereço:</span> <strong>{laudoData.vistoriaInfo?.endereco || 'N/A'}</strong>
+            <span className="text-[var(--text-secondary)]">Endereço:</span> <strong className="text-[var(--text-primary)]">{laudoData.vistoriaInfo?.endereco || 'N/A'}</strong>
           </div>
           <div>
-            <span className="text-gray-600">Ambientes:</span> <strong>{laudoData.ambientes?.length || 0}</strong>
+            <span className="text-[var(--text-secondary)]">Ambientes:</span> <strong className="text-[var(--text-primary)]">{laudoData.ambientes?.length || 0}</strong>
           </div>
           <div>
-            <span className="text-gray-600">Data:</span> <strong>{laudoData.vistoriaInfo?.realizadaEm || 'N/A'}</strong>
+            <span className="text-[var(--text-secondary)]">Data:</span> <strong className="text-[var(--text-primary)]">{laudoData.vistoriaInfo?.realizadaEm || 'N/A'}</strong>
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@ export default function Step4Revisao({ onSubmit, onBack, laudoData }: Step4Props
                 onChange={() => handleChecklistToggle(item)}
                 className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
               />
-              <span className="text-sm text-gray-700">{item}</span>
+              <span className="text-sm text-[var(--text-secondary)]">{item}</span>
             </label>
           ))}
         </div>
@@ -95,52 +95,52 @@ export default function Step4Revisao({ onSubmit, onBack, laudoData }: Step4Props
 
       {/* Confirmações */}
       <div className="mb-6 space-y-3">
-        <h4 className="font-bold text-gray-900 mb-2">⚠️ Confirmações Necessárias</h4>
-        <label className="flex items-start gap-3 cursor-pointer p-3 border-2 border-gray-200 rounded-lg hover:border-primary transition-colors">
+        <h4 className="font-bold text-[var(--text-primary)] mb-2">⚠️ Confirmações Necessárias</h4>
+        <label className="flex items-start gap-3 cursor-pointer p-3 border-2 border-[var(--border-color)] rounded-lg hover:border-primary transition-colors bg-[var(--bg-primary)]">
           <input
             type="checkbox"
             checked={confirmacoes.dadosCorretos}
             onChange={(e) => setConfirmacoes({ ...confirmacoes, dadosCorretos: e.target.checked })}
             className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary mt-0.5"
           />
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-[var(--text-secondary)]">
             Confirmo que todas as <strong>informações da vistoria</strong> estão corretas
           </span>
         </label>
-        <label className="flex items-start gap-3 cursor-pointer p-3 border-2 border-gray-200 rounded-lg hover:border-primary transition-colors">
+        <label className="flex items-start gap-3 cursor-pointer p-3 border-2 border-[var(--border-color)] rounded-lg hover:border-primary transition-colors bg-[var(--bg-primary)]">
           <input
             type="checkbox"
             checked={confirmacoes.ambientesCorretos}
             onChange={(e) => setConfirmacoes({ ...confirmacoes, ambientesCorretos: e.target.checked })}
             className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary mt-0.5"
           />
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-[var(--text-secondary)]">
             Confirmo que todos os <strong>ambientes</strong> foram adicionados corretamente
           </span>
         </label>
-        <label className="flex items-start gap-3 cursor-pointer p-3 border-2 border-gray-200 rounded-lg hover:border-primary transition-colors">
+        <label className="flex items-start gap-3 cursor-pointer p-3 border-2 border-[var(--border-color)] rounded-lg hover:border-primary transition-colors bg-[var(--bg-primary)]">
           <input
             type="checkbox"
             checked={confirmacoes.imagensCorretas}
             onChange={(e) => setConfirmacoes({ ...confirmacoes, imagensCorretas: e.target.checked })}
             className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary mt-0.5"
           />
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-[var(--text-secondary)]">
             Confirmo que todas as <strong>imagens</strong> foram enviadas e estão corretas
           </span>
         </label>
       </div>
 
       {/* Aviso */}
-      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 mb-6">
-        <p className="text-sm text-yellow-800">
+      <div className="bg-yellow-500/10 border-2 border-yellow-500/20 rounded-lg p-4 mb-6">
+        <p className="text-sm text-yellow-500">
           <strong>⏱️ Estimativa de processamento:</strong> Após finalizar, seu laudo entrará na fila de processamento.
           Você receberá uma notificação por email quando estiver pronto (estimativa: 10-30 minutos).
         </p>
       </div>
 
       {/* Buttons */}
-      <div className="flex justify-between pt-6 border-t border-gray-200">
+      <div className="flex justify-between pt-6 border-t border-[var(--border-color)]">
         <Button variant="outline" size="lg" onClick={onBack}>
           ← Voltar
         </Button>

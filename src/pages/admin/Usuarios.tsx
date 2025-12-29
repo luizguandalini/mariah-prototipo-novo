@@ -109,9 +109,9 @@ export default function Usuarios() {
 
   const getRoleBadge = (role: string) => {
     const colors: Record<string, string> = {
-      DEV: "bg-purple-100 text-purple-800",
-      ADMIN: "bg-blue-100 text-blue-800",
-      USUARIO: "bg-gray-100 text-gray-800",
+      DEV: "bg-purple-200 text-purple-900 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-300 dark:border-purple-700 font-bold",
+      ADMIN: "bg-blue-200 text-blue-900 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-300 dark:border-blue-700 font-bold",
+      USUARIO: "bg-gray-200 text-gray-900 dark:bg-gray-700/50 dark:text-gray-300 border border-gray-300 dark:border-gray-600",
     };
     return colors[role] || colors.USUARIO;
   };
@@ -154,11 +154,11 @@ export default function Usuarios() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">
             Gerenciar Usuários
           </h2>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-[var(--text-secondary)]">
               Total: <span className="font-semibold">{total}</span> usuários
             </div>
             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
@@ -168,10 +168,10 @@ export default function Usuarios() {
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 transition-colors duration-300">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 🔍 Buscar
               </label>
               <input
@@ -179,18 +179,18 @@ export default function Usuarios() {
                 placeholder="Nome ou email..."
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 👤 Role
               </label>
               <select
                 value={roleFilter}
                 onChange={(e) => handleRoleFilterChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               >
                 <option value="">Todos</option>
                 <option value="DEV">DEV</option>
@@ -200,13 +200,13 @@ export default function Usuarios() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
                 ✅ Status
               </label>
               <select
                 value={ativoFilter === undefined ? "" : ativoFilter.toString()}
                 onChange={(e) => handleAtivoFilterChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               >
                 <option value="">Todos</option>
                 <option value="true">Ativos</option>
@@ -232,80 +232,80 @@ export default function Usuarios() {
         </div>
 
         {/* Tabela */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] overflow-hidden transition-colors duration-300">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-[var(--text-secondary)]">
               Carregando usuários...
             </div>
           ) : usuarios.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-[var(--text-secondary)]">
               Nenhum usuário encontrado
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-[var(--bg-primary)] border-b border-[var(--border-color)]">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">
                       Usuário
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">
                       Email
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">
                       Role
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">
                       Imagens
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">
                       Ações
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-[var(--border-color)]">
                   {usuarios.map((user) => (
                     <motion.tr
                       key={user.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="hover:bg-gray-50"
+                      className="hover:bg-[var(--bg-primary)] transition-colors"
                     >
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 text-sm font-medium text-[var(--text-primary)]">
                         {user.nome}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">
                         {user.email}
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadge(
+                          className={`px-2 py-1 text-xs font-semibold rounded-full shadow-sm ${getRoleBadge(
                             user.role
                           )}`}
                         >
                           {user.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm">
                         {user.role === "DEV" || user.role === "ADMIN" ? (
-                          <span className="text-green-600 font-semibold">
+                          <span className="text-green-500 font-semibold italic">
                             ∞ Ilimitado
                           </span>
                         ) : (
-                          <span className="font-semibold">
+                          <span className="font-semibold text-[var(--text-primary)]">
                             {user.quantidadeImagens}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          className={`px-2 py-1 text-xs font-semibold rounded-full shadow-sm ${
                             user.ativo
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
+                              ? "bg-green-200 text-green-900 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700 font-bold"
+                              : "bg-red-200 text-red-900 dark:bg-red-900/40 dark:text-red-300 border border-red-300 dark:border-red-700"
                           }`}
                         >
                           {user.ativo ? "Ativo" : "Inativo"}
@@ -334,8 +334,8 @@ export default function Usuarios() {
 
         {/* Paginação */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-4">
-            <div className="text-sm text-gray-600">
+          <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] px-6 py-4 transition-colors">
+            <div className="text-sm text-[var(--text-secondary)]">
               Página {page} de {totalPages}
             </div>
             <div className="flex gap-2">
@@ -361,19 +361,19 @@ export default function Usuarios() {
 
         {/* Modal Editar Imagens */}
         {showEditModal && editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
+              className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-2xl p-6 max-w-md w-full transition-colors duration-300"
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
+              <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4">
                 📊 Gerenciar Imagens - {editingUser.nome}
               </h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Quantidade Atual de Imagens
                   </label>
                   <input
@@ -382,7 +382,7 @@ export default function Usuarios() {
                     onChange={(e) =>
                       setQuantidadeImagens(Number(e.target.value))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary outline-none"
                     min="0"
                   />
                 </div>
@@ -392,6 +392,7 @@ export default function Usuarios() {
                     variant="outline"
                     size="sm"
                     onClick={() => setQuantidadeImagens((q) => q + 10)}
+                    className="flex-1"
                   >
                     +10
                   </Button>
@@ -399,6 +400,7 @@ export default function Usuarios() {
                     variant="outline"
                     size="sm"
                     onClick={() => setQuantidadeImagens((q) => q + 50)}
+                    className="flex-1"
                   >
                     +50
                   </Button>
@@ -406,6 +408,7 @@ export default function Usuarios() {
                     variant="outline"
                     size="sm"
                     onClick={() => setQuantidadeImagens((q) => q + 100)}
+                    className="flex-1"
                   >
                     +100
                   </Button>
@@ -434,19 +437,19 @@ export default function Usuarios() {
 
         {/* Modal Criar Usuário */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
+              className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-2xl p-6 max-w-md w-full transition-colors duration-300"
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
+              <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4">
                 ➕ Criar Novo Usuário
               </h3>
 
-              <div className="space-y-4">
+              <form onSubmit={(e) => { e.preventDefault(); handleCriarUsuario(); }} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Nome Completo
                   </label>
                   <input
@@ -455,13 +458,14 @@ export default function Usuarios() {
                     onChange={(e) =>
                       setNovoUsuario({ ...novoUsuario, nome: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all"
                     placeholder="João Silva"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Email
                   </label>
                   <input
@@ -470,13 +474,14 @@ export default function Usuarios() {
                     onChange={(e) =>
                       setNovoUsuario({ ...novoUsuario, email: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all"
                     placeholder="joao@example.com"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Senha
                   </label>
                   <input
@@ -485,13 +490,15 @@ export default function Usuarios() {
                     onChange={(e) =>
                       setNovoUsuario({ ...novoUsuario, senha: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all"
                     placeholder="Mínimo 6 caracteres"
+                    required
+                    minLength={6}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Nível de Acesso
                   </label>
                   <select
@@ -502,7 +509,7 @@ export default function Usuarios() {
                         role: e.target.value as any,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all"
                   >
                     <option value="USUARIO">USUARIO</option>
                     <option value="ADMIN">ADMIN</option>
@@ -511,13 +518,15 @@ export default function Usuarios() {
 
                 <div className="flex gap-2 pt-4">
                   <Button
+                    type="submit"
                     variant="primary"
-                    onClick={handleCriarUsuario}
                     className="flex-1"
+                    disabled={loading}
                   >
-                    ✅ Criar Usuário
+                    {loading ? "Criando..." : "✅ Criar Usuário"}
                   </Button>
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={() => {
                       setShowCreateModal(false);
@@ -533,7 +542,7 @@ export default function Usuarios() {
                     ❌ Cancelar
                   </Button>
                 </div>
-              </div>
+              </form>
             </motion.div>
           </div>
         )}

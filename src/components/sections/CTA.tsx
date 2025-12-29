@@ -25,7 +25,11 @@ export default function CTA() {
             Escolha o plano ideal para você e comece hoje mesmo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="secondary" size="lg">
+            <Button 
+                variant="outline" 
+                size="lg" 
+                className="bg-white text-primary border-white hover:bg-white/90 hover:text-primary-dark"
+            >
               Assinar Agora
             </Button>
           </div>

@@ -57,7 +57,7 @@ const plans = [
 
 export default function Pricing() {
   return (
-    <section id="planos" className="py-12 md:py-20 bg-white">
+    <section id="planos" className="py-12 md:py-20 bg-[var(--bg-secondary)] transition-colors duration-300">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -65,10 +65,10 @@ export default function Pricing() {
           viewport={{ once: true }}
           className="text-center mb-10 md:mb-16"
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 text-[var(--text-primary)]">
             Planos e <span className="gradient-text">Preços</span>
           </h2>
-          <p className="text-base md:text-xl text-gray-600 max-w-2xl mx-auto px-4">
+          <p className="text-base md:text-xl text-[var(--text-secondary)] max-w-2xl mx-auto px-4">
             Escolha o plano ideal para seu negócio. Todos com 7 dias de garantia.
           </p>
         </motion.div>
@@ -81,33 +81,33 @@ export default function Pricing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className={`relative rounded-2xl p-6 md:p-8 ${
+              className={`relative rounded-2xl p-6 md:p-8 transition-all duration-300 ${
                 plan.highlighted
-                  ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-2xl md:scale-105'
-                  : 'bg-white border-2 border-gray-200'
+                  ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-2xl md:scale-105 border-none'
+                  : 'bg-[var(--bg-primary)] border border-[var(--border-color)]'
               }`}
             >
               {plan.highlighted && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-bold">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-bold shadow-md">
                   Mais Popular
                 </div>
               )}
 
               <div className="mb-4 md:mb-6">
-                <h3 className={`text-xl md:text-2xl font-bold mb-2 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`text-xl md:text-2xl font-bold mb-2 ${plan.highlighted ? 'text-white' : 'text-[var(--text-primary)]'}`}>
                   {plan.name}
                 </h3>
-                <p className={`text-xs md:text-sm ${plan.highlighted ? 'text-purple-100' : 'text-gray-600'}`}>
+                <p className={`text-xs md:text-sm ${plan.highlighted ? 'text-purple-100' : 'text-[var(--text-secondary)]'}`}>
                   {plan.description}
                 </p>
               </div>
 
               <div className="mb-4 md:mb-6">
                 <div className="flex items-baseline">
-                  <span className={`text-4xl md:text-5xl font-bold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
+                  <span className={`text-4xl md:text-5xl font-bold ${plan.highlighted ? 'text-white' : 'text-[var(--text-primary)]'}`}>
                     {plan.price}
                   </span>
-                  <span className={`ml-2 text-sm md:text-base ${plan.highlighted ? 'text-purple-100' : 'text-gray-600'}`}>
+                  <span className={`ml-2 text-sm md:text-base ${plan.highlighted ? 'text-purple-100' : 'text-[var(--text-secondary)]'}`}>
                     {plan.period}
                   </span>
                 </div>
@@ -129,7 +129,7 @@ export default function Pricing() {
                         clipRule="evenodd"
                       />
                     </svg>
-                    <span className={`text-sm md:text-base ${plan.highlighted ? 'text-purple-50' : 'text-gray-600'}`}>
+                    <span className={`text-sm md:text-base ${plan.highlighted ? 'text-purple-50' : 'text-[var(--text-secondary)]'}`}>
                       {feature}
                     </span>
                   </li>
@@ -137,9 +137,9 @@ export default function Pricing() {
               </ul>
 
               <Button
-                variant={plan.highlighted ? 'secondary' : 'primary'}
+                variant={plan.highlighted ? 'outline' : 'primary'}
                 size="lg"
-                className="w-full"
+                className={`w-full ${plan.highlighted ? 'bg-white text-primary border-white hover:bg-white/90' : ''}`}
               >
                 Começar Agora
               </Button>
@@ -154,43 +154,32 @@ export default function Pricing() {
           viewport={{ once: true }}
           className="max-w-4xl mx-auto"
         >
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 md:p-8 border border-purple-100">
-            <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-gray-900">
+          <div className="bg-[var(--bg-primary)] rounded-2xl p-6 md:p-8 border border-[var(--border-color)] transition-colors duration-300">
+            <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-[var(--text-primary)]">
               Precisa de créditos avulsos?
             </h3>
-            <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">
+            <p className="text-sm md:text-base text-[var(--text-secondary)] mb-4 md:mb-6">
               Compre créditos sob demanda sem compromisso mensal. Ideal para uso esporádico.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-              <div className="bg-white rounded-xl p-4 md:p-6 border border-purple-200">
-                <div className="text-2xl md:text-3xl font-bold text-primary mb-1 md:mb-2">R$ 5</div>
-                <div className="text-gray-600 text-xs md:text-sm mb-3 md:mb-4">por laudo</div>
-                <Button variant="outline" size="sm" className="w-full text-xs md:text-sm">
-                  Comprar 10 Créditos
-                </Button>
-              </div>
-
-              <div className="bg-white rounded-xl p-4 md:p-6 border-2 border-primary">
-                <div className="text-[10px] md:text-xs font-bold text-primary mb-1 md:mb-2">ECONOMIA DE 20%</div>
-                <div className="text-2xl md:text-3xl font-bold text-primary mb-1 md:mb-2">R$ 4</div>
-                <div className="text-gray-600 text-xs md:text-sm mb-3 md:mb-4">por laudo</div>
-                <Button variant="primary" size="sm" className="w-full text-xs md:text-sm">
-                  Comprar 50 Créditos
-                </Button>
-              </div>
-
-              <div className="bg-white rounded-xl p-4 md:p-6 border border-purple-200">
-                <div className="text-[10px] md:text-xs font-bold text-primary mb-1 md:mb-2">ECONOMIA DE 40%</div>
-                <div className="text-2xl md:text-3xl font-bold text-primary mb-1 md:mb-2">R$ 3</div>
-                <div className="text-gray-600 text-xs md:text-sm mb-3 md:mb-4">por laudo</div>
-                <Button variant="outline" size="sm" className="w-full text-xs md:text-sm">
-                  Comprar 100 Créditos
-                </Button>
-              </div>
+              {[
+                { label: 'ECONOMIA DE 0%', price: 'R$ 5', qty: '10' },
+                { label: 'ECONOMIA DE 20%', price: 'R$ 4', qty: '50', best: true },
+                { label: 'ECONOMIA DE 40%', price: 'R$ 3', qty: '100' }
+              ].map((item, idx) => (
+                <div key={idx} className={`bg-[var(--bg-secondary)] rounded-xl p-4 md:p-6 border ${item.best ? 'border-primary' : 'border-[var(--border-color)]'}`}>
+                  <div className={`text-[10px] md:text-xs font-bold text-primary mb-1 md:mb-2 ${item.label === 'ECONOMIA DE 0%' ? 'invisible' : ''}`}>{item.label}</div>
+                  <div className="text-2xl md:text-3xl font-bold text-primary mb-1 md:mb-2">{item.price}</div>
+                  <div className="text-[var(--text-secondary)] text-xs md:text-sm mb-3 md:mb-4">por laudo</div>
+                  <Button variant={item.best ? "primary" : "outline"} size="sm" className="w-full text-xs md:text-sm">
+                    Comprar {item.qty} Créditos
+                  </Button>
+                </div>
+              ))}
             </div>
 
-            <p className="text-xs text-gray-500 mt-4 text-center">
+            <p className="text-xs text-[var(--text-secondary)] mt-4 text-center">
               Créditos não expiram e podem ser usados a qualquer momento.
             </p>
           </div>

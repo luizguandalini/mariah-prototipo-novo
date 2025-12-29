@@ -57,8 +57,8 @@ export default function LaudoPreview() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-xl md:text-3xl font-bold text-gray-900">Preview do Laudo</h2>
-            <p className="text-sm md:text-base text-gray-600">Av. José Galante, 671 - Apto 161</p>
+            <h2 className="text-xl md:text-3xl font-bold text-[var(--text-primary)] transition-colors">Preview do Laudo</h2>
+            <p className="text-sm md:text-base text-[var(--text-secondary)]">Av. José Galante, 671 - Apto 161</p>
           </div>
           <div className="flex gap-2 md:gap-3">
             <Button variant="outline" size="sm" className="flex-1 sm:flex-none text-xs md:text-sm">✏️ Editar</Button>
@@ -135,7 +135,7 @@ export default function LaudoPreview() {
             <span className="sm:hidden">← Anterior</span>
           </Button>
 
-          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap">
+          <span className="text-xs md:text-sm text-[var(--text-secondary)] whitespace-nowrap">
             Página {currentPage + 1} de {totalPaginas}
           </span>
 

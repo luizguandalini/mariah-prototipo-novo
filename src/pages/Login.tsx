@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import Button from '../components/ui/Button'
 import { useAuth } from '../contexts/AuthContext'
+import ThemeToggle from '../components/ui/ThemeToggle'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -31,11 +32,15 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-4 transition-colors duration-300">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary-dark/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
       </div>
 
       <motion.div
@@ -46,32 +51,32 @@ export default function Login() {
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-6 md:mb-8">
           <div className="text-2xl md:text-3xl font-bold">
-            <span className="text-gray-900">MAR</span>
+            <span className="text-[var(--text-primary)]">MAR</span>
             <span className="gradient-text">i</span>
-            <span className="text-gray-900">AH</span>
+            <span className="text-[var(--text-primary)]">AH</span>
           </div>
         </Link>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 text-center">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-2xl p-6 md:p-8 transition-colors duration-300">
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-2 text-center">
             Bem-vindo de volta!
           </h1>
-          <p className="text-sm md:text-base text-gray-600 text-center mb-6 md:mb-8">
+          <p className="text-sm md:text-base text-[var(--text-secondary)] text-center mb-6 md:mb-8">
             Faça login para continuar gerando laudos incríveis
           </p>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 Email
               </label>
               <input
@@ -79,7 +84,7 @@ export default function Login() {
                 id="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+                className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary focus:outline-none transition-colors"
                 placeholder="seu@email.com"
                 required
                 disabled={isLoading}
@@ -87,7 +92,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 Senha
               </label>
               <input
@@ -95,7 +100,7 @@ export default function Login() {
                 id="password"
                 value={formData.senha}
                 onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+                className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary focus:outline-none transition-colors"
                 placeholder="••••••••"
                 required
                 minLength={6}
@@ -105,10 +110,10 @@ export default function Login() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center">
-                <input type="checkbox" className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
-                <span className="ml-2 text-sm text-gray-600">Lembrar de mim</span>
+                <input type="checkbox" className="w-4 h-4 text-primary border-gray-300 dark:border-gray-700 rounded focus:ring-primary" />
+                <span className="ml-2 text-sm text-[var(--text-secondary)] transition-colors">Lembrar de mim</span>
               </label>
-              <a href="#" className="text-sm text-primary hover:text-primary-dark">
+              <a href="#" className="text-sm text-primary hover:text-primary-dark transition-colors">
                 Esqueceu a senha?
               </a>
             </div>
@@ -124,16 +129,16 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-gray-600">
+          <p className="mt-6 text-center text-[var(--text-secondary)]">
             Não tem uma conta?{' '}
-            <Link to="/cadastro" className="text-primary font-semibold hover:text-primary-dark">
+            <Link to="/cadastro" className="text-primary font-semibold hover:text-primary-dark transition-colors">
               Cadastre-se grátis
             </Link>
           </p>
         </div>
 
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-gray-600 hover:text-gray-900 text-sm">
+        <div className="mt-6 text-center transition-colors">
+          <Link to="/" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm">
             ← Voltar para home
           </Link>
         </div>

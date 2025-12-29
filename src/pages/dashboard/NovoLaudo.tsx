@@ -52,7 +52,7 @@ export default function NovoLaudo() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-6"
+          className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-3 md:p-6 transition-all"
         >
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
@@ -62,14 +62,14 @@ export default function NovoLaudo() {
                     className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm md:text-xl font-bold transition-all ${
                       currentStep >= step.number
                         ? 'bg-primary text-white'
-                        : 'bg-gray-200 text-gray-500'
+                        : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border border-[var(--border-color)]'
                     }`}
                   >
                     {currentStep > step.number ? '✓' : step.icon}
                   </div>
                   <span
-                    className={`mt-1 md:mt-2 text-[10px] md:text-sm font-medium text-center ${
-                      currentStep >= step.number ? 'text-gray-900' : 'text-gray-500'
+                    className={`mt-1 md:mt-2 text-[10px] md:text-sm font-medium text-center transition-colors ${
+                      currentStep >= step.number ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] opacity-60'
                     }`}
                   >
                     <span className="hidden sm:inline">{step.title}</span>
@@ -79,7 +79,7 @@ export default function NovoLaudo() {
                 {index < steps.length - 1 && (
                   <div
                     className={`h-0.5 md:h-1 flex-1 mx-1 md:mx-4 rounded transition-all ${
-                      currentStep > step.number ? 'bg-primary' : 'bg-gray-200'
+                      currentStep > step.number ? 'bg-primary' : 'bg-[var(--border-color)]'
                     }`}
                   />
                 )}

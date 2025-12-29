@@ -30,9 +30,9 @@ export default function Step2Ambientes({ onNext, onBack, initialData = [] }: Ste
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">Ambientes do Imóvel</h3>
-      <p className="text-gray-600 mb-6">
+    <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 transition-all">
+      <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Ambientes do Imóvel</h3>
+      <p className="text-[var(--text-secondary)] mb-6">
         Adicione todos os ambientes que farão parte da vistoria
       </p>
 
@@ -43,7 +43,7 @@ export default function Step2Ambientes({ onNext, onBack, initialData = [] }: Ste
             type="text"
             value={novoAmbiente}
             onChange={(e) => setNovoAmbiente(e.target.value)}
-            className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+            className="flex-1 px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
             placeholder="Digite o nome do ambiente (ex: Sala, Cozinha, Quarto 1...)"
             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAmbiente())}
           />
@@ -60,14 +60,14 @@ export default function Step2Ambientes({ onNext, onBack, initialData = [] }: Ste
         {/* Lista de ambientes */}
         {ambientes.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-semibold text-gray-900">Ambientes Adicionados ({ambientes.length})</h4>
+             <h4 className="font-semibold text-[var(--text-primary)]">Ambientes Adicionados ({ambientes.length})</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {ambientes.map((ambiente, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between px-4 py-3 bg-purple-50 border-2 border-purple-200 rounded-lg"
+                  className="flex items-center justify-between px-4 py-3 bg-purple-500/10 border-2 border-purple-500/20 rounded-lg"
                 >
-                  <span className="font-medium text-gray-900">🏠 {ambiente}</span>
+                  <span className="font-medium text-[var(--text-primary)]">🏠 {ambiente}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveAmbiente(index)}
@@ -82,14 +82,14 @@ export default function Step2Ambientes({ onNext, onBack, initialData = [] }: Ste
         )}
 
         {ambientes.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">Nenhum ambiente adicionado ainda</p>
-            <p className="text-sm text-gray-400 mt-1">Adicione pelo menos um ambiente para continuar</p>
+          <div className="text-center py-12 bg-[var(--bg-primary)] rounded-lg border border-[var(--border-color)]">
+            <p className="text-[var(--text-secondary)]">Nenhum ambiente adicionado ainda</p>
+            <p className="text-sm text-[var(--text-secondary)] opacity-70 mt-1">Adicione pelo menos um ambiente para continuar</p>
           </div>
         )}
 
         {/* Buttons */}
-        <div className="flex justify-between pt-6 border-t border-gray-200">
+        <div className="flex justify-between pt-6 border-t border-[var(--border-color)]">
           <Button type="button" variant="outline" size="lg" onClick={onBack}>
             ← Voltar
           </Button>

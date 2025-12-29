@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { Toaster } from "sonner";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -25,39 +26,41 @@ import GerenciarDetalhesLaudo from "./pages/admin/GerenciarDetalhesLaudo";
 
 function App() {
   return (
-    <AuthProvider>
-      <Toaster position="top-right" richColors expand={true} />
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<Register />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <Toaster position="top-right" richColors expand={true} />
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<Register />} />
 
-        {/* User Dashboard Routes */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboard/laudos" element={<MeusLaudos />} />
-        <Route
-          path="/dashboard/laudos/:id/preview"
-          element={<LaudoPreview />}
-        />
-        <Route path="/dashboard/novo-laudo" element={<NovoLaudo />} />
-        <Route path="/dashboard/perfil" element={<Perfil />} />
-        <Route path="/dashboard/creditos" element={<Creditos />} />
-        <Route path="/dashboard/pagamentos" element={<Pagamentos />} />
-        <Route path="/dashboard/suporte" element={<Suporte />} />
+          {/* User Dashboard Routes */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/laudos" element={<MeusLaudos />} />
+          <Route
+            path="/dashboard/laudos/:id/preview"
+            element={<LaudoPreview />}
+          />
+          <Route path="/dashboard/novo-laudo" element={<NovoLaudo />} />
+          <Route path="/dashboard/perfil" element={<Perfil />} />
+          <Route path="/dashboard/creditos" element={<Creditos />} />
+          <Route path="/dashboard/pagamentos" element={<Pagamentos />} />
+          <Route path="/dashboard/suporte" element={<Suporte />} />
 
-        {/* Admin Dashboard Routes */}
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/usuarios" element={<Usuarios />} />
-        <Route path="/admin/laudos" element={<TodosLaudos />} />
-        <Route path="/admin/pdf-settings" element={<PDFSettings />} />
-        <Route path="/admin/ambientes" element={<GerenciarAmbientes />} />
-        <Route
-          path="/admin/detalhes-laudo"
-          element={<GerenciarDetalhesLaudo />}
-        />
-      </Routes>
-    </AuthProvider>
+          {/* Admin Dashboard Routes */}
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/usuarios" element={<Usuarios />} />
+          <Route path="/admin/laudos" element={<TodosLaudos />} />
+          <Route path="/admin/pdf-settings" element={<PDFSettings />} />
+          <Route path="/admin/ambientes" element={<GerenciarAmbientes />} />
+          <Route
+            path="/admin/detalhes-laudo"
+            element={<GerenciarDetalhesLaudo />}
+          />
+        </Routes>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

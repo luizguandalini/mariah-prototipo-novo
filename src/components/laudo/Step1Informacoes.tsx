@@ -30,20 +30,20 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6">Informações da Vistoria</h3>
+    <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 transition-all">
+      <h3 className="text-2xl font-bold text-[var(--text-primary)] mb-6">Informações da Vistoria</h3>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Uso */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Uso
             </label>
             <select
               value={formData.uso}
               onChange={(e) => handleChange('uso', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
               required
             >
               <option>Residencial</option>
@@ -54,13 +54,13 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
 
           {/* Tipo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Tipo
             </label>
             <select
               value={formData.tipo}
               onChange={(e) => handleChange('tipo', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
               required
             >
               <option>Apartamento</option>
@@ -74,27 +74,27 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
 
           {/* Unidade */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Unidade (opcional)
             </label>
             <input
               type="text"
               value={formData.unidade}
               onChange={(e) => handleChange('unidade', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
               placeholder="Ex: 671, Apto 22"
             />
           </div>
 
           {/* Tipo de Vistoria */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Tipo de Vistoria
             </label>
             <select
               value={formData.tipoVistoria}
               onChange={(e) => handleChange('tipoVistoria', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
               required
             >
               <option>Entrada</option>
@@ -106,14 +106,14 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
 
         {/* Endereço */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
             Endereço Completo
           </label>
           <input
             type="text"
             value={formData.endereco}
             onChange={(e) => handleChange('endereco', e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+            className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
             placeholder="Ex: Av. José Galante, 671 - Vila Andrade, São Paulo - SP"
             required
           />
@@ -122,14 +122,14 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* CEP */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               CEP
             </label>
             <input
               type="text"
               value={formData.cep}
               onChange={(e) => handleChange('cep', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
               placeholder="00000-000"
               required
             />
@@ -137,14 +137,14 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
 
           {/* Tamanho */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Tamanho do Imóvel
             </label>
             <input
               type="text"
               value={formData.tamanho}
               onChange={(e) => handleChange('tamanho', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
               placeholder="Ex: 200 m²"
               required
             />
@@ -152,14 +152,14 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
 
           {/* Realizada em */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Realizada em
             </label>
             <input
               type="date"
               value={formData.realizadaEm}
               onChange={(e) => handleChange('realizadaEm', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
               required
             />
           </div>
@@ -168,13 +168,13 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Água */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Água
             </label>
             <select
               value={formData.agua}
               onChange={(e) => handleChange('agua', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
             >
               <option>Selecione...</option>
               <option>Normal</option>
@@ -185,13 +185,13 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
 
           {/* Energia */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
               Energia
             </label>
             <select
               value={formData.energia}
               onChange={(e) => handleChange('energia', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
             >
               <option>Selecione...</option>
               <option>Normal</option>
@@ -202,7 +202,7 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-end pt-6 border-t border-gray-200">
+        <div className="flex justify-end pt-6 border-t border-[var(--border-color)]">
           <Button type="submit" variant="primary" size="lg">
             Próximo: Ambientes →
           </Button>

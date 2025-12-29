@@ -14,12 +14,12 @@ export default function Button({
   className = '',
   ...props
 }: ButtonProps) {
-  const baseStyles = 'font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-2'
+  const baseStyles = 'font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed'
 
   const variants = {
-    primary: 'bg-gradient-to-r from-primary to-primary-dark text-white hover:shadow-lg hover:shadow-primary/50',
-    secondary: 'bg-white text-primary-dark border-2 border-primary hover:bg-primary/5',
-    outline: 'bg-transparent text-primary-dark border-2 border-primary-dark hover:bg-primary-dark hover:text-white'
+    primary: 'bg-gradient-to-r from-primary to-primary-dark text-white hover:shadow-lg hover:shadow-primary/50 shadow-sm',
+    secondary: 'bg-[var(--bg-secondary)] text-[var(--accent-color)] border border-[var(--border-color)] hover:bg-[var(--bg-primary)] dark:hover:bg-gray-800',
+    outline: 'bg-transparent text-[var(--text-primary)] border border-[var(--border-color)] hover:bg-[var(--bg-primary)] dark:hover:bg-gray-800'
   }
 
   const sizes = {

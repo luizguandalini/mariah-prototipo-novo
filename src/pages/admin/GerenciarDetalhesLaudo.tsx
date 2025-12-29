@@ -443,7 +443,7 @@ export default function GerenciarDetalhesLaudo() {
     <DashboardLayout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             Gerenciar Detalhes do Laudo
           </h1>
           <Button
@@ -464,7 +464,7 @@ export default function GerenciarDetalhesLaudo() {
                 key={section.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-lg shadow-md p-6"
+                className="bg-[var(--bg-secondary)] rounded-lg shadow-md p-6 border border-[var(--border-color)]"
               >
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-3">
@@ -481,7 +481,7 @@ export default function GerenciarDetalhesLaudo() {
                         </span>
                       )}
                     </button>
-                    <h2 className="text-xl font-semibold text-gray-800">
+                    <h2 className="text-xl font-semibold text-[var(--text-primary)]">
                       {section.name}
                     </h2>
                   </div>
@@ -544,7 +544,7 @@ export default function GerenciarDetalhesLaudo() {
                         className="border-l-4 border-blue-200 pl-4"
                       >
                         <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-lg font-medium text-gray-700">
+                          <h3 className="text-lg font-medium text-[var(--text-primary)]">
                             {question.questionText || "Pergunta sem texto"}
                           </h3>
                           <div className="flex gap-2">
@@ -598,9 +598,9 @@ export default function GerenciarDetalhesLaudo() {
                           {question.options?.map((option) => (
                             <div
                               key={option.id}
-                              className="flex justify-between items-center bg-gray-50 p-2 rounded"
+                              className="flex justify-between items-center bg-[var(--bg-primary)] p-2 rounded border border-[var(--border-color)]"
                             >
-                              <span className="text-gray-600">
+                              <span className="text-[var(--text-secondary)]">
                                 {option.optionText}
                               </span>
                               <div className="flex gap-2">
@@ -684,18 +684,18 @@ export default function GerenciarDetalhesLaudo() {
 
         {/* Modal para Seção */}
         {sectionModal.open && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-lg p-6 w-full max-w-md"
+              className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg p-6 w-full max-w-md shadow-xl"
             >
-              <h3 className="text-lg font-semibold mb-4">
+              <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">
                 {sectionModal.mode === "create" ? "Nova Seção" : "Editar Seção"}
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Nome da Seção
                   </label>
                   <input
@@ -704,7 +704,7 @@ export default function GerenciarDetalhesLaudo() {
                     onChange={(e) =>
                       setSectionForm({ ...sectionForm, name: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -734,20 +734,20 @@ export default function GerenciarDetalhesLaudo() {
 
         {/* Modal para Pergunta */}
         {questionModal.open && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-lg p-6 w-full max-w-md"
+              className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg p-6 w-full max-w-md shadow-xl"
             >
-              <h3 className="text-lg font-semibold mb-4">
+              <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">
                 {questionModal.mode === "create"
                   ? "Nova Pergunta"
                   : "Editar Pergunta"}
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Texto da Pergunta (opcional)
                   </label>
                   <input
@@ -759,7 +759,7 @@ export default function GerenciarDetalhesLaudo() {
                         questionText: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Deixe vazio se não houver pergunta específica"
                   />
                 </div>
@@ -790,18 +790,18 @@ export default function GerenciarDetalhesLaudo() {
 
         {/* Modal para Opção */}
         {optionModal.open && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-lg p-6 w-full max-w-md"
+              className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg p-6 w-full max-w-md shadow-xl"
             >
-              <h3 className="text-lg font-semibold mb-4">
+              <h3 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">
                 {optionModal.mode === "create" ? "Nova Opção" : "Editar Opção"}
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Texto da Opção
                   </label>
                   <input
@@ -813,7 +813,7 @@ export default function GerenciarDetalhesLaudo() {
                         optionText: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
