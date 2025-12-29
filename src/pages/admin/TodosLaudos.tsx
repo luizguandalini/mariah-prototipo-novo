@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import LaudoDetalhes from "../../components/LaudoDetalhes";
+import EditarEnderecoLaudo from "../../components/EditarEnderecoLaudo";
 import { laudosService, type Laudo } from "../../services/laudos";
 
 export default function TodosLaudos() {
@@ -9,6 +10,7 @@ export default function TodosLaudos() {
   const [error, setError] = useState<string | null>(null);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 15;
+  const [laudoEditando, setLaudoEditando] = useState<Laudo | null>(null);
 
   useEffect(() => {
     fetchAllLaudos();
@@ -44,6 +46,13 @@ export default function TodosLaudos() {
       alert(err.message || "Erro ao deletar laudo");
       console.error("Erro ao deletar laudo:", err);
     }
+  };
+
+  const handleEnderecoAtualizado = (laudoAtualizado: Laudo) => {
+    // Atualizar o laudo na lista
+    setLaudos((prevLaudos) =>
+      prevLaudos.map((l) => (l.id === laudoAtualizado.id ? laudoAtualizado : l))
+    );
   };
 
   const mapStatus = (status: string) => {
@@ -222,6 +231,12 @@ export default function TodosLaudos() {
                           </a>
                         )}
                       <button
+                        onClick={() => setLaudoEditando(laudo)}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium whitespace-nowrap"
+                      >
+                        ✏️ Editar Endereço
+                      </button>
+                      <button
                         onClick={() =>
                           handleDeleteLaudo(
                             laudo.id,
@@ -299,6 +314,15 @@ export default function TodosLaudos() {
               </div>
             )}
           </>
+        )}
+
+        {/* Modal de Edição de Endereço */}
+        {laudoEditando && (
+          <EditarEnderecoLaudo
+            laudo={laudoEditando}
+            onClose={() => setLaudoEditando(null)}
+            onSuccess={handleEnderecoAtualizado}
+          />
         )}
       </div>
     </DashboardLayout>
