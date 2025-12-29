@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import LaudoDetalhes from "../../components/LaudoDetalhes";
+import EditarEnderecoLaudo from "../../components/EditarEnderecoLaudo";
 import { laudosService, type Laudo } from "../../services/laudos";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
@@ -16,6 +17,7 @@ export default function MeusLaudos() {
   const [error, setError] = useState<string | null>(null);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10;
+  const [laudoEditando, setLaudoEditando] = useState<Laudo | null>(null);
 
   useEffect(() => {
     fetchLaudos();
@@ -52,6 +54,13 @@ export default function MeusLaudos() {
       alert(err.message || "Erro ao deletar laudo");
       console.error("Erro ao deletar laudo:", err);
     }
+  };
+
+  const handleEnderecoAtualizado = (laudoAtualizado: Laudo) => {
+    // Atualizar o laudo na lista
+    setLaudos((prevLaudos) =>
+      prevLaudos.map((l) => (l.id === laudoAtualizado.id ? laudoAtualizado : l))
+    );
   };
 
   const mapStatus = (
@@ -362,6 +371,14 @@ export default function MeusLaudos() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="whitespace-nowrap"
+                          onClick={() => setLaudoEditando(laudo)}
+                        >
+                          ✏️ Editar Endereço
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="whitespace-nowrap text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
                           onClick={() =>
                             handleDeleteLaudo(
@@ -427,6 +444,15 @@ export default function MeusLaudos() {
               </div>
             )}
           </>
+        )}
+
+        {/* Modal de Edição de Endereço */}
+        {laudoEditando && (
+          <EditarEnderecoLaudo
+            laudo={laudoEditando}
+            onClose={() => setLaudoEditando(null)}
+            onSuccess={handleEnderecoAtualizado}
+          />
         )}
       </div>
     </DashboardLayout>

@@ -162,6 +162,21 @@ class LaudosService {
   }
 
   /**
+   * Atualiza apenas o endereço de um laudo
+   */
+  async updateLaudoEndereco(id: string, endereco: {
+    cep?: string;
+    rua?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade?: string;
+    estado?: string;
+  }): Promise<Laudo> {
+    return api.patch<Laudo>(`/laudos/${id}/endereco`, endereco, true);
+  }
+
+  /**
    * Deleta um laudo
    */
   async deleteLaudo(id: string): Promise<void> {
