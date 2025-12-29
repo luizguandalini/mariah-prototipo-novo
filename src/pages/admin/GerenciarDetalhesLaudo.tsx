@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import { laudoDetailsService } from "../../services/laudo-details";
 import {
   LaudoSection,
@@ -64,6 +65,18 @@ export default function GerenciarDetalhesLaudo() {
   const [optionForm, setOptionForm] = useState<CreateLaudoOptionDto>({
     questionId: "",
     optionText: "",
+  });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
   });
 
   const loadMoreSections = () => {
@@ -302,14 +315,20 @@ export default function GerenciarDetalhesLaudo() {
   };
 
   const handleDeleteSection = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar esta seção?")) return;
-    try {
-      await laudoDetailsService.deleteSection(id);
-      removeSectionFromLocalState(id);
-      toast.success("Seção deletada com sucesso");
-    } catch (error) {
-      toast.error("Erro ao deletar seção");
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Deletar Seção",
+      message: "Tem certeza que deseja deletar esta seção? Esta ação não pode ser desfeita.",
+      onConfirm: async () => {
+        try {
+          await laudoDetailsService.deleteSection(id);
+          removeSectionFromLocalState(id);
+          toast.success("Seção deletada com sucesso");
+        } catch (error) {
+          toast.error("Erro ao deletar seção");
+        }
+      },
+    });
   };
 
   // Handlers para perguntas
@@ -346,14 +365,20 @@ export default function GerenciarDetalhesLaudo() {
   };
 
   const handleDeleteQuestion = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar esta pergunta?")) return;
-    try {
-      await laudoDetailsService.deleteQuestion(id);
-      removeQuestionFromLocalState(id);
-      toast.success("Pergunta deletada com sucesso");
-    } catch (error) {
-      toast.error("Erro ao deletar pergunta");
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Deletar Pergunta",
+      message: "Tem certeza que deseja deletar esta pergunta? Esta ação não pode ser desfeita.",
+      onConfirm: async () => {
+        try {
+          await laudoDetailsService.deleteQuestion(id);
+          removeQuestionFromLocalState(id);
+          toast.success("Pergunta deletada com sucesso");
+        } catch (error) {
+          toast.error("Erro ao deletar pergunta");
+        }
+      },
+    });
   };
 
   // Handlers para opções
@@ -388,14 +413,20 @@ export default function GerenciarDetalhesLaudo() {
   };
 
   const handleDeleteOption = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar esta opção?")) return;
-    try {
-      await laudoDetailsService.deleteOption(id);
-      toast.success("Opção deletada com sucesso");
-      removeOptionFromLocalState(id);
-    } catch (error) {
-      toast.error("Erro ao deletar opção");
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Deletar Opção",
+      message: "Tem certeza que deseja deletar esta opção? Esta ação não pode ser desfeita.",
+      onConfirm: async () => {
+        try {
+          await laudoDetailsService.deleteOption(id);
+          toast.success("Opção deletada com sucesso");
+          removeOptionFromLocalState(id);
+        } catch (error) {
+          toast.error("Erro ao deletar opção");
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -809,6 +840,15 @@ export default function GerenciarDetalhesLaudo() {
             </motion.div>
           </div>
         )}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          onConfirm={confirmModal.onConfirm}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmLabel="Deletar"
+          variant="danger"
+        />
       </div>
     </DashboardLayout>
   );

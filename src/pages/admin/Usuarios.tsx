@@ -4,6 +4,7 @@ import Button from "../../components/ui/Button";
 import { usersService } from "../../services/users";
 import { User } from "../../types/auth";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState<User[]>([]);
@@ -92,7 +93,7 @@ export default function Usuarios() {
       await carregarUsuarios();
     } catch (error) {
       console.error("Erro ao atualizar imagens:", error);
-      alert("Erro ao atualizar quantidade de imagens");
+      toast.error("Erro ao atualizar quantidade de imagens");
     }
   };
 
@@ -102,7 +103,7 @@ export default function Usuarios() {
       await carregarUsuarios();
     } catch (error) {
       console.error("Erro ao adicionar imagens:", error);
-      alert("Erro ao adicionar imagens");
+      toast.error("Erro ao adicionar imagens");
     }
   };
 
@@ -121,7 +122,7 @@ export default function Usuarios() {
       setShowCreateModal(false);
       setNovoUsuario({ nome: "", email: "", senha: "", role: "USUARIO" });
       await carregarUsuarios();
-      alert("✅ Usuário criado com sucesso!");
+      toast.success("Usuário criado com sucesso!");
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
 
@@ -133,17 +134,17 @@ export default function Usuarios() {
           errorMessage.includes("Email já cadastrado") ||
           errorMessage.includes("já cadastrado")
         ) {
-          alert("❌ Este email já está cadastrado no sistema!");
+          toast.error("Este email já está cadastrado no sistema!");
         } else if (errorMessage.includes("DEV")) {
-          alert("❌ Não é permitido criar usuário DEV via interface.");
+          toast.error("Não é permitido criar usuário DEV via interface.");
         } else {
-          alert(`❌ ${errorMessage}`);
+          toast.error(errorMessage);
         }
       } else if (Array.isArray(errorMessage)) {
-        alert(`❌ ${errorMessage.join(", ")}`);
+        toast.error(errorMessage.join(", "));
       } else {
-        alert(
-          "❌ Erro ao criar usuário. Verifique os dados e tente novamente."
+        toast.error(
+          "Erro ao criar usuário. Verifique os dados e tente novamente."
         );
       }
     }

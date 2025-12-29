@@ -9,11 +9,12 @@ export enum UserRole {
 }
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   nome: string;
   role: UserRole;
   quantidadeImagens: number;
+  ativo?: boolean;
 }
 
 export interface LoginCredentials {

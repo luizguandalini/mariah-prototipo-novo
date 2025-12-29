@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import LaudoDetalhes from "../../components/LaudoDetalhes";
 import EditarEnderecoLaudo from "../../components/EditarEnderecoLaudo";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import { laudosService, type Laudo } from "../../services/laudos";
+import { toast } from "sonner";
 
 export default function TodosLaudos() {
   const [laudos, setLaudos] = useState<Laudo[]>([]);
@@ -11,6 +13,11 @@ export default function TodosLaudos() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 15;
   const [laudoEditando, setLaudoEditando] = useState<Laudo | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    isOpen: boolean;
+    id: string;
+    endereco: string;
+  }>({ isOpen: false, id: "", endereco: "" });
 
   useEffect(() => {
     fetchAllLaudos();
@@ -30,20 +37,13 @@ export default function TodosLaudos() {
     }
   };
 
-  const handleDeleteLaudo = async (id: string, endereco: string) => {
-    if (
-      !window.confirm(
-        `Tem certeza que deseja deletar o laudo de "${endereco}"? Esta ação não pode ser desfeita.`
-      )
-    ) {
-      return;
-    }
-
+  const handleDeleteLaudo = async (id: string) => {
     try {
       await laudosService.deleteLaudo(id);
       setLaudos((prevLaudos) => prevLaudos.filter((l) => l.id !== id));
+      toast.success("Laudo deletado com sucesso!");
     } catch (err: any) {
-      alert(err.message || "Erro ao deletar laudo");
+      toast.error(err.message || "Erro ao deletar laudo");
       console.error("Erro ao deletar laudo:", err);
     }
   };
@@ -238,10 +238,11 @@ export default function TodosLaudos() {
                       </button>
                       <button
                         onClick={() =>
-                          handleDeleteLaudo(
-                            laudo.id,
-                            laudo.rua || laudo.endereco
-                          )
+                          setConfirmDelete({
+                            isOpen: true,
+                            id: laudo.id,
+                            endereco: laudo.rua || laudo.endereco,
+                          })
                         }
                         className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium whitespace-nowrap"
                       >
@@ -324,6 +325,18 @@ export default function TodosLaudos() {
             onSuccess={handleEnderecoAtualizado}
           />
         )}
+
+        <ConfirmModal
+          isOpen={confirmDelete.isOpen}
+          onClose={() =>
+            setConfirmDelete({ ...confirmDelete, isOpen: false })
+          }
+          onConfirm={() => handleDeleteLaudo(confirmDelete.id)}
+          title="Deletar Laudo"
+          message={`Tem certeza que deseja deletar o laudo de "${confirmDelete.endereco}"? Esta ação não pode ser desfeita.`}
+          confirmLabel="Deletar"
+          variant="danger"
+        />
       </div>
     </DashboardLayout>
   );
