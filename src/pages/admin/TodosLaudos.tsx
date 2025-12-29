@@ -111,7 +111,7 @@ export default function TodosLaudos() {
   const laudosPaginados = laudos.slice(indexInicio, indexFim);
 
   return (
-    <DashboardLayout userType="admin">
+    <DashboardLayout>
       <div className="space-y-6">
         <h2 className="text-3xl font-bold text-gray-900">Todos os Laudos</h2>
 

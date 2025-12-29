@@ -154,13 +154,7 @@ export default function MeusLaudos() {
   };
 
   return (
-    <DashboardLayout
-      userType={
-        user?.role === UserRole.ADMIN || user?.role === UserRole.DEV
-          ? "admin"
-          : "user"
-      }
-    >
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <motion.div

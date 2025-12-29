@@ -10,7 +10,7 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <DashboardLayout userType="admin">
+    <DashboardLayout>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Dashboard Admin</h2>

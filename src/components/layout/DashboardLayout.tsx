@@ -6,18 +6,17 @@ import { authService } from "../../services/auth";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  userType?: "user" | "admin";
 }
 
 interface MenuItem {
   path: string;
   icon: string;
   label: string;
+  roles?: UserRole[];
 }
 
 export default function DashboardLayout({
   children,
-  userType = "user",
 }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -82,27 +81,68 @@ export default function DashboardLayout({
     return quantidade.toString();
   };
 
-  const userMenuItems: MenuItem[] = [
-    { path: "/dashboard", icon: "📊", label: "Dashboard" },
-    { path: "/dashboard/laudos", icon: "📄", label: "Meus Laudos" },
+  const isAdmin = currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.DEV);
+
+  const allMenuItems: MenuItem[] = [
+    // 1. Dashboards
+    {
+      path: "/admin/dashboard",
+      icon: "📊",
+      label: "Dashboard",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
+
+    // 2. Laudos (Ações e Gestão)
     { path: "/dashboard/novo-laudo", icon: "➕", label: "Novo Laudo" },
+    { path: "/dashboard/laudos", icon: "📋", label: "Meus Laudos" },
+    {
+      path: "/admin/laudos",
+      icon: "📄",
+      label: "Todos os Laudos",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
+
+    // 3. Configurações do Sistema (Admin/Dev)
+    {
+      path: "/admin/detalhes-laudo",
+      icon: "📋",
+      label: "Detalhes do Laudo",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
+    {
+      path: "/admin/ambientes",
+      icon: "🏠",
+      label: "Gerenciar Ambientes",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
+    {
+      path: "/admin/pdf-settings",
+      icon: "📝",
+      label: "Config. PDF",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
+
+    // 4. Gestão de Usuários (Admin/Dev)
+    {
+      path: "/admin/usuarios",
+      icon: "👥",
+      label: "Usuários",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
+
+    // 5. Conta e Faturamento
     { path: "/dashboard/creditos", icon: "💳", label: "Créditos & Planos" },
     { path: "/dashboard/pagamentos", icon: "💰", label: "Pagamentos" },
     { path: "/dashboard/perfil", icon: "👤", label: "Meu Perfil" },
+
+    // 6. Ajuda
     { path: "/dashboard/suporte", icon: "💬", label: "Suporte" },
   ];
 
-  const adminMenuItems: MenuItem[] = [
-    { path: "/admin/dashboard", icon: "📊", label: "Dashboard" },
-    { path: "/admin/usuarios", icon: "👥", label: "Usuários" },
-    { path: "/dashboard/laudos", icon: "📋", label: "Meus Laudos" },
-    { path: "/admin/laudos", icon: "📄", label: "Todos os Laudos" },
-    { path: "/admin/ambientes", icon: "🏠", label: "Gerenciar Ambientes" },
-    { path: "/admin/detalhes-laudo", icon: "📋", label: "Detalhes do Laudo" },
-    { path: "/admin/pdf-settings", icon: "📝", label: "Config. PDF" },
-  ];
-
-  const menuItems = userType === "admin" ? adminMenuItems : userMenuItems;
+  const menuItems = allMenuItems.filter((item) => {
+    if (!item.roles) return true;
+    return currentUser && item.roles.includes(currentUser.role);
+  });
 
   const handleLogout = () => {
     navigate("/");
@@ -156,9 +196,9 @@ export default function DashboardLayout({
               </svg>
             </button>
           </div>
-          {userType === "admin" && (
+          {currentUser && (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.DEV) && (
             <span className="inline-block mt-2 px-2 py-1 text-xs font-semibold bg-primary/10 text-primary rounded">
-              Admin
+              {getRoleName(currentUser.role)}
             </span>
           )}
         </div>
@@ -231,7 +271,7 @@ export default function DashboardLayout({
 
             {/* User Info */}
             <div className="flex items-center gap-2 md:gap-4">
-              {userType === "user" && currentUser && (
+              {currentUser && (
                 <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-2 bg-purple-50 rounded-lg">
                   <span className="text-xs md:text-sm font-medium text-gray-700 hidden sm:inline">
                     Imagens:

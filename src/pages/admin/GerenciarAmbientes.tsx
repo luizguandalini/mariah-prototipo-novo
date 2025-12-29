@@ -951,7 +951,7 @@ export default function GerenciarAmbientes() {
   };
 
   return (
-    <DashboardLayout userType="admin">
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Cabeçalho */}
         <div className="flex items-center justify-between">
