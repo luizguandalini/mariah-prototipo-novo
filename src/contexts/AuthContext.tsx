@@ -68,6 +68,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
   };
 
+  const updateUser = (updatedUser: User) => {
+    authService.updateStoredUser(updatedUser);
+    setUser(updatedUser);
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -75,6 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     register,
     logout,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

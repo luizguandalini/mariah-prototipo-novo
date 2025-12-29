@@ -101,6 +101,14 @@ class AuthService {
   private setAuthData(response: AuthResponse): void {
     api.setAuthToken(response.access_token);
     localStorage.setItem(this.STORAGE_KEYS.USER, JSON.stringify(response.user));
+    localStorage.setItem(this.STORAGE_KEYS.TOKEN, response.access_token);
+  }
+
+  /**
+   * Atualiza dados do usuário no localStorage
+   */
+  updateStoredUser(user: User): void {
+    localStorage.setItem(this.STORAGE_KEYS.USER, JSON.stringify(user));
   }
 
   /**
