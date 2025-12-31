@@ -84,6 +84,8 @@ export interface Laudo {
   mecanismosAbertura?: MecanismosAbertura;
   revestimentos?: Revestimentos;
   mobilias?: Mobilias;
+  dadosExtra?: object;
+
 
   createdAt: string;
   updatedAt: string;
