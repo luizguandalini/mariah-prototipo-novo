@@ -656,6 +656,7 @@ export default function GerenciarAmbientes() {
           const data: CreateItemAmbienteDto = {
             nome: formData.nome,
             prompt: formData.prompt,
+            descricao: formData.descricao || undefined,
             parentId: dialog.parentId,
             ativo: formData.ativo,
           };
@@ -665,6 +666,7 @@ export default function GerenciarAmbientes() {
           const data: UpdateItemAmbienteDto = {
             nome: formData.nome,
             prompt: formData.prompt,
+            descricao: formData.descricao || undefined,
             ativo: formData.ativo,
           };
           await ambientesService.atualizarItem(
@@ -1117,24 +1119,48 @@ export default function GerenciarAmbientes() {
                   )}
 
                   {(dialog.type === "item" || dialog.type === "subitem") && (
+                    <>
+                      {/* Campo Descrição - APENAS para itens PAI */}
+                      {dialog.type === "item" && !dialog.parentId && (
+                        <div>
+                          <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
+                            Descrição (exibida no app)
+                          </label>
+                          <textarea
+                            value={formData.descricao}
+                            onChange={(e) =>
+                              setFormData({ ...formData, descricao: e.target.value })
+                            }
+                            className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none resize-none transition-all placeholder:opacity-50"
+                            rows={2}
+                            placeholder="Ex: Fotografe a porta principal do ambiente"
+                          />
+                          <p className="text-xs text-[var(--text-secondary)] opacity-60 mt-1">
+                            Esta descrição será exibida ao usuário no app mobile
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Campo Prompt - SEMPRE obrigatório */}
                      <div>
-                      <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
-                        Prompt de IA *
+                      <label className="block text-sm font-bold text-amber-600 dark:text-amber-500 mb-2">
+                        🤖 Prompt de IA (uso interno) *
                       </label>
                       <textarea
                         value={formData.prompt}
                         onChange={(e) =>
                           setFormData({ ...formData, prompt: e.target.value })
                         }
-                        className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none resize-none font-mono text-sm transition-all placeholder:opacity-50"
+                        className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-amber-500/20 text-[var(--text-primary)] rounded-lg focus:border-amber-500 outline-none resize-none font-mono text-sm transition-all placeholder:opacity-50"
                         rows={5}
                         required
                         placeholder="Digite o prompt para análise deste item..."
                       />
-                      <p className="text-xs text-[var(--text-secondary)] opacity-60 mt-1">
-                        Este prompt será usado pela IA para analisar este item
+                      <p className="text-xs text-amber-600/80 dark:text-amber-500/80 font-semibold mt-1">
+                        ⚠️ Este campo NÃO é exibido ao usuário - apenas para uso interno da IA
                       </p>
                     </div>
+                    </>
                   )}
 
                    <div className="flex items-center gap-3 p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg transition-colors">
