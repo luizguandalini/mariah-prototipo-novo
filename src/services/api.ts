@@ -2,17 +2,21 @@
  * Cliente HTTP para comunicação com o backend
  *
  * Este serviço centraliza todas as requisições HTTP ao backend,
- * gerenciando tokens de autenticação e tratamento de erros.
+ * gerenciando tokens de autenticação, tratamento de erros e
+ * renovação automática de tokens expirados.
  */
 
 import { API_CONFIG } from "../config/api";
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
+  _retry?: boolean; // Flag para evitar loop infinito de refresh
 }
 
 class ApiService {
   private baseURL: string;
+  private isRefreshing = false;
+  private refreshPromise: Promise<string> | null = null;
 
   constructor() {
     this.baseURL = API_CONFIG.baseURL;
@@ -23,6 +27,13 @@ class ApiService {
    */
   private getAuthToken(): string | null {
     return localStorage.getItem("auth_token");
+  }
+
+  /**
+   * Obtém o refresh token armazenado
+   */
+  private getRefreshToken(): string | null {
+    return localStorage.getItem("auth_refresh_token");
   }
 
   /**
@@ -37,6 +48,72 @@ class ApiService {
    */
   clearAuthToken(): void {
     localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_refresh_token");
+  }
+
+  /**
+   * Renova os tokens usando o refresh token
+   */
+  private async refreshTokens(): Promise<string> {
+    // Se já está renovando, aguarda a promise existente
+    if (this.isRefreshing && this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error("Sem refresh token disponível");
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = (async () => {
+      try {
+        const response = await fetch(`${this.baseURL}/auth/refresh`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Falha ao renovar token");
+        }
+
+        const data = await response.json();
+        
+        // Atualiza tokens no storage
+        localStorage.setItem("auth_token", data.access_token);
+        if (data.refresh_token) {
+          localStorage.setItem("auth_refresh_token", data.refresh_token);
+        }
+        if (data.user) {
+          localStorage.setItem("auth_user", JSON.stringify(data.user));
+        }
+
+        console.log("Tokens renovados com sucesso");
+        return data.access_token;
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
+  /**
+   * Limpa dados de autenticação e redireciona para login
+   */
+  private handleAuthFailure(): void {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_refresh_token");
+    localStorage.removeItem("auth_user");
+    
+    // Redireciona para página de login se não estiver nela
+    if (!window.location.pathname.includes("/login")) {
+      window.location.href = "/login";
+    }
   }
 
   /**
@@ -46,7 +123,7 @@ class ApiService {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<T> {
-    const { requiresAuth = false, headers = {}, ...restOptions } = options;
+    const { requiresAuth = false, _retry = false, headers = {}, ...restOptions } = options;
 
     const config: RequestInit = {
       ...restOptions,
@@ -69,6 +146,37 @@ class ApiService {
 
     try {
       const response = await fetch(`${this.baseURL}${endpoint}`, config);
+
+      // Se receber 401 e não é uma retry, tenta renovar o token
+      if (response.status === 401 && !_retry && requiresAuth) {
+        const refreshToken = this.getRefreshToken();
+        
+        if (refreshToken) {
+          try {
+            console.log("Token expirado, tentando renovar...");
+            const newToken = await this.refreshTokens();
+            
+            // Refaz a requisição original com o novo token
+            const retryOptions: RequestOptions = {
+              ...options,
+              _retry: true,
+              headers: {
+                ...headers,
+                Authorization: `Bearer ${newToken}`,
+              },
+            };
+            
+            return this.request<T>(endpoint, retryOptions);
+          } catch (refreshError) {
+            console.error("Falha ao renovar token:", refreshError);
+            this.handleAuthFailure();
+            throw new Error("Sessão expirada. Por favor, faça login novamente.");
+          }
+        } else {
+          this.handleAuthFailure();
+          throw new Error("Sessão expirada. Por favor, faça login novamente.");
+        }
+      }
 
       // Trata erros HTTP
       if (!response.ok) {

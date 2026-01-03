@@ -16,6 +16,7 @@ import type {
 class AuthService {
   private readonly STORAGE_KEYS = {
     TOKEN: 'auth_token',
+    REFRESH_TOKEN: 'auth_refresh_token',
     USER: 'auth_user',
   } as const;
 
@@ -30,7 +31,7 @@ class AuthService {
         false
       );
 
-      // Armazena token e dados do usuário
+      // Armazena tokens e dados do usuário
       this.setAuthData(response);
 
       return response;
@@ -53,7 +54,7 @@ class AuthService {
         false
       );
 
-      // Armazena token e dados do usuário
+      // Armazena tokens e dados do usuário
       this.setAuthData(response);
 
       return response;
@@ -66,10 +67,49 @@ class AuthService {
   }
 
   /**
+   * Renova os tokens usando o refresh token
+   */
+  async refreshTokens(): Promise<AuthResponse> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('Sem refresh token disponível');
+    }
+
+    try {
+      const response = await api.post<AuthResponse>(
+        '/auth/refresh',
+        { refresh_token: refreshToken },
+        false
+      );
+
+      // Atualiza tokens no storage
+      this.setAuthData(response);
+
+      return response;
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      // Se falhou ao renovar, força logout
+      this.logout();
+      throw new Error('Sessão expirada. Por favor, faça login novamente.');
+    }
+  }
+
+  /**
    * Realiza logout do usuário
    */
   logout(): void {
+    // Tenta revogar o refresh token no backend (fire and forget)
+    const refreshToken = this.getRefreshToken();
+    if (refreshToken) {
+      api.post('/auth/revoke', { refresh_token: refreshToken }, false)
+        .catch(() => {
+          // Ignora erros na revogação, o importante é limpar localmente
+          console.log('Falha ao revogar refresh token no backend');
+        });
+    }
+
     localStorage.removeItem(this.STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(this.STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(this.STORAGE_KEYS.USER);
     api.clearAuthToken();
   }
@@ -100,8 +140,13 @@ class AuthService {
    */
   private setAuthData(response: AuthResponse): void {
     api.setAuthToken(response.access_token);
-    localStorage.setItem(this.STORAGE_KEYS.USER, JSON.stringify(response.user));
     localStorage.setItem(this.STORAGE_KEYS.TOKEN, response.access_token);
+    localStorage.setItem(this.STORAGE_KEYS.USER, JSON.stringify(response.user));
+    
+    // Armazena refresh token se presente
+    if ('refresh_token' in response && response.refresh_token) {
+      localStorage.setItem(this.STORAGE_KEYS.REFRESH_TOKEN, response.refresh_token as string);
+    }
   }
 
   /**
@@ -116,6 +161,13 @@ class AuthService {
    */
   getToken(): string | null {
     return localStorage.getItem(this.STORAGE_KEYS.TOKEN);
+  }
+
+  /**
+   * Obtém o refresh token
+   */
+  getRefreshToken(): string | null {
+    return localStorage.getItem(this.STORAGE_KEYS.REFRESH_TOKEN);
   }
 }
 
