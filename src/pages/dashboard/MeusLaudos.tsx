@@ -362,6 +362,15 @@ export default function MeusLaudos() {
                             </Button>
                           </Link>
                         )}
+                          <Link to={`/dashboard/laudos/${laudo.id}/galeria`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="whitespace-nowrap"
+                            >
+                              📷 Ver Fotos
+                            </Button>
+                          </Link>
                         <Button
                           variant="outline"
                           size="sm"

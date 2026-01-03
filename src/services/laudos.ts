@@ -44,6 +44,19 @@ export interface Mobilias {
   nao_fixa: string;
 }
 
+export interface ImagemLaudo {
+  id: string;
+  s3Key: string;
+  url: string;
+  ambiente: string;
+  tipo: string;
+  categoria: string;
+  avariaLocal?: string;
+  descricao: string;
+  dataCaptura: string;
+  imagemJaFoiAnalisadaPelaIa: string;
+}
+
 export interface Laudo {
   id: string;
   endereco: string;
@@ -183,6 +196,32 @@ class LaudosService {
    */
   async deleteLaudo(id: string): Promise<void> {
     return api.delete<void>(`/laudos/${id}`, true);
+  }
+
+  /**
+   * Obtém as imagens de um laudo de forma paginada
+   */
+  async getImagens(
+    laudoId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    data: ImagemLaudo[];
+    total: number;
+    page: number;
+    lastPage: number;
+  }> {
+    return api.get(
+      `/uploads/laudo/${laudoId}/imagens?page=${page}&limit=${limit}`,
+      true
+    );
+  }
+
+  /**
+   * Deleta uma imagem
+   */
+  async deleteImagem(id: string): Promise<void> {
+    return api.delete<void>(`/uploads/imagem/${id}`, true);
   }
 }
 

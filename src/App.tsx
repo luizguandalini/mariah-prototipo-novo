@@ -15,6 +15,7 @@ import Perfil from "./pages/dashboard/Perfil";
 import Creditos from "./pages/dashboard/Creditos";
 import Pagamentos from "./pages/dashboard/Pagamentos";
 import Suporte from "./pages/dashboard/Suporte";
+import GaleriaImagens from "./pages/dashboard/GaleriaImagens";
 
 // Dashboard Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -41,6 +42,10 @@ function App() {
           <Route
             path="/dashboard/laudos/:id/preview"
             element={<LaudoPreview />}
+          />
+          <Route
+            path="/dashboard/laudos/:id/galeria"
+            element={<GaleriaImagens />}
           />
           <Route path="/dashboard/novo-laudo" element={<NovoLaudo />} />
           <Route path="/dashboard/perfil" element={<Perfil />} />
