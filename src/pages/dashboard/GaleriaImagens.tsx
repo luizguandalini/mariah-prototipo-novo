@@ -46,12 +46,29 @@ export default function GaleriaImagens() {
   };
 
   const handleDelete = async () => {
+    const imagemId = confirmDelete.imagemId;
+    
+    // 1. Salva a imagem para possível rollback
+    const imagemDeletada = imagens.find(img => img.id === imagemId);
+    const indexOriginal = imagens.findIndex(img => img.id === imagemId);
+    
+    // 2. Atualização otimista - remove da UI imediatamente
+    setImagens(prev => prev.filter(img => img.id !== imagemId));
+    setConfirmDelete({ isOpen: false, imagemId: "" });
+    
     try {
-      await laudosService.deleteImagem(confirmDelete.imagemId);
-      toast.success("Imagem deletiada com sucesso!");
-      setConfirmDelete({ isOpen: false, imagemId: "" });
-      fetchImagens(paginaAtual); // Recarrega a página atual
+      // 3. Chama a API em background
+      await laudosService.deleteImagem(imagemId);
+      toast.success("Imagem deletada com sucesso!");
     } catch (err: any) {
+      // 4. ROLLBACK - restaura a imagem na posição original
+      if (imagemDeletada) {
+        setImagens(prev => {
+          const novaLista = [...prev];
+          novaLista.splice(indexOriginal, 0, imagemDeletada);
+          return novaLista;
+        });
+      }
       toast.error("Erro ao deletar imagem.");
       console.error(err);
     }
