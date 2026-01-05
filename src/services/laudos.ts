@@ -46,7 +46,6 @@ export interface Mobilias {
 
 export interface ImagemLaudo {
   id: string;
-  s3Key: string;
   url: string;
   ambiente: string;
   tipo: string;
