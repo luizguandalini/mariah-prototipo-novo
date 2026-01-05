@@ -48,10 +48,10 @@ export interface ImagemLaudo {
   id: string;
   url: string;
   ambiente: string;
+  ambienteComentario?: string;
   tipo: string;
   categoria: string;
   avariaLocal?: string;
-  descricao: string;
   dataCaptura: string;
   imagemJaFoiAnalisadaPelaIa: string;
   ordem: number;

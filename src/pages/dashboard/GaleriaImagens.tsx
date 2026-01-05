@@ -300,7 +300,7 @@ export default function GaleriaImagens() {
                     >
                       <img
                         src={img.url}
-                        alt={img.descricao || "Imagem do laudo"}
+                        alt={img.tipo || "Imagem do laudo"}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       
