@@ -37,6 +37,7 @@ export default function VisualizadorPdfLaudo() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const originalLegendasRef = useRef<Record<string, string>>({});
+  const pagesCache = useRef<Record<number, any[]>>({});
 
   useEffect(() => {
     carregarConfiguracoes();
@@ -60,6 +61,14 @@ export default function VisualizadorPdfLaudo() {
   const carregarImagens = async () => {
     if (!id) return;
     
+    // Se já estiver em cache, usa o cache e não ativa o loading visualmente (ou ativa bem rápido)
+    if (pagesCache.current[paginaAtual]) {
+      setImagensComUrls(pagesCache.current[paginaAtual]);
+      // Mantemos os totais atualizados caso tenha mudado algo globalmente, 
+      // mas para performance de navegação, assumimos que totalPaginas não muda drasticamente
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await laudosService.getImagensPdf(id, paginaAtual, 12);
@@ -77,6 +86,8 @@ export default function VisualizadorPdfLaudo() {
         url: urls[img.s3Key],
       }));
 
+      // Salvar no cache
+      pagesCache.current[paginaAtual] = imagensComUrl;
       setImagensComUrls(imagensComUrl);
     } catch (error: any) {
       toast.error(error.message || 'Erro ao carregar imagens');
@@ -155,17 +166,6 @@ export default function VisualizadorPdfLaudo() {
     }
   };
 
-  if (loading && paginaAtual === 1) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando imagens...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -230,10 +230,17 @@ export default function VisualizadorPdfLaudo() {
       </div>
 
       {/* Grid de Imagens - Layout Tradicional */}
-      <div className="flex items-start justify-center min-h-[600px] py-8">
+      <div className="flex items-start justify-center min-h-[600px] py-8 relative">
+        {loading && (
+          <div className="absolute inset-0 flex items-start justify-center pt-20 z-10 bg-gray-50 bg-opacity-50">
+             <div className="bg-white p-4 rounded-full shadow-lg">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+             </div>
+          </div>
+        )}
         <div
           id="pdf-grid-preview"
-          className="bg-white"
+          className={`bg-white transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}
           style={{
             width: '210mm',
             padding: `${configuracoes.margemPagina}px`,
