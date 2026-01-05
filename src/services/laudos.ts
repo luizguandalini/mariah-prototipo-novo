@@ -57,6 +57,19 @@ export interface ImagemLaudo {
   imagemJaFoiAnalisadaPelaIa: string;
 }
 
+export interface AmbienteInfo {
+  ambiente: string;
+  totalImagens: number;
+  ordem: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  lastPage: number;
+}
+
 export interface Laudo {
   id: string;
   endereco: string;
@@ -213,6 +226,35 @@ class LaudosService {
   }> {
     return api.get(
       `/uploads/laudo/${laudoId}/imagens?page=${page}&limit=${limit}`,
+      true
+    );
+  }
+
+  /**
+   * Obtém os ambientes de um laudo com contagem de imagens (paginado)
+   */
+  async getAmbientes(
+    laudoId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<AmbienteInfo>> {
+    return api.get(
+      `/uploads/laudo/${laudoId}/ambientes?page=${page}&limit=${limit}`,
+      true
+    );
+  }
+
+  /**
+   * Obtém as imagens de um ambiente específico (paginado)
+   */
+  async getImagensByAmbiente(
+    laudoId: string,
+    ambiente: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<PaginatedResponse<ImagemLaudo>> {
+    return api.get(
+      `/uploads/laudo/${laudoId}/ambiente/${encodeURIComponent(ambiente)}/imagens?page=${page}&limit=${limit}`,
       true
     );
   }
