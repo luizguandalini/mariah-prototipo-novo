@@ -265,6 +265,60 @@ class LaudosService {
   async deleteImagem(id: string): Promise<void> {
     return api.delete<void>(`/uploads/imagem/${id}`, true);
   }
+
+  /**
+   * Obtém imagens para PDF com numeração automática (paginado)
+   */
+  async getImagensPdf(
+    laudoId: string,
+    page: number = 1,
+    limit: number = 12
+  ): Promise<{
+    data: any[];
+    meta: {
+      currentPage: number;
+      totalPages: number;
+      totalImages: number;
+      imagesPerPage: number;
+    };
+  }> {
+    return api.get(
+      `/laudos/${laudoId}/imagens-pdf?page=${page}&limit=${limit}`,
+      true
+    );
+  }
+
+  /**
+   * Atualiza a legenda de uma imagem
+   */
+  async updateLegenda(imagemId: string, legenda: string): Promise<void> {
+    return api.patch(`/uploads/imagem/${imagemId}/legenda`, { legenda }, true);
+  }
+
+  /**
+   * Obtém URLs pré-assinadas em batch
+   */
+  async getSignedUrlsBatch(s3Keys: string[]): Promise<Record<string, string>> {
+    return api.post(`/uploads/signed-urls-batch`, { s3Keys }, true);
+  }
+
+  /**
+   * Obtém configurações de PDF do usuário
+   */
+  async getConfiguracoesPdf(): Promise<any> {
+    return api.get(`/users/configuracoes-pdf`, true);
+  }
+
+  /**
+   * Atualiza configurações de PDF do usuário
+   */
+  async updateConfiguracoesPdf(config: {
+    espacamentoHorizontal?: number;
+    espacamentoVertical?: number;
+    margemPagina?: number;
+  }): Promise<any> {
+    return api.put(`/users/configuracoes-pdf`, config, true);
+  }
 }
 
 export const laudosService = new LaudosService();
