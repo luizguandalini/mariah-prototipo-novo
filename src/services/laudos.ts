@@ -54,6 +54,7 @@ export interface ImagemLaudo {
   descricao: string;
   dataCaptura: string;
   imagemJaFoiAnalisadaPelaIa: string;
+  ordem: number;
 }
 
 export interface AmbienteInfo {
