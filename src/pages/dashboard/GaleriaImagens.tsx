@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Trash2, Calendar, MapPin, Tag, Info, FolderOpen, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Trash2, Calendar, MapPin, Tag, Info, FolderOpen, ChevronRight, Image as ImageIcon, CheckCircle } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import ConfirmModal from "../../components/ui/ConfirmModal";
@@ -303,6 +303,13 @@ export default function GaleriaImagens() {
                         alt={img.descricao || "Imagem do laudo"}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
+                      
+                      {/* Badge de Confirmação IA */}
+                      {img.imagemJaFoiAnalisadaPelaIa === "sim" && (
+                        <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1.5 shadow-lg">
+                          <CheckCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
+                        </div>
+                      )}
                       
                       {/* Overlay on Hover */}
                       <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 flex flex-col justify-between text-white text-xs">
