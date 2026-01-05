@@ -292,7 +292,11 @@ export default function GaleriaImagens() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.05 }}
-                      className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-[var(--border-color)] shadow-sm hover:shadow-md transition-all"
+                      className={`group relative aspect-square bg-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all ${
+                        img.categoria === "AVARIA" 
+                          ? "border-[3px] border-red-500" 
+                          : "border border-[var(--border-color)]"
+                      }`}
                     >
                       <img
                         src={img.url}
@@ -301,39 +305,19 @@ export default function GaleriaImagens() {
                       />
                       
                       {/* Overlay on Hover */}
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 flex flex-col justify-between text-white text-xs overflow-y-auto custom-scrollbar">
-                        <div className="space-y-2">
-                           {img.ambiente && (
-                            <div className="flex items-start gap-2">
-                                <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-primary" />
-                                <span className="font-medium">{img.ambiente}</span>
-                            </div>
-                           )}
-                           {img.categoria && (
-                            <div className="flex items-center gap-2">
-                                <Tag className="w-3 h-3 shrink-0 text-blue-400" />
-                                <span>{img.categoria}</span>
-                            </div>
-                           )}
-                           {img.descricao && (
-                            <div className="flex items-start gap-2">
-                                <Info className="w-3 h-3 mt-0.5 shrink-0 text-yellow-400" />
-                                <span className="line-clamp-3">{img.descricao}</span>
-                            </div>
-                           )}
-                           <div className="flex items-center gap-2 text-gray-400 pt-2 border-t border-white/10 mt-2">
-                               <Calendar className="w-3 h-3" />
-                               <span>{formatDate(img.dataCaptura)}</span>
-                           </div>
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 flex flex-col justify-between text-white text-xs">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span className="text-sm">{formatDate(img.dataCaptura)}</span>
                         </div>
 
                         <button
                           onClick={() =>
                             setConfirmDelete({ isOpen: true, imagemId: img.id })
                           }
-                          className="mt-3 w-full py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
+                          className="w-full py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-4 h-4" />
                           <span>Excluir</span>
                         </button>
                       </div>
