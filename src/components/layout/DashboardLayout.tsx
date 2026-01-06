@@ -101,8 +101,6 @@ export default function DashboardLayout({
     { path: "/dashboard/pagamentos", icon: "💰", label: "Pagamentos" },
     { path: "/dashboard/perfil", icon: "👤", label: "Meu Perfil" },
 
-    // 6. Ajuda
-    { path: "/dashboard/suporte", icon: "💬", label: "Suporte" },
   ];
 
   const menuItems = allMenuItems.filter((item) => {
