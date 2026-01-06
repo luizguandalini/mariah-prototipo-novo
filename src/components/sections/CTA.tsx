@@ -22,15 +22,16 @@ export default function CTA() {
           </h2>
           <p className="text-xl text-purple-100 mb-8">
             Junte-se a milhares de profissionais que já transformaram seu trabalho com a Mariah.
-            Escolha o plano ideal para você e comece hoje mesmo.
+            Escolha o pacote ideal para você e comece hoje mesmo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
                 variant="outline" 
                 size="lg" 
                 className="bg-white text-primary border-white hover:bg-white/90 hover:text-primary-dark"
+                onClick={() => document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Assinar Agora
+              Ver Pacotes
             </Button>
           </div>
 
@@ -43,7 +44,7 @@ export default function CTA() {
                   clipRule="evenodd"
                 />
               </svg>
-              <span>Planos flexíveis</span>
+              <span>Sem validade</span>
             </div>
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -53,7 +54,7 @@ export default function CTA() {
                   clipRule="evenodd"
                 />
               </svg>
-              <span>Cancele quando quiser</span>
+              <span>Sem mensalidade</span>
             </div>
           </div>
         </motion.div>
