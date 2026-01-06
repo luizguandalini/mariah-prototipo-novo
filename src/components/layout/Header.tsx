@@ -3,9 +3,11 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import Button from '../ui/Button'
 import ThemeToggle from '../ui/ThemeToggle'
+import { useTheme } from '../../contexts/ThemeContext'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { theme } = useTheme()
 
   return (
     <motion.header
@@ -17,9 +19,9 @@ export default function Header() {
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="text-xl md:text-2xl font-bold">
-              <span className="text-primary-dark dark:text-gray-100">MAR</span>
-              <span className="gradient-text">i</span>
-              <span className="text-primary-dark dark:text-gray-100">AH</span>
+              <span style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}>MAR</span>
+              <span className="gradient-text">IA</span>
+              <span style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}>H</span>
             </div>
           </Link>
 
