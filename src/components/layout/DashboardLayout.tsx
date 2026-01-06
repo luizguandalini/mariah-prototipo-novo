@@ -97,7 +97,7 @@ export default function DashboardLayout({
     },
 
     // 5. Conta e Faturamento
-    { path: "/dashboard/creditos", icon: "💳", label: "Créditos & Planos" },
+    { path: "/dashboard/creditos", icon: "💳", label: "Créditos" },
     { path: "/dashboard/pagamentos", icon: "💰", label: "Pagamentos" },
     { path: "/dashboard/perfil", icon: "👤", label: "Meu Perfil" },
 
