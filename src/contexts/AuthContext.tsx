@@ -8,6 +8,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '../services/auth';
+import { usersService } from '../services/users';
 import type {
   User,
   LoginCredentials,
@@ -25,19 +26,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Carrega usuário do localStorage ao inicializar
+  // Carrega usuário do localStorage ao inicializar e busca atualização
   useEffect(() => {
-    const loadUser = () => {
+    const loadUser = async () => {
+      let loadedFromCache = false;
       try {
         const currentUser = authService.getCurrentUser();
         if (currentUser && authService.isAuthenticated()) {
           setUser(currentUser);
+          loadedFromCache = true;
         }
       } catch (error) {
-        console.error('Error loading user:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error loading user from cache:', error);
       }
+
+      // Mesmo se carregou do cache, ou se não carregou, tentamos buscar do servidor se tiver token
+      if (authService.isAuthenticated()) {
+        try {
+          const updatedUser = await usersService.getMe();
+          setUser(updatedUser);
+          authService.updateStoredUser(updatedUser);
+        } catch (error) {
+          console.error('Error fetching fresh user data:', error);
+          // Se falhar refresh e não tinha cache, estamos deslogados ou sem rede
+          if (!loadedFromCache) {
+             // Opcional: logout? Por enquanto mantemos comportamento padrão
+          }
+        }
+      }
+      
+      setIsLoading(false);
     };
 
     loadUser();
@@ -73,6 +91,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(updatedUser);
   };
 
+  const refreshUser = async () => {
+    if (!authService.isAuthenticated()) return;
+    try {
+      // Busca dados atualizados do servidor
+      const updatedUser = await usersService.getMe();
+      // Atualiza no estado e no localStorage
+      updateUser(updatedUser);
+    } catch (error) {
+      console.error('Erro ao atualizar dados do usuário:', error);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -81,6 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     updateUser,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -6,10 +6,12 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { laudosService, type ImagemLaudo, type AmbienteInfo } from "../../services/laudos";
+import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 
 export default function GaleriaImagens() {
   const { id } = useParams<{ id: string }>();
+  const { refreshUser } = useAuth();
   
   // Estado para ambientes
   const [ambientes, setAmbientes] = useState<AmbienteInfo[]>([]);
@@ -107,6 +109,12 @@ export default function GaleriaImagens() {
     try {
       // 3. Chama a API em background
       await laudosService.deleteImagem(imagemId);
+      
+      // Atualizar créditos do usuário (novo fluxo)
+      if (refreshUser) {
+        await refreshUser();
+      }
+
       toast.success("Imagem deletada com sucesso!");
       
       // Se deletou a última imagem do ambiente, voltar para lista de ambientes

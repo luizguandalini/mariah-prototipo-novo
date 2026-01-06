@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { usersService } from "../../services/users";
 import { User, UserRole } from "../../types/auth";
 import { authService } from "../../services/auth";
+import { useAuth } from "../../contexts/AuthContext";
 import ThemeToggle from "../ui/ThemeToggle";
 
 interface DashboardLayoutProps {
@@ -22,38 +23,9 @@ export default function DashboardLayout({
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      // Tenta buscar do localStorage primeiro
-      const cachedUser = authService.getCurrentUser();
-      if (cachedUser) {
-        setCurrentUser(cachedUser);
-      }
-
-      // Depois atualiza com dados do servidor
-      const userData = await usersService.getMe();
-      setCurrentUser(userData);
-
-      // Atualiza no localStorage
-      localStorage.setItem("auth_user", JSON.stringify(userData));
-    } catch (error) {
-      console.error("Erro ao carregar dados do usuário:", error);
-      // Se falhar, usa dados do cache
-      const cachedUser = authService.getCurrentUser();
-      if (cachedUser) {
-        setCurrentUser(cachedUser);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  // Usar dados do contexto global para ter contadores atualizados
+  const { user: currentUser, isLoading: loading } = useAuth();
 
   const getRoleName = (role: UserRole): string => {
     const roleNames = {

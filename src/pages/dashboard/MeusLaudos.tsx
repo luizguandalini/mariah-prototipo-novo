@@ -12,7 +12,7 @@ import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
 
 export default function MeusLaudos() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [laudos, setLaudos] = useState<Laudo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +47,12 @@ export default function MeusLaudos() {
   const handleDeleteLaudo = async (id: string) => {
     try {
       await laudosService.deleteLaudo(id);
+      
+      // Atualizar créditos do usuário (novo fluxo)
+      if (refreshUser) {
+        await refreshUser();
+      }
+
       // Atualiza a lista removendo o laudo deletado
       setLaudos((prevLaudos) => prevLaudos.filter((l) => l.id !== id));
       toast.success("Laudo deletado com sucesso!");
