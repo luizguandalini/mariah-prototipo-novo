@@ -22,7 +22,6 @@ import VisualizadorPdfLaudo from "./pages/dashboard/VisualizadorPdfLaudo";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Usuarios from "./pages/admin/Usuarios";
 import TodosLaudos from "./pages/admin/TodosLaudos";
-import PDFSettings from "./pages/admin/PDFSettings";
 import GerenciarAmbientes from "./pages/admin/GerenciarAmbientes";
 import GerenciarDetalhesLaudo from "./pages/admin/GerenciarDetalhesLaudo";
 
@@ -62,7 +61,6 @@ function App() {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/usuarios" element={<Usuarios />} />
           <Route path="/admin/laudos" element={<TodosLaudos />} />
-          <Route path="/admin/pdf-settings" element={<PDFSettings />} />
           <Route path="/admin/ambientes" element={<GerenciarAmbientes />} />
           <Route
             path="/admin/detalhes-laudo"
