@@ -170,11 +170,7 @@ export default function MeusLaudos() {
               Gerencie todos os seus laudos imobiliários
             </p>
           </div>
-          <Link to="/dashboard/novo-laudo">
-            <Button variant="primary" size="lg">
-              ➕ Novo Laudo
-            </Button>
-          </Link>
+
         </motion.div>
 
         {/* Filtros */}
@@ -241,11 +237,7 @@ export default function MeusLaudos() {
                 ? "Nenhum laudo encontrado. Comece criando seu primeiro laudo!"
                 : "Nenhum laudo encontrado com este status."}
             </p>
-            {filtroStatus === "todos" && (
-              <Link to="/dashboard/novo-laudo">
-                <Button>Criar Primeiro Laudo</Button>
-              </Link>
-            )}
+
           </div>
         ) : (
           <>

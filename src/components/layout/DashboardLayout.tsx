@@ -94,7 +94,6 @@ export default function DashboardLayout({
     },
 
     // 2. Laudos (Ações e Gestão)
-    { path: "/dashboard/novo-laudo", icon: "➕", label: "Novo Laudo" },
     { path: "/dashboard/laudos", icon: "📋", label: "Meus Laudos" },
     {
       path: "/admin/laudos",

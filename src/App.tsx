@@ -9,7 +9,7 @@ import Register from "./pages/Register";
 // Dashboard User
 import Dashboard from "./pages/dashboard/Dashboard";
 import MeusLaudos from "./pages/dashboard/MeusLaudos";
-import NovoLaudo from "./pages/dashboard/NovoLaudo";
+
 import LaudoPreview from "./pages/dashboard/LaudoPreview";
 import Perfil from "./pages/dashboard/Perfil";
 import Creditos from "./pages/dashboard/Creditos";
@@ -51,7 +51,7 @@ function App() {
             path="/dashboard/laudos/:id/pdf"
             element={<VisualizadorPdfLaudo />}
           />
-          <Route path="/dashboard/novo-laudo" element={<NovoLaudo />} />
+
           <Route path="/dashboard/perfil" element={<Perfil />} />
           <Route path="/dashboard/creditos" element={<Creditos />} />
           <Route path="/dashboard/pagamentos" element={<Pagamentos />} />
