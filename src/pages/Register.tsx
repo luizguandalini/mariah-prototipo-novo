@@ -9,10 +9,10 @@ export default function Register() {
   const navigate = useNavigate();
   const { register, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Redireciona para o dashboard se já estiver autenticado
+  // Redireciona para Meus Laudos se já estiver autenticado
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true })
+      navigate('/dashboard/laudos', { replace: true })
     }
   }, [isAuthenticated, authLoading, navigate])
 
@@ -31,7 +31,7 @@ export default function Register() {
 
     try {
       await register(formData);
-      navigate("/dashboard");
+      navigate("/dashboard/laudos");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao criar conta");
     } finally {
