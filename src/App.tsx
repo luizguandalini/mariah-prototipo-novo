@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ProtectedRoute from "./components/routing/ProtectedRoute";
 
 // Dashboard User
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -36,35 +37,35 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Register />} />
 
-          {/* User Dashboard Routes */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/laudos" element={<MeusLaudos />} />
+          {/* User Dashboard Routes - Protected */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/laudos" element={<ProtectedRoute><MeusLaudos /></ProtectedRoute>} />
           <Route
             path="/dashboard/laudos/:id/preview"
-            element={<LaudoPreview />}
+            element={<ProtectedRoute><LaudoPreview /></ProtectedRoute>}
           />
           <Route
             path="/dashboard/laudos/:id/galeria"
-            element={<GaleriaImagens />}
+            element={<ProtectedRoute><GaleriaImagens /></ProtectedRoute>}
           />
           <Route
             path="/dashboard/laudos/:id/pdf"
-            element={<VisualizadorPdfLaudo />}
+            element={<ProtectedRoute><VisualizadorPdfLaudo /></ProtectedRoute>}
           />
 
-          <Route path="/dashboard/perfil" element={<Perfil />} />
-          <Route path="/dashboard/creditos" element={<Creditos />} />
-          <Route path="/dashboard/pagamentos" element={<Pagamentos />} />
+          <Route path="/dashboard/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+          <Route path="/dashboard/creditos" element={<ProtectedRoute><Creditos /></ProtectedRoute>} />
+          <Route path="/dashboard/pagamentos" element={<ProtectedRoute><Pagamentos /></ProtectedRoute>} />
 
 
-          {/* Admin Dashboard Routes */}
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/usuarios" element={<Usuarios />} />
-          <Route path="/admin/laudos" element={<TodosLaudos />} />
-          <Route path="/admin/ambientes" element={<GerenciarAmbientes />} />
+          {/* Admin Dashboard Routes - Protected with Admin requirement */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><Usuarios /></ProtectedRoute>} />
+          <Route path="/admin/laudos" element={<ProtectedRoute requireAdmin><TodosLaudos /></ProtectedRoute>} />
+          <Route path="/admin/ambientes" element={<ProtectedRoute requireAdmin><GerenciarAmbientes /></ProtectedRoute>} />
           <Route
             path="/admin/detalhes-laudo"
-            element={<GerenciarDetalhesLaudo />}
+            element={<ProtectedRoute requireAdmin><GerenciarDetalhesLaudo /></ProtectedRoute>}
           />
         </Routes>
       </AuthProvider>

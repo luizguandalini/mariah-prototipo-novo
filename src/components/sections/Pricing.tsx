@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import Button from '../ui/Button'
 import { planosService } from '../../services/planos'
 import type { Plano } from '../../types/planos'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function Pricing() {
   const [plans, setPlans] = useState<Plano[]>([])
   const [loading, setLoading] = useState(true)
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -24,6 +28,16 @@ export default function Pricing() {
 
     fetchPlans()
   }, [])
+
+  const handleComprarPlano = () => {
+    if (!isAuthenticated) {
+      // Se não estiver autenticado, redirecionar para login
+      navigate('/login')
+    } else {
+      // Se estiver autenticado, ir para página de créditos
+      navigate('/dashboard/creditos')
+    }
+  }
 
   if (loading) {
     return (
@@ -127,7 +141,7 @@ export default function Pricing() {
                 variant="primary"
                 size="lg"
                 className="w-full mt-auto"
-                onClick={() => window.location.href = '/dashboard/creditos'}
+                onClick={handleComprarPlano}
               >
                 Comprar Agora
               </Button>
