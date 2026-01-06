@@ -29,23 +29,12 @@ export default function Hero() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start">
               <Button variant="primary" size="lg" className="w-full sm:w-auto">
-                Assinar Agora
-              </Button>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                Ver Demonstração
+                Começar Agora
               </Button>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-12">
-              <div>
-                <div className="text-2xl md:text-3xl font-bold gradient-text">+10K</div>
-                <div className="text-xs md:text-sm text-[var(--text-secondary)]">Laudos Gerados</div>
-              </div>
-              <div>
-                <div className="text-2xl md:text-3xl font-bold gradient-text">98%</div>
-                <div className="text-xs md:text-sm text-[var(--text-secondary)]">Satisfação</div>
-              </div>
+            <div className="grid grid-cols-1 gap-4 md:gap-6 mt-8 md:mt-12 justify-items-center lg:justify-items-start">
               <div>
                 <div className="text-2xl md:text-3xl font-bold gradient-text">24/7</div>
                 <div className="text-xs md:text-sm text-[var(--text-secondary)]">Disponível</div>
@@ -90,7 +79,7 @@ export default function Hero() {
               </div>
               <div className="mt-3 md:mt-4 flex items-center gap-2">
                 <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-primary to-primary-dark rounded-full"></div>
-                <div className="text-[10px] md:text-xs text-[var(--text-secondary)]">Pronto em segundos</div>
+                <div className="text-[10px] md:text-xs text-[var(--text-secondary)]">Pronto para uso</div>
               </div>
             </motion.div>
           </motion.div>

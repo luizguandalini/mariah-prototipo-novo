@@ -8,7 +8,7 @@ const features = [
   },
   {
     title: 'Rapidez Incomparável',
-    description: 'Laudos gerados em segundos, não em dias. Aumente sua produtividade exponencialmente.',
+    description: 'Elabore laudos com muito mais agilidade. Aumente sua produtividade e foque no atendimento.',
     icon: '⚡'
   },
   {
@@ -18,7 +18,7 @@ const features = [
   },
   {
     title: 'Múltiplos Formatos',
-    description: 'Exporte em PDF, compartilhe online ou integre com seu CRM favorito.',
+    description: 'Gere arquivos PDF detalhados, baixe e compartilhe diretamente com seus clientes.',
     icon: '📱'
   },
   {

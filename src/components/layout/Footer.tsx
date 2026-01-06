@@ -9,8 +9,8 @@ export default function Footer() {
           <div className="col-span-1 md:col-span-2">
             <div className="text-2xl font-bold mb-4">
               <span className="text-white">MAR</span>
-              <span className="text-primary">i</span>
-              <span className="text-white">AH</span>
+              <span className="gradient-text">IA</span>
+              <span className="text-white">H</span>
             </div>
             <p className="text-gray-400 max-w-md">
               Inteligência artificial especializada em laudos imobiliários.
@@ -49,16 +49,7 @@ export default function Footer() {
                   Acessar Conta
                 </Link>
               </li>
-              <li>
-                <a href="#contato" className="hover:text-primary transition-colors">
-                  Contato
-                </a>
-              </li>
-              <li>
-                <a href="#faq" className="hover:text-primary transition-colors">
-                  FAQ
-                </a>
-              </li>
+
             </ul>
           </div>
         </div>

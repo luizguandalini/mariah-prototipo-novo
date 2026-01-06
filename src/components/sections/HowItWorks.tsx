@@ -4,25 +4,25 @@ const steps = [
   {
     number: '01',
     title: 'Faça Upload das Fotos',
-    description: 'Envie as fotos do imóvel diretamente pela plataforma. Aceita múltiplos formatos e resolução.',
+    description: 'Utilize nosso aplicativo exclusivo para capturar e enviar as fotos do imóvel de forma prática.',
     icon: '📸'
   },
   {
     number: '02',
     title: 'IA Analisa o Imóvel',
-    description: 'A Mariah analisa cada detalhe: acabamentos, conservação, metragem e muito mais.',
+    description: 'A Mariah analisa cada detalhe: acabamentos, conservação e características visuais do imóvel.',
     icon: '🤖'
   },
   {
     number: '03',
     title: 'Laudo Profissional Gerado',
-    description: 'Receba um laudo completo e profissional pronto para uso em segundos.',
+    description: 'Receba um laudo completo e profissional, revisado e pronto para apresentação.',
     icon: '📄'
   },
   {
     number: '04',
     title: 'Baixe e Compartilhe',
-    description: 'Exporte em PDF, compartilhe com clientes ou integre ao seu sistema.',
+    description: 'Gere arquivos PDF completos e compartilhe facilmente com seus clientes.',
     icon: '✅'
   }
 ]
