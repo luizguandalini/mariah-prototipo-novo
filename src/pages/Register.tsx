@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Button from "../components/ui/Button";
@@ -7,7 +7,14 @@ import ThemeToggle from "../components/ui/ThemeToggle";
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // Redireciona para o dashboard se já estiver autenticado
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, authLoading, navigate])
 
   const [formData, setFormData] = useState({
     nome: "",

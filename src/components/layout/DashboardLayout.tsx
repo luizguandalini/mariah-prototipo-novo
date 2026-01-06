@@ -25,7 +25,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Usar dados do contexto global para ter contadores atualizados
-  const { user: currentUser, isLoading: loading } = useAuth();
+  const { user: currentUser, isLoading: loading, logout } = useAuth();
 
   const getRoleName = (role: UserRole): string => {
     const roleNames = {
@@ -109,6 +109,7 @@ export default function DashboardLayout({
   });
 
   const handleLogout = () => {
+    logout();
     navigate("/");
   };
 
