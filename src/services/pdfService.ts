@@ -67,6 +67,7 @@ class PdfService {
     getImagensPagina: (page: number) => Promise<any>,
     getUrlsBatch: (s3Keys: string[]) => Promise<Record<string, string>>,
     configuracoes: any,
+    ambientes: any[],
     onProgress: ProgressCallback,
     abortSignal?: AbortSignal
   ): Promise<void> {
@@ -88,8 +89,11 @@ class PdfService {
         elementoParaCaptura = await this.criarCapa(laudo, configuracoes);
         // Aumentei o delay para garantir carregamento da fonte
         await new Promise(resolve => setTimeout(resolve, 800));
+      } else if (hasCover && pagina === 2) {
+        elementoParaCaptura = this.criarPaginaTermos(ambientes);
+        await new Promise(resolve => setTimeout(resolve, 400));
       } else {
-        const backendPage = hasCover ? pagina - 1 : pagina;
+        const backendPage = hasCover ? pagina - 2 : pagina;
         const response = await getImagensPagina(backendPage);
         const imagens = response.data;
         const s3Keys = imagens.map((img: any) => img.s3Key);
@@ -232,6 +236,89 @@ class PdfService {
       });
     }));
 
+    return container;
+  }
+
+  private criarPaginaTermos(ambientes: any[]): HTMLElement {
+    const itemsPerColumn = 12;
+    const columns = [[], [], [], []] as any[][];
+    
+    ambientes.forEach((amb, index) => {
+      const colIndex = Math.floor(index / itemsPerColumn);
+      if (colIndex < 4) {
+        columns[colIndex].push({ ...amb, originalIndex: index + 1 });
+      }
+    });
+
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: fixed;
+      top: -10000px;
+      left: 0;
+      width: 210mm;
+      height: 297mm;
+      box-sizing: border-box;
+      background-color: #fff;
+      padding: 20mm;
+      font-family: "Roboto", Arial, sans-serif;
+      color: black;
+      overflow: hidden;
+    `;
+
+    container.innerHTML = `
+      <style>
+        .termos-gerais h2 { font-size: 14px; font-weight: 700; border-bottom: 1px solid #c0c0c0; padding-bottom: 4px; margin-bottom: 15px; text-transform: uppercase; }
+        .termos-gerais p { font-size: 12px; text-align: justify; line-height: 1.5; margin-bottom: 15px; }
+        .ambientes-section { margin-top: 30px; }
+        .ambientes-section h2 { font-size: 14px; font-weight: 700; border-bottom: 1px solid #c0c0c0; padding-bottom: 4px; margin-bottom: 15px; text-transform: uppercase; }
+        .ambientes-container { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+        .ambiente-col { background-color: #d9d9d9; padding: 8px; min-height: 480px; display: flex; flex-direction: column; gap: 8px; }
+        .ambiente-item { font-size: 11px; line-height: 1.2; }
+      </style>
+      
+      <div style="height: 35px;"></div>
+
+      <div class="termos-gerais">
+        <h2>Termos Gerais</h2>
+        <p>
+          É obrigação do locatário o reparo imediato dos danos causados por si mesmo ou por
+          terceiros durante a vigência do contrato de locação, cabendo ao locatário restituir o
+          imóvel no mesmo estado em que o recebeu, de acordo com este laudo de vistoria,
+          comprometendo-se com o zelo e promovendo a manutenção preventiva do mesmo e de
+          seus equipamentos porventura existentes, em especial, equipamentos elétricos, quadros
+          de distribuição de energia, instalações hidráulicas, elétricas, sistemas de ar, sistema de
+          aquecimento em geral ou danos decorrentes do mau uso, tais como: danos ao
+          encanamento provocados pelo descarte de objetos em ralos, em vasos sanitários,
+          conservação dos móveis ou de bens de razão estrutural, como portas, janelas, esquadrias,
+          pias, gabinetes, entre outros.
+        </p>
+        <p>
+          O locatário será isento de responsabilidade quanto aos desgastes naturais decorrentes do
+          uso normal e zeloso do imóvel, desde que tais condições sejam compatíveis com o
+          período de locação e não decorram de negligência, mau uso ou ausência de manutenção
+          regular. Eventuais danos que ultrapassem o desgaste esperado ou sejam causados por
+          uso inadequado serão de responsabilidade do locatário, firmando compromisso do uso
+          zeloso pelo período em que se der início a locação até a efetiva devolução das chaves.
+        </p>
+      </div>
+
+      <div class="ambientes-section">
+        <h2>Ambientes</h2>
+        <div class="ambientes-container">
+          ${columns.map(col => `
+            <div class="ambiente-col">
+              ${col.map(amb => `
+                <div class="ambiente-item">
+                  ${amb.originalIndex}. ${amb.ambiente.replace(/^\d+\s*-\s*/, '')}
+                </div>
+              `).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container); // IMPORTANTE: Anexar ao body para ser renderizado pelo html2canvas
     return container;
   }
 

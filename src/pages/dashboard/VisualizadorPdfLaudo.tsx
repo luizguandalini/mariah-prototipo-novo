@@ -33,6 +33,7 @@ export default function VisualizadorPdfLaudo() {
   
   const [laudo, setLaudo] = useState<Laudo | null>(null);
   const [imagensComUrls, setImagensComUrls] = useState<any[]>([]);
+  const [ambientes, setAmbientes] = useState<any[]>([]);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalImagens, setTotalImagens] = useState(0);
@@ -60,9 +61,22 @@ export default function VisualizadorPdfLaudo() {
 
   useEffect(() => {
     if (id && laudo) {
+      if (ambientes.length === 0) {
+        carregarAmbientes();
+      }
       carregarImagens();
     }
   }, [id, paginaAtual, laudo]);
+
+  const carregarAmbientes = async () => {
+    if (!id) return;
+    try {
+      const response = await laudosService.getAmbientes(id, 1, 100);
+      setAmbientes(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar ambientes:', error);
+    }
+  };
 
   const carregarConfiguracoes = async () => {
     try {
@@ -95,7 +109,7 @@ export default function VisualizadorPdfLaudo() {
       if (totalPaginas === 0) {
         try {
           const response = await laudosService.getImagensPdf(id, 1, 12);
-          setTotalPaginas(response.meta.totalPages + 1);
+          setTotalPaginas(response.meta.totalPages + 2); // +2 (Capa + Termos)
           setTotalImagens(response.meta.totalImages);
         } catch (e) {
           console.error(e);
@@ -104,7 +118,15 @@ export default function VisualizadorPdfLaudo() {
       return;
     }
 
-    const backendPage = hasCover ? paginaAtual - 1 : paginaAtual;
+    // Se for página de Termos (Página 2), não carrega imagens
+    if (hasCover && paginaAtual === 2) {
+      setImagensComUrls([]);
+      setLoading(false);
+      return;
+    }
+
+    // Calculo da página do backend (Pagina 1 do backend começa na página 3 do visualizador se tiver capa)
+    const backendPage = hasCover ? paginaAtual - 2 : paginaAtual;
 
     if (pagesCache.current[paginaAtual]) {
       setImagensComUrls(pagesCache.current[paginaAtual]);
@@ -115,7 +137,7 @@ export default function VisualizadorPdfLaudo() {
       setLoading(true);
       const response = await laudosService.getImagensPdf(id, backendPage, 12);
       
-      setTotalPaginas(hasCover ? response.meta.totalPages + 1 : response.meta.totalPages);
+      setTotalPaginas(hasCover ? response.meta.totalPages + 2 : response.meta.totalPages);
       setTotalImagens(response.meta.totalImages);
 
       const s3Keys = response.data.map((img: any) => img.s3Key);
@@ -179,6 +201,7 @@ export default function VisualizadorPdfLaudo() {
         getImagensPagina,
         getUrlsBatch,
         configuracoes,
+        ambientes,
         setProgresso,
         abortControllerRef.current.signal
       );
@@ -308,6 +331,87 @@ export default function VisualizadorPdfLaudo() {
     );
   };
 
+  const renderInfoPage = () => {
+    // Organizar ambientes em 4 colunas com máximo de 12 itens por coluna
+    const itemsPerColumn = 12;
+    const columns = [[], [], [], []] as any[][];
+    
+    ambientes.forEach((amb, index) => {
+      const colIndex = Math.floor(index / itemsPerColumn);
+      if (colIndex < 4) {
+        columns[colIndex].push({ ...amb, originalIndex: index + 1 });
+      }
+    });
+
+    return (
+      <div 
+        id="pdf-grid-preview"
+        style={{
+          width: '210mm',
+          height: '297mm',
+          boxSizing: 'border-box',
+          margin: '0 auto',
+          padding: '20mm',
+          backgroundColor: '#fff',
+          overflow: 'hidden',
+          fontFamily: '"Roboto", Arial, sans-serif',
+          color: 'black',
+        }}
+      >
+        <style>{`
+          .termos-gerais h2 { font-size: 14px; font-weight: 700; border-bottom: 1px solid #c0c0c0; padding-bottom: 4px; margin-bottom: 15px; text-transform: uppercase; }
+          .termos-gerais p { font-size: 12px; text-align: justify; line-height: 1.5; margin-bottom: 15px; }
+          .ambientes-section { margin-top: 30px; }
+          .ambientes-section h2 { font-size: 14px; font-weight: 700; border-bottom: 1px solid #c0c0c0; padding-bottom: 4px; margin-bottom: 15px; text-transform: uppercase; }
+          .ambientes-container { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+          .ambiente-col { background-color: #d9d9d9; padding: 8px; min-height: 480px; display: flex; flex-direction: column; gap: 8px; }
+          .ambiente-item { font-size: 11px; line-height: 1.2; }
+        `}</style>
+        
+        <div style={{ height: '35px' }}></div>
+
+        <div className="termos-gerais">
+          <h2>Termos Gerais</h2>
+          <p>
+            É obrigação do locatário o reparo imediato dos danos causados por si mesmo ou por
+            terceiros durante a vigência do contrato de locação, cabendo ao locatário restituir o
+            imóvel no mesmo estado em que o recebeu, de acordo com este laudo de vistoria,
+            comprometendo-se com o zelo e promovendo a manutenção preventiva do mesmo e de
+            seus equipamentos porventura existentes, em especial, equipamentos elétricos, quadros
+            de distribuição de energia, instalações hidráulicas, elétricas, sistemas de ar, sistema de
+            aquecimento em geral ou danos decorrentes do mau uso, tais como: danos ao
+            encanamento provocados pelo descarte de objetos em ralos, em vasos sanitários,
+            conservação dos móveis ou de bens de razão estrutural, como portas, janelas, esquadrias,
+            pias, gabinetes, entre outros.
+          </p>
+          <p>
+            O locatário será isento de responsabilidade quanto aos desgastes naturais decorrentes do
+            uso normal e zeloso do imóvel, desde que tais condições sejam compatíveis com o
+            período de locação e não decorram de negligência, mau uso ou ausência de manutenção
+            regular. Eventuais danos que ultrapassem o desgaste esperado ou sejam causados por
+            uso inadequado serão de responsabilidade do locatário, firmando compromisso do uso
+            zeloso pelo período em que se der início a locação até a efetiva devolução das chaves.
+          </p>
+        </div>
+
+        <div className="ambientes-section">
+          <h2>Ambientes</h2>
+          <div className="ambientes-container">
+            {columns.map((col, colIndex) => (
+              <div key={colIndex} className="ambiente-col">
+                {col.map((amb) => (
+                  <div key={amb.ambiente} className="ambiente-item">
+                    {amb.originalIndex}. {amb.ambiente.replace(/^\d+\s*-\s*/, '')}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -383,6 +487,8 @@ export default function VisualizadorPdfLaudo() {
         
         {hasCover && paginaAtual === 1 ? (
           renderCoverPage()
+        ) : hasCover && paginaAtual === 2 ? (
+          renderInfoPage()
         ) : (
           <div
             id="pdf-grid-preview"
