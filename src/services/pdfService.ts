@@ -14,6 +14,13 @@ const METODOLOGIA_TEXTS = [
   "Os elementos adicionais ao imóvel, como acessórios, eletrodomésticos, equipamentos de arcondicionado, dispositivos em geral, lustres ou luminárias, mobília não embutida, entre outros, serão identificados no laudo pela denominação \"ITEM\"."
 ];
 
+const METODOLOGIA_SAIDA_TEXTS = [
+  "Este documento traz como condições de devolução do imóvel, o qual será utilizado para averiguação comparativa com a vistoria de entrada, a fim de constatar possíveis divergências que possam ter surgido no decorrer da locação.",
+  "Caberá às partes utilizar as análises apresentadas neste laudo como base comparativa com o laudo anterior, considerando o grau de relevância dos apontamentos, a atribuição de responsabilidade e a necessidade de reparo imediato dos danos causados pela locatária durante o período de uso. Conforme estabelece o art. 23, inciso III, da Lei nº 8.245/91, cabe ao locatário a restituição do imóvel no mesmo estado em que o recebeu, de acordo com o laudo de vistoria inicial. Deve-se analisar, em especial, equipamentos elétricos, quadros de distribuição de energia, instalações hidráulicas e elétricas, sistemas de ar condicionado, sistemas de aquecimento em geral ou danos decorrentes do mau uso, tais como: danos ao encanamento provocados pelo descarte de objetos em ralos e vasos sanitários, conservação de móveis, eletrodomésticos ou bens de razão estrutural, como portas, janelas, esquadrias, pias, armários, entre outros.",
+  "O método utilizado na vistoria consiste em uma análise meticulosa, baseando-se em procedimentos técnicos para avaliar todos os aspectos relevantes, desde apontamentos estruturais visíveis até pequenos detalhes construtivos e acessórios presentes no imóvel. Todos os aspectos são registrados de forma clara e objetiva, por textos e imagens, incluindo qualquer apontamento ou irregularidade aparente, salvo vício oculto. A abordagem é imparcial, e as fotos de cada ambiente trazem todos os ângulos necessários, como paredes, pisos, tetos, portas e janelas, entre outros que compõem o imóvel e suas instalações. As imagens são agrupadas e numeradas por ambiente, de modo que, mesmo na ausência de texto descrevendo algum apontamento, poderão ser identificadas por meio da interpretação dos registros fotográficos.",
+  "Os registros encontrados como irregularidades ou avarias são indicados neste laudo de vistoria pela menção da palavra \"APONTAMENTO\"."
+];
+
 // CSS idêntico ao usado no componente React
 const COVER_PAGE_CSS = `
   @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
@@ -91,7 +98,7 @@ class PdfService {
     const pdf = new jsPDF('portrait', 'mm', 'a4');
     let paginaAdicionada = false;
 
-    const hasCover = laudo?.tipoVistoria?.toLowerCase().includes('entrada');
+    const hasCover = true;
 
     for (let pagina = 1; pagina <= totalPaginas; pagina++) {
       if (abortSignal?.aborted) {
@@ -240,9 +247,10 @@ class PdfService {
         </div>
       </div>
       
+      
       <div class="div-metodologia">
         <h1>METODOLOGIA</h1>
-        ${METODOLOGIA_TEXTS.map(text => `<p>${text}</p>`).join('')}
+        ${(laudo.tipoVistoria?.toLowerCase() === 'saída' || laudo.tipoVistoria?.toLowerCase() === 'saida' ? METODOLOGIA_SAIDA_TEXTS : METODOLOGIA_TEXTS).map(text => `<p>${text}</p>`).join('')}
       </div>
     `;
 
