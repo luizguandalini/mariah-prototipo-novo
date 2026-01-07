@@ -33,6 +33,7 @@ export interface ItemAmbiente {
   ambienteId: string;
   parentId?: string;
   nome: string;
+  descricao?: string;
   prompt: string;
   ordem: number;
   ativo: boolean;
@@ -59,6 +60,7 @@ export interface UpdateAmbienteDto {
 
 export interface CreateItemAmbienteDto {
   nome: string;
+  descricao?: string;
   prompt: string;
   parentId?: string;
   ativo?: boolean;
@@ -66,6 +68,7 @@ export interface CreateItemAmbienteDto {
 
 export interface UpdateItemAmbienteDto {
   nome?: string;
+  descricao?: string;
   prompt?: string;
   parentId?: string;
   ativo?: boolean;

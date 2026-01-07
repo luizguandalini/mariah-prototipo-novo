@@ -675,7 +675,9 @@ export default function GerenciarAmbientes() {
                 ? formData.tiposImovel
                 : undefined,
           };
-          await ambientesService.criarAmbiente(data);
+          const novoAmbiente = await ambientesService.criarAmbiente(data);
+          
+          setAmbientes(prev => [...prev, novoAmbiente]);
           toast.success("Ambiente criado com sucesso!");
         } else if (dialog.mode === "edit" && dialog.data) {
           const data: UpdateAmbienteDto = {
@@ -685,40 +687,116 @@ export default function GerenciarAmbientes() {
             tiposUso: formData.tiposUso,
             tiposImovel: formData.tiposImovel,
           };
-          await ambientesService.atualizarAmbiente(dialog.data.id, data);
+          const ambienteAtualizado = await ambientesService.atualizarAmbiente(dialog.data.id, data);
+          
+          setAmbientes(prev => prev.map(a => a.id === ambienteAtualizado.id ? {...a, ...ambienteAtualizado, itens: a.itens} : a));
           toast.success("Ambiente atualizado com sucesso!");
         }
       } else if (
         (dialog.type === "item" || dialog.type === "subitem") &&
         dialog.ambienteId
       ) {
+        let novoItem: ItemAmbiente | null = null;
+        let itemAtualizado: ItemAmbiente | null = null;
+
         if (dialog.mode === "create") {
           const data: CreateItemAmbienteDto = {
             nome: formData.nome,
-            prompt: formData.prompt,
             descricao: formData.descricao || undefined,
+            prompt: formData.prompt,
             parentId: dialog.parentId,
             ativo: formData.ativo,
           };
-          await ambientesService.criarItem(dialog.ambienteId, data);
+          novoItem = await ambientesService.criarItem(dialog.ambienteId, data);
           toast.success("Item criado com sucesso!");
         } else if (dialog.mode === "edit" && dialog.data) {
           const data: UpdateItemAmbienteDto = {
             nome: formData.nome,
-            prompt: formData.prompt,
             descricao: formData.descricao || undefined,
+            prompt: formData.prompt,
+            parentId: dialog.parentId,
             ativo: formData.ativo,
           };
-          await ambientesService.atualizarItem(
+          itemAtualizado = await ambientesService.atualizarItem(
             dialog.ambienteId,
             dialog.data.id,
             data
           );
           toast.success("Item atualizado com sucesso!");
         }
+
+        // Atualizar estado local de forma inteligente
+        try {
+          // Precisamos encontrar qual CARD na tela corresponde ao ambienteId onde o item foi salvo.
+          // O 'dialog.ambienteId' pode ser o ID de um ambiente dentro de um grupo.
+          
+          setAmbientes((prev) => 
+            prev.map((ambienteCard) => {
+               // Verifica se o dialog.ambienteId é o ID deste card OU o ID do primeiro ambiente deste grupo
+               const isTarget = 
+                 ambienteCard.id === dialog.ambienteId || 
+                 (ambienteCard.isGrupo && ambienteCard.ambientes?.[0]?.id === dialog.ambienteId);
+               
+               if (isTarget) {
+                 // Se temos o novo item retornado pela API, adicionamos diretamente (mais rápido)
+                 if (novoItem) {
+                    // Se for subitem, é mais complexo atualizar a árvore manualmente, 
+                    // então buscamos a lista atualizada para garantir consistência.
+                    // Se for item raiz, adicionamos direto.
+                    if (novoItem.parentId) {
+                        // Marcamos para buscar atualização completa abaixo
+                        return ambienteCard; 
+                    } else {
+                        return {
+                            ...ambienteCard,
+                            itens: [...(ambienteCard.itens || []), novoItem]
+                        };
+                    }
+                 }
+                 
+                 // Se foi edição
+                 if (itemAtualizado) {
+                     // Edição simples de item raiz pode ser manual
+                     if (!itemAtualizado.parentId) {
+                         return {
+                             ...ambienteCard,
+                             itens: (ambienteCard.itens || []).map(i => i.id === itemAtualizado!.id ? itemAtualizado! : i)
+                         };
+                     }
+                 }
+                 
+                 return ambienteCard;
+               }
+               return ambienteCard;
+            })
+          );
+          
+          // ESTRATÉGIA HÍBRIDA:
+          // Mesmo tentando atualizar manualmente acima, vamos buscar a lista atualizada do servidor
+          // para garantir que sub-itens e ordenação fiquem 100% corretos.
+          // O ambienteIdParaBuscar deve ser o ID que usamos para queries de itens (o real).
+          const ambienteIdParaBuscar = dialog.ambienteId; 
+
+          const itensAtualizados = await ambientesService.listarItensAmbiente(ambienteIdParaBuscar);
+          
+          setAmbientes(prev => prev.map(a => {
+             const isTarget = 
+                 a.id === ambienteIdParaBuscar || 
+                 (a.isGrupo && a.ambientes?.[0]?.id === ambienteIdParaBuscar);
+
+            if (isTarget) {
+              return { ...a, itens: itensAtualizados };
+            }
+            return a;
+          }));
+
+        } catch (err) {
+          console.error("Erro ao atualizar lista de itens localmente:", err);
+          // Não falhamos o fluxo principal se o refresh visual falhar, pois o item foi criado.
+          // O usuário pode recarregar se necessário, mas o toast já avisou do sucesso.
+        }
       }
 
-      await carregarAmbientes();
       fecharDialog();
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
@@ -765,92 +843,126 @@ export default function GerenciarAmbientes() {
       onConfirm: () => {},
     });
 
+    // Snapshot para rollback
+    const previousAmbientes = [...ambientes];
+
+    // ATUALIZAÇÃO OTIMISTA: Remove visualmente ANTES da API
     try {
       if (type === "ambiente") {
+        // Remover do estado local imediatamente
+        // Se for grupo, remove todos. Se for único, remove único.
         const ambiente = ambientes.find((a) => a.id === id);
+        if (ambiente?.isGrupo && ambiente.ambientes) {
+             const idsParaRemover = ambiente.ambientes.map(a => a.id).concat(id);
+             setAmbientes(prev => prev.filter(a => !idsParaRemover.includes(a.id)));
+        } else {
+             setAmbientes(prev => prev.filter(a => a.id !== id));
+        }
 
-        // Se for um grupo, deletar todos os ambientes do grupo
+        const ambienteAlvo = ambientes.find((a) => a.id === id);
         if (
-          ambiente?.isGrupo &&
-          ambiente.ambientes &&
-          ambiente.ambientes.length > 0
+          ambienteAlvo?.isGrupo &&
+          ambienteAlvo.ambientes &&
+          ambienteAlvo.ambientes.length > 0
         ) {
-          for (const amb of ambiente.ambientes) {
+          for (const amb of ambienteAlvo.ambientes) {
             await ambientesService.deletarAmbiente(amb.id);
           }
         } else {
           await ambientesService.deletarAmbiente(id);
         }
 
-        // Fechar dialog de edição ANTES de mostrar notificação
+        // Fechar dialog de edição somente se sucesso (ou manter fechado já que removemos da tela)
         setDialogEditarAmbientes({ open: false, ambientes: [] });
+        toast.success("Ambiente deletado!");
 
-        toast.success("Ambiente deletado com sucesso!");
       } else if (type === "item" && ambienteId) {
-        const ambiente = ambientes.find((a) => a.id === ambienteId);
+         // Remover do estado local imediatamente
+         setAmbientes(prev => prev.map(a => {
+            if (a.id === ambienteId && a.itens) {
+                // Função recursiva para remover item da árvore
+                const removerRecursivo = (itens: ItemAmbiente[]): ItemAmbiente[] => {
+                    return itens.filter(i => i.id !== id).map(i => ({
+                        ...i,
+                        filhos: i.filhos ? removerRecursivo(i.filhos) : []
+                    }));
+                };
+                return { ...a, itens: removerRecursivo(a.itens) };
+            }
+            return a;
+         }));
 
-        // Se for um grupo, deletar o item do primeiro ambiente do grupo
+        const ambiente = previousAmbientes.find((a) => a.id === ambienteId);
+        let ambienteIdReal = ambienteId;
+        
         if (
           ambiente?.isGrupo &&
           ambiente.ambientes &&
           ambiente.ambientes.length > 0
         ) {
-          await ambientesService.deletarItem(ambiente.ambientes[0].id, id);
+          ambienteIdReal = ambiente.ambientes[0].id;
+          await ambientesService.deletarItem(ambienteIdReal, id);
         } else {
           await ambientesService.deletarItem(ambienteId, id);
         }
 
-        toast.success("Item deletado com sucesso!");
+        toast.success("Item deletado!");
       }
-
-      await carregarAmbientes();
     } catch (error: any) {
       console.error("Erro ao deletar:", error);
-
-      // Fechar dialog mesmo em caso de erro
-      setDialogEditarAmbientes({ open: false, ambientes: [] });
-
-      toast.error(error?.response?.data?.message || "Erro ao deletar");
+      // ROLLBACK: Restaura o estado anterior em caso de erro
+      setAmbientes(previousAmbientes);
+      
+      const msg = error?.response?.data?.message || "Erro ao deletar. Alterações desfeitas.";
+      toast.error(msg);
     }
   };
 
   /**
-   * Toggle de tipo específico sem recarregar tudo
+   * Toggle de tipo específico com Optimistic UI e Rollback
    */
   const handleToggleTipoUso = async (ambienteId: string, tipo: TipoUso) => {
+    // 1. Snapshot do estado anterior
+    const previousAmbientes = [...ambientes];
+    
+    // Encontrar o ambiente e verificar ação
+    const ambiente = ambientes.find((a) => a.id === ambienteId);
+    if (!ambiente) return;
+    
+    const tiposAtuais = ambiente.tiposUso || [];
+    const estaRemovendo = tiposAtuais.includes(tipo);
+
+    // 2. Atualização Otimista Imediata
+    setAmbientes((prev) =>
+      prev.map((a) => {
+        if (a.id === ambienteId) {
+            const novosTipos = estaRemovendo 
+                ? (a.tiposUso || []).filter(t => t !== tipo)
+                : [...(a.tiposUso || []), tipo];
+            return { ...a, tiposUso: novosTipos };
+        }
+        return a;
+      }) as unknown as Ambiente[]
+    );
+
     try {
-      const ambiente = ambientes.find((a) => a.id === ambienteId);
-      if (!ambiente) return;
-
-      const tiposAtuais = ambiente.tiposUso || [];
-      const estaRemovendo = tiposAtuais.includes(tipo);
-
-      // Se for um grupo, usar ID do primeiro ambiente
+      // 3. Chamada à API
       const ambienteIdReal =
         ambiente.isGrupo && ambiente.ambientes && ambiente.ambientes.length > 0
           ? ambiente.ambientes[0].id
           : ambienteId;
 
-      // Chamar endpoint REST específico (mais eficiente!)
-      const resultado = estaRemovendo
-        ? await ambientesService.removerTipoUso(ambienteIdReal, tipo)
-        : await ambientesService.adicionarTipoUso(ambienteIdReal, tipo);
+      await (estaRemovendo
+        ? ambientesService.removerTipoUso(ambienteIdReal, tipo)
+        : ambientesService.adicionarTipoUso(ambienteIdReal, tipo));
 
-      // Forçar o tipo correto - o backend retorna strings mas sabemos que são TipoUso válidos
-      const tiposUsoAtualizados = resultado.tiposUso as unknown as TipoUso[];
-
-      // Atualizar localmente APÓS sucesso da API
-      setAmbientes(
-        (prev) =>
-          prev.map((a) =>
-            a.id === ambienteId ? { ...a, tiposUso: tiposUsoAtualizados } : a
-          ) as unknown as Ambiente[]
-      );
-
-      toast.success(`${tipo} ${estaRemovendo ? "removido" : "adicionado"}!`);
+      // Sucesso - O estado já está atualizado
+      // toast.success(`${tipo} ${estaRemovendo ? "removido" : "adicionado"}!`); // Opcional: Feedback visual já ocorreu
     } catch (error: any) {
+      // 4. Rollback em caso de erro
       console.error("Erro ao atualizar tipo de uso:", error);
-      toast.error("Erro ao atualizar tipo de uso");
+      setAmbientes(previousAmbientes);
+      toast.error("Erro ao sincronizar. Alteração desfeita.");
     }
   };
 
@@ -858,42 +970,46 @@ export default function GerenciarAmbientes() {
     ambienteId: string,
     tipo: TipoImovel
   ) => {
+    // 1. Snapshot do estado anterior
+    const previousAmbientes = [...ambientes];
+
+    // Encontrar o ambiente e verificar ação
+    const ambiente = ambientes.find((a) => a.id === ambienteId);
+    if (!ambiente) return;
+
+    const tiposAtuais = ambiente.tiposImovel || [];
+    const estaRemovendo = tiposAtuais.includes(tipo);
+
+    // 2. Atualização Otimista Imediata
+    setAmbientes((prev) =>
+        prev.map((a) => {
+          if (a.id === ambienteId) {
+              const novosTipos = estaRemovendo 
+                  ? (a.tiposImovel || []).filter(t => t !== tipo)
+                  : [...(a.tiposImovel || []), tipo];
+              return { ...a, tiposImovel: novosTipos };
+          }
+          return a;
+        }) as unknown as Ambiente[]
+      );
+
     try {
-      const ambiente = ambientes.find((a) => a.id === ambienteId);
-      if (!ambiente) return;
-
-      const tiposAtuais = ambiente.tiposImovel || [];
-      const estaRemovendo = tiposAtuais.includes(tipo);
-
-      // Se for um grupo, usar ID do primeiro ambiente
+      // 3. Chamada à API
       const ambienteIdReal =
         ambiente.isGrupo && ambiente.ambientes && ambiente.ambientes.length > 0
           ? ambiente.ambientes[0].id
           : ambienteId;
 
-      // Chamar endpoint REST específico (mais eficiente!)
-      const resultado = estaRemovendo
-        ? await ambientesService.removerTipoImovel(ambienteIdReal, tipo)
-        : await ambientesService.adicionarTipoImovel(ambienteIdReal, tipo);
+        await (estaRemovendo
+        ? ambientesService.removerTipoImovel(ambienteIdReal, tipo)
+        : ambientesService.adicionarTipoImovel(ambienteIdReal, tipo));
 
-      // Forçar o tipo correto - o backend retorna strings mas sabemos que são TipoImovel válidos
-      const tiposImovelAtualizados =
-        resultado.tiposImovel as unknown as TipoImovel[];
-
-      // Atualizar localmente APÓS sucesso da API
-      setAmbientes(
-        (prev) =>
-          prev.map((a) =>
-            a.id === ambienteId
-              ? { ...a, tiposImovel: tiposImovelAtualizados }
-              : a
-          ) as unknown as Ambiente[]
-      );
-
-      toast.success(`${tipo} ${estaRemovendo ? "removido" : "adicionado"}!`);
+        // Sucesso
     } catch (error: any) {
+      // 4. Rollback em caso de erro
       console.error("Erro ao atualizar tipo de imóvel:", error);
-      toast.error("Erro ao atualizar tipo de imóvel");
+      setAmbientes(previousAmbientes);
+      toast.error("Erro ao sincronizar. Alteração desfeita.");
     }
   };
 
