@@ -301,17 +301,27 @@ function SortableAmbienteCard({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      // Para grupos, coletar todos os ambientes do grupo (completos)
+                    onClick={async () => {
+                      // Para grupos, buscar dados completos na API para garantir edição correta
                       if (ambiente.isGrupo && ambiente.ambientes) {
-                        const idsNoGrupo = ambiente.ambientes.map(a => a.id);
-                        const ambientesCompletos = ambientes.filter(a => idsNoGrupo.includes(a.id));
-                        setDialogEditarAmbientes({
-                          open: true,
-                          ambientes: ambientesCompletos,
-                        });
+                         try {
+                           const toastId = toast.loading("Carregando ambientes...");
+                           // Buscar cada ambiente do grupo individualmente para ter os dados completos
+                           const promises = ambiente.ambientes.map(a => ambientesService.buscarAmbiente(a.id));
+                           const ambientesCompletos = await Promise.all(promises);
+                           toast.dismiss(toastId);
+                           
+                           setDialogEditarAmbientes({
+                             open: true,
+                             ambientes: ambientesCompletos,
+                           });
+                         } catch (error) {
+                           toast.dismiss();
+                           toast.error("Erro ao carregar detalhes do grupo");
+                           console.error(error);
+                         }
                       } else {
-                        // Para ambiente individual, criar array com 1 elemento
+                        // Para ambiente individual, usar o objeto atual
                         setDialogEditarAmbientes({
                           open: true,
                           ambientes: [ambiente],
@@ -689,7 +699,42 @@ export default function GerenciarAmbientes() {
           };
           const ambienteAtualizado = await ambientesService.atualizarAmbiente(dialog.data.id, data);
           
-          setAmbientes(prev => prev.map(a => a.id === ambienteAtualizado.id ? {...a, ...ambienteAtualizado, itens: a.itens} : a));
+          setAmbientes(prev => {
+            // 1. Atualizar se estiver na raiz
+            let newAmbientes = prev.map(a => a.id === ambienteAtualizado.id ? {...a, ...ambienteAtualizado, itens: a.itens} : a);
+            
+            // 2. Atualizar se estiver dentro de um grupo (atualização manual para feedback imediato)
+            newAmbientes = newAmbientes.map(a => {
+              if (a.isGrupo && a.ambientes) {
+                const subIndex = a.ambientes.findIndex(sub => sub.id === ambienteAtualizado.id);
+                if (subIndex >= 0) {
+                  const newSubs = [...a.ambientes];
+                  newSubs[subIndex] = { ...newSubs[subIndex], ...ambienteAtualizado };
+                  
+                  // OPTIMISTIC UPDATE: Recalcular nome do grupo se for apenas concatenação
+                  // Isso garante feedback imediato no CARD do grupo (ex: "Varanda + SACADA" -> "Varanda + SLA")
+                  const novoNomeGrupo = newSubs.map(s => s.nome).join(" + ");
+                  
+                  return { ...a, nome: novoNomeGrupo, ambientes: newSubs };
+                }
+              }
+              return a;
+            });
+            
+            return newAmbientes;
+          });
+
+          // 3. Se fizer parte de um grupo, buscar o grupo atualizado do servidor
+          // (Importante caso o backend renomeie o grupo automaticamente baseado nos filhos)
+          const parentGroup = ambientes.find(a => a.isGrupo && a.ambientes?.some(sub => sub.id === ambienteAtualizado.id));
+          if (parentGroup) {
+             ambientesService.buscarAmbiente(parentGroup.id)
+               .then(freshGroup => {
+                 setAmbientes(prev => prev.map(a => a.id === freshGroup.id ? {...freshGroup, itens: a.itens} : a));
+               })
+               .catch(err => console.error("Erro ao atualizar grupo pai:", err));
+          }
+
           toast.success("Ambiente atualizado com sucesso!");
         }
       } else if (
