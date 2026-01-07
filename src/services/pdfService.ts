@@ -26,6 +26,7 @@ const COVER_PAGE_CSS = `
   .formatacao-campos { display: flex; background-color: #d9d9d9; border: solid rgb(255, 255, 255) 1px; padding: 2px; align-items: baseline; }
   .formatacao-campos > strong { font-size: 12px; margin-left: 2px; white-space: nowrap; }
   .formatacao-campos > p { margin: 0px; font-size: 12px; margin-left: 3px; word-wrap: break-word; }
+  .valor-campo { text-transform: capitalize; }
   .campo-curto { width: 170px; flex-shrink: 0; min-height: 100%; }
   .campo-longo { flex: 1; min-height: 100%; }
   .div-metodologia { margin-top: 17px; }
@@ -171,7 +172,7 @@ class PdfService {
           <div class="linha-campos">
             <div class="formatacao-campos campo-curto">
               <strong>Uso:</strong>
-              <p>${laudo.tipoUso || 'Industrial'}</p>
+              <p class="valor-campo">${(laudo.tipoUso || 'Industrial').toLowerCase()}</p>
             </div>
             <div class="formatacao-campos campo-longo">
               <strong>Endereço:</strong>
@@ -182,7 +183,7 @@ class PdfService {
           <div class="linha-campos">
             <div class="formatacao-campos campo-curto">
               <strong>Tipo:</strong>
-              <p>${laudo.tipoImovel || laudo.tipo}</p>
+              <p class="valor-campo">${(laudo.tipoImovel || laudo.tipo || '').toLowerCase()}</p>
             </div>
             <div class="formatacao-campos campo-longo">
               <strong>CEP:</strong>
@@ -204,7 +205,7 @@ class PdfService {
           <div class="linha-campos">
             <div class="formatacao-campos campo-curto">
               <strong>Tipo de Vistoria:</strong>
-              <p>${laudo.tipoVistoria}</p>
+              <p class="valor-campo">${(laudo.tipoVistoria || '').toLowerCase()}</p>
             </div>
             <div class="formatacao-campos campo-longo">
               <strong>Realizada em:</strong>
