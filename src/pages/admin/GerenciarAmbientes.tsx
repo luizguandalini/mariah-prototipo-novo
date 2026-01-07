@@ -56,6 +56,7 @@ function SortableAmbienteCard({
   setDialogGrupo,
   setDialogEditarAmbientes,
   ambientes,
+  loading,
 }: {
   ambiente: Ambiente;
   expandedAmbientes: Set<string>;
@@ -89,6 +90,7 @@ function SortableAmbienteCard({
     ambientes: Ambiente[];
   }) => void;
   ambientes: Ambiente[];
+  loading?: boolean;
 }) {
   const {
     attributes,
@@ -253,7 +255,8 @@ function SortableAmbienteCard({
                 {ambiente.itens?.length || 0} itens
               </span>
               <span
-                className={`transform transition-transform ${
+                onClick={() => toggleAmbiente(ambiente.id)}
+                className={`transform transition-transform cursor-pointer p-2 hover:bg-white/10 rounded-full ${
                   expandedAmbientes.has(ambiente.id) ? "rotate-180" : ""
                 }`}
               >
@@ -327,7 +330,11 @@ function SortableAmbienteCard({
                 </div>
 
                 {/* Lista de Itens */}
-                {ambiente.itens && ambiente.itens.length > 0 ? (
+                {loading ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                ) : ambiente.itens && ambiente.itens.length > 0 ? (
                   <div className="space-y-3">
                     {ambiente.itens.map((item) =>
                       renderItem(
@@ -364,6 +371,7 @@ export default function GerenciarAmbientes() {
   const [offset, setOffset] = useState(0);
   const limit = 10;
   const observerTarget = useRef<HTMLDivElement>(null);
+  const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
 
   const [expandedAmbientes, setExpandedAmbientes] = useState<Set<string>>(
     new Set()
@@ -448,11 +456,12 @@ export default function GerenciarAmbientes() {
         0
       );
       // Forçar tipo correto - API retorna strings mas são enums válidos
-      setAmbientes(response.data as unknown as Ambiente[]);
+      const dataWithoutItems = (response.data as unknown as Ambiente[]).map(a => ({...a, itens: undefined}));
+      setAmbientes(dataWithoutItems);
       setHasMore(response.hasMore);
       setOffset(limit);
-      // Expandir todos por padrão
-      setExpandedAmbientes(new Set(response.data.map((a) => a.id)));
+      // Não expandir por padrão
+      setExpandedAmbientes(new Set());
     } catch (error) {
       toast.error("Erro ao carregar ambientes");
       console.error("Erro ao carregar ambientes:", error);
@@ -470,19 +479,14 @@ export default function GerenciarAmbientes() {
         limit,
         offset
       );
-      // Forçar tipo correto - API retorna strings mas são enums válidos
       setAmbientes((prev) => [
         ...prev,
-        ...(response.data as unknown as Ambiente[]),
+        ...((response.data as unknown as Ambiente[]).map(a => ({...a, itens: undefined}))),
       ]);
       setHasMore(response.hasMore);
       setOffset((prev) => prev + limit);
-      // Expandir novos ambientes
-      setExpandedAmbientes((prev) => {
-        const newSet = new Set(prev);
-        response.data.forEach((a) => newSet.add(a.id));
-        return newSet;
-      });
+      // Não expandir novos ambientes automaticamente
+
     } catch (error) {
       toast.error("Erro ao carregar mais ambientes");
       console.error("Erro ao carregar mais ambientes:", error);
@@ -517,7 +521,9 @@ export default function GerenciarAmbientes() {
     }
   };
 
-  const toggleAmbiente = (id: string) => {
+  const toggleAmbiente = async (id: string) => {
+    const isExpanding = !expandedAmbientes.has(id);
+    
     setExpandedAmbientes((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -527,6 +533,40 @@ export default function GerenciarAmbientes() {
       }
       return newSet;
     });
+
+    // Se estiver expandindo e não tiver itens, buscar da API
+    if (isExpanding) {
+        const ambiente = ambientes.find(a => a.id === id);
+        // Se já tiver itens carregados, não precisa buscar de novo
+        if (ambiente && (!ambiente.itens || ambiente.itens.length === 0)) {
+            // Verificar se é grupo para buscar itens do ambiente principal do grupo ou do próprio
+             const ambienteIdBusca =
+               ambiente.isGrupo && ambiente.ambientes && ambiente.ambientes.length > 0
+                 ? ambiente.ambientes[0].id
+                 : ambiente.id;
+
+            try {
+                setLoadingItems(prev => new Set(prev).add(id));
+                const itens = await ambientesService.listarItensAmbiente(ambienteIdBusca);
+                
+                setAmbientes(prev => prev.map(a => {
+                    if (a.id === id) {
+                        return { ...a, itens };
+                    }
+                    return a;
+                }));
+            } catch (error) {
+                console.error("Erro ao carregar itens do ambiente:", error);
+                toast.error("Erro ao carregar itens");
+            } finally {
+                setLoadingItems(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(id);
+                    return newSet;
+                });
+            }
+        }
+    }
   };
 
   const handleAgruparAmbientes = async () => {
@@ -1018,6 +1058,7 @@ export default function GerenciarAmbientes() {
                     setDialogGrupo={setDialogGrupo}
                     setDialogEditarAmbientes={setDialogEditarAmbientes}
                     ambientes={ambientes}
+                    loading={loadingItems.has(ambiente.id)}
                   />
                 ))}
               </div>
