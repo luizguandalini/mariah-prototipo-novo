@@ -72,7 +72,9 @@ export default function VisualizadorPdfLaudo() {
     if (!id) return;
     try {
       const response = await laudosService.getAmbientes(id, 1, 100);
+      
       setAmbientes(response.data);
+
     } catch (error) {
       console.error('Erro ao carregar ambientes:', error);
     }
@@ -332,8 +334,9 @@ export default function VisualizadorPdfLaudo() {
   };
 
   const renderInfoPage = () => {
-    // Organizar ambientes em 4 colunas com máximo de 12 itens por coluna
-    const itemsPerColumn = 12;
+    // Organizar ambientes em 4 colunas com máximo de 18 itens por coluna
+    // Ajuste fino: 18 itens preenchem melhor a altura disponível sem estourar facilmente com textos de 2 linhas.
+    const itemsPerColumn = 18;
     const columns = [[], [], [], []] as any[][];
     
     ambientes.forEach((amb, index) => {
@@ -365,7 +368,7 @@ export default function VisualizadorPdfLaudo() {
           .ambientes-section h2 { font-size: 14px; font-weight: 700; border-bottom: 1px solid #c0c0c0; padding-bottom: 4px; margin-bottom: 15px; text-transform: uppercase; }
           .ambientes-container { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
           .ambiente-col { background-color: #d9d9d9; padding: 8px; min-height: 480px; display: flex; flex-direction: column; gap: 8px; }
-          .ambiente-item { font-size: 11px; line-height: 1.2; }
+          .ambiente-item { font-size: 11px; line-height: 1.2; word-wrap: break-word; }
         `}</style>
         
         <div style={{ height: '35px' }}></div>

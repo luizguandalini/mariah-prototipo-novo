@@ -240,7 +240,7 @@ class PdfService {
   }
 
   private criarPaginaTermos(ambientes: any[]): HTMLElement {
-    const itemsPerColumn = 12;
+    const itemsPerColumn = 18;
     const columns = [[], [], [], []] as any[][];
     
     ambientes.forEach((amb, index) => {
@@ -273,7 +273,7 @@ class PdfService {
         .ambientes-section h2 { font-size: 14px; font-weight: 700; border-bottom: 1px solid #c0c0c0; padding-bottom: 4px; margin-bottom: 15px; text-transform: uppercase; }
         .ambientes-container { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
         .ambiente-col { background-color: #d9d9d9; padding: 8px; min-height: 480px; display: flex; flex-direction: column; gap: 8px; }
-        .ambiente-item { font-size: 11px; line-height: 1.2; }
+        .ambiente-item { font-size: 11px; line-height: 1.2; word-wrap: break-word; }
       </style>
       
       <div style="height: 35px;"></div>
