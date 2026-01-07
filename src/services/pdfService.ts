@@ -34,6 +34,22 @@ const COVER_PAGE_CSS = `
   .div-metodologia > p { font-weight: 400; font-size: 16px; text-align: justify; margin: 10px 0; line-height: 1.4; }
 `;
 
+// Função auxiliar para normalizar nomes de seções
+const normalizeSectionName = (name: string): string => {
+  return name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+};
+
+// Mapeamento de seção -> campo de dados
+const SECTION_FIELD_MAP: Record<string, { dataKey: string; fields?: string[] }> = {
+  [normalizeSectionName("Atestado da vistoria")]: { dataKey: "atestado" },
+  [normalizeSectionName("Análises Hidráulicas")]: { dataKey: "analisesHidraulicas", fields: ["fluxo_agua", "vazamentos"] },
+  [normalizeSectionName("Análises Elétricas")]: { dataKey: "analisesEletricas", fields: ["funcionamento", "disjuntores"] },
+  [normalizeSectionName("Sistema de ar")]: { dataKey: "sistemaAr", fields: ["ar_condicionado", "aquecimento"] },
+  [normalizeSectionName("Mecanismos de abertura")]: { dataKey: "mecanismosAbertura", fields: ["portas", "macanetas", "janelas"] },
+  [normalizeSectionName("Revestimentos")]: { dataKey: "revestimentos", fields: ["tetos", "pisos", "bancadas"] },
+  [normalizeSectionName("Mobilias")]: { dataKey: "mobilias", fields: ["fixa", "nao_fixa"] },
+};
+
 class PdfService {
   async gerarPdfPaginaUnica(elementoId: string, nomeArquivo: string = 'laudo-pagina.pdf'): Promise<void> {
     const elemento = document.getElementById(elementoId);
@@ -68,6 +84,7 @@ class PdfService {
     getUrlsBatch: (s3Keys: string[]) => Promise<Record<string, string>>,
     configuracoes: any,
     ambientes: any[],
+    detalhes: any, // Novo parâmetro com as seções e respostas
     onProgress: ProgressCallback,
     abortSignal?: AbortSignal
   ): Promise<void> {
@@ -91,6 +108,10 @@ class PdfService {
         await new Promise(resolve => setTimeout(resolve, 800));
       } else if (hasCover && pagina === 2) {
         elementoParaCaptura = this.criarPaginaTermos(ambientes);
+        await new Promise(resolve => setTimeout(resolve, 400));
+      } else if (hasCover && pagina === totalPaginas) {
+        // Nova condição: Se for Entrada, a última página é o Relatório
+        elementoParaCaptura = this.criarPaginaRelatorio(laudo, detalhes);
         await new Promise(resolve => setTimeout(resolve, 400));
       } else {
         const backendPage = hasCover ? pagina - 2 : pagina;
@@ -319,6 +340,134 @@ class PdfService {
     `;
 
     document.body.appendChild(container); // IMPORTANTE: Anexar ao body para ser renderizado pelo html2canvas
+    return container;
+  }
+
+   private criarPaginaRelatorio(laudo: any, detalhes: any): HTMLElement {
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: fixed;
+      top: -10000px;
+      left: 0;
+      width: 210mm;
+      height: 297mm;
+      box-sizing: border-box;
+      background-color: #fff;
+      padding: 20mm;
+      font-family: "Roboto", Arial, sans-serif;
+      color: black;
+      overflow: hidden;
+    `;
+
+    // 1. Preparar lista de seções oficiais
+    const sections: any[] = [...(detalhes?.availableSections || [])];
+
+    // 2. Identificar e adicionar seções órfãs (Dados Legados/Extras)
+    if (detalhes?.dadosExtra) {
+       Object.entries(detalhes.dadosExtra).forEach(([key, value]) => {
+          // Verifica se essa chave já existe nas seções oficiais (normalizando nomes)
+          const isOfficial = sections.some((s: any) => normalizeSectionName(s.name) === normalizeSectionName(key));
+          
+          if (!isOfficial) {
+             // Criar uma estrutura de seção compatível para renderização
+             const questions = typeof value === 'object' && value !== null
+                ? Object.keys(value).map(k => ({ id: k, questionText: k }))
+                : [{ id: 'val', questionText: 'Descrição' }]; // Para strings simples
+
+             sections.push({
+                id: `extra-${key}`,
+                name: key,
+                questions: questions,
+                isExtra: true
+             });
+          }
+       });
+    }
+
+    const mid = Math.ceil(sections.length / 2);
+    const col1 = sections.slice(0, mid);
+    const col2 = sections.slice(mid);
+
+    // Função auxiliar para renderizar item (precisa estar no escopo ou ser inline)
+    const renderItem = (sectionName: any, questionText: any, questionId: any, index: any) => {
+        const normalizedKey = normalizeSectionName(sectionName);
+        const mapping = SECTION_FIELD_MAP[normalizedKey];
+        
+        let dataKey = mapping?.dataKey || normalizedKey;
+        let fieldKey = mapping?.fields?.[index];
+
+        let sectionData = detalhes[dataKey];
+        
+        // Fallback: tentar buscar em dadosExtra
+        if (!sectionData && detalhes.dadosExtra) {
+             sectionData = detalhes.dadosExtra[sectionName] || detalhes.dadosExtra[normalizedKey];
+        }
+        
+        if (typeof sectionData === 'string' && sectionData.startsWith('{')) {
+            try { sectionData = JSON.parse(sectionData); } catch {}
+        }
+
+        let value = '-';
+        if (sectionData) {
+            if (fieldKey && sectionData[fieldKey] !== undefined) {
+               value = sectionData[fieldKey];
+            } else if (typeof sectionData === 'string' && !fieldKey) {
+               value = sectionData;
+            } else if (sectionData[questionText] !== undefined) {
+               value = sectionData[questionText];
+            } else if (sectionData[questionId] !== undefined) {
+               value = sectionData[questionId];
+            }
+        }
+
+        if (value === null || value === undefined || value === '') value = '-';
+        if (typeof value === 'object') value = JSON.stringify(value);
+
+        return `
+            <div class="item-row">
+                <span class="item-label">${questionText}</span>
+                <span class="item-valor">${value}</span>
+            </div>
+        `;
+    };
+
+    container.innerHTML = `
+      <style>
+         .relatorio-titulo { font-size: 14px; font-weight: 700; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 20px; text-transform: uppercase; }
+         .relatorio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+         .relatorio-coluna { display: flex; flex-direction: column; gap: 10px; }
+         .categoria-box { background-color: #999; color: #fff; padding: 5px 10px; font-weight: 700; margin-bottom: 2px; font-size: 11px; text-transform: uppercase; }
+         .item-row { display: flex; align-items: center; justify-content: space-between; background-color: #d9d9d9; padding: 5px 10px; margin-bottom: 2px; font-size: 11px; }
+         .item-label { font-weight: 500; }
+         .item-valor { font-weight: 700; text-transform: uppercase; }
+      </style>
+      
+      <div style="height: 35px;"></div>
+
+      <h2 class="relatorio-titulo">RELATÓRIO GERAL DE APONTAMENTO</h2>
+
+      <div class="relatorio-grid">
+        <div class="relatorio-coluna">
+          ${col1.map((section: any) => `
+              <div class="grupo">
+                  <div class="categoria-box">${section.name}</div>
+                  ${section.questions?.map((q: any, idx: number) => renderItem(section.name, q.questionText || '', q.id, idx)).join('')}
+              </div>
+          `).join('')}
+        </div>
+
+        <div class="relatorio-coluna">
+            ${col2.map((section: any) => `
+              <div class="grupo">
+                  <div class="categoria-box">${section.name}</div>
+                  ${section.questions?.map((q: any, idx: number) => renderItem(section.name, q.questionText || '', q.id, idx)).join('')}
+              </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container); 
     return container;
   }
 

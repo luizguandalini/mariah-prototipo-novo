@@ -2,6 +2,24 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { laudosService, Laudo } from '../../services/laudos';
 import { pdfService } from '../../services/pdfService';
+import { useAuth } from '../../contexts/AuthContext';
+import { LaudoSection } from '../../types/laudo-details';
+
+// Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
+const normalizeSectionName = (name: string): string => {
+  return name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+};
+
+// Mapeamento de seção -> campo de dados
+const SECTION_FIELD_MAP: Record<string, { dataKey: string; fields?: string[] }> = {
+  [normalizeSectionName("Atestado da vistoria")]: { dataKey: "atestado" },
+  [normalizeSectionName("Análises Hidráulicas")]: { dataKey: "analisesHidraulicas", fields: ["fluxo_agua", "vazamentos"] },
+  [normalizeSectionName("Análises Elétricas")]: { dataKey: "analisesEletricas", fields: ["funcionamento", "disjuntores"] },
+  [normalizeSectionName("Sistema de ar")]: { dataKey: "sistemaAr", fields: ["ar_condicionado", "aquecimento"] },
+  [normalizeSectionName("Mecanismos de abertura")]: { dataKey: "mecanismosAbertura", fields: ["portas", "macanetas", "janelas"] },
+  [normalizeSectionName("Revestimentos")]: { dataKey: "revestimentos", fields: ["tetos", "pisos", "bancadas"] },
+  [normalizeSectionName("Mobilias")]: { dataKey: "mobilias", fields: ["fixa", "nao_fixa"] },
+};
 import { toast } from 'sonner';
 import Button from '../../components/ui/Button';
 
@@ -34,6 +52,7 @@ export default function VisualizadorPdfLaudo() {
   const [laudo, setLaudo] = useState<Laudo | null>(null);
   const [imagensComUrls, setImagensComUrls] = useState<any[]>([]);
   const [ambientes, setAmbientes] = useState<any[]>([]);
+  const [detalhes, setDetalhes] = useState<any>(null); // Armazena o objeto completo com availableSections
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalImagens, setTotalImagens] = useState(0);
@@ -94,6 +113,15 @@ export default function VisualizadorPdfLaudo() {
     try {
       const data = await laudosService.getLaudo(id);
       setLaudo(data);
+      
+      // Carregar detalhes completos (perguntas e respostas dinâmicas)
+      try {
+        const details = await laudosService.getLaudoDetalhes(id);
+        setDetalhes(details);
+      } catch (err) {
+        console.error('Erro ao carregar detalhes dinâmicos:', err);
+      }
+
     } catch (error) {
       console.error('Erro ao carregar laudo:', error);
       toast.error('Erro ao carregar dados do laudo');
@@ -108,20 +136,28 @@ export default function VisualizadorPdfLaudo() {
       setImagensComUrls([]);
       setLoading(false);
       
-      if (totalPaginas === 0) {
-        try {
-          const response = await laudosService.getImagensPdf(id, 1, 12);
-          setTotalPaginas(response.meta.totalPages + 2); // +2 (Capa + Termos)
-          setTotalImagens(response.meta.totalImages);
-        } catch (e) {
-          console.error(e);
-        }
-      }
+           const response = await laudosService.getImagensPdf(id, 1, 12);
+           const isEntrada = ((response.data?.[0]?.laudo?.tipoVistoria || '') + (laudo?.tipoVistoria || '')).toLowerCase().includes('entrada');
+           
+           // Se for Entrada: Capa + Termos + Imagens + Relatório = Total + 3
+           // Se não for Entrada: Apenas Imagens = Total
+           // Nota: o check de 'hasCover' já encapsula a lógica de 'entrada'
+           const adicional = hasCover ? 3 : 0;
+           
+           setTotalPaginas(response.meta.totalPages + adicional);
+           setTotalImagens(response.meta.totalImages);
       return;
     }
 
     // Se for página de Termos (Página 2), não carrega imagens
     if (hasCover && paginaAtual === 2) {
+      setImagensComUrls([]);
+      setLoading(false);
+      return;
+    }
+
+    // Se for página de Relatório (Última Página), não carrega imagens
+    if (hasCover && paginaAtual === totalPaginas) {
       setImagensComUrls([]);
       setLoading(false);
       return;
@@ -139,7 +175,7 @@ export default function VisualizadorPdfLaudo() {
       setLoading(true);
       const response = await laudosService.getImagensPdf(id, backendPage, 12);
       
-      setTotalPaginas(hasCover ? response.meta.totalPages + 2 : response.meta.totalPages);
+      setTotalPaginas(hasCover ? response.meta.totalPages + 3 : response.meta.totalPages);
       setTotalImagens(response.meta.totalImages);
 
       const s3Keys = response.data.map((img: any) => img.s3Key);
@@ -204,6 +240,7 @@ export default function VisualizadorPdfLaudo() {
         getUrlsBatch,
         configuracoes,
         ambientes,
+        detalhes, // Passando detalhes dinâmicos para o gerador
         setProgresso,
         abortControllerRef.current.signal
       );
@@ -415,6 +452,150 @@ export default function VisualizadorPdfLaudo() {
     );
   };
 
+
+
+
+  // Renderiza uma pergunta e sua resposta, encapsulando a lógica de busca do valor
+  const renderItemDinamico = (sectionName: string, questionText: string, questionId: string, index: number) => {
+    if (!detalhes) return null;
+
+    const normalizedKey = normalizeSectionName(sectionName);
+    const mapping = SECTION_FIELD_MAP[normalizedKey];
+    
+    // Identificar a chave de dados (ex: analisesHidraulicas, dadosExtra, etc)
+    let dataKey = mapping?.dataKey || normalizedKey;
+    let fieldKey = mapping?.fields?.[index];
+
+    // Buscar o objeto de dados da seção
+    let sectionData = detalhes[dataKey];
+    
+    // Fallback: tentar buscar em dadosExtra
+    // Importante: para seções órfãs, o nome da seção DEVE ser usado para buscar em dadosExtra
+    if (!sectionData && detalhes.dadosExtra) {
+         // Tenta pelo nome exato ou normalizado
+         sectionData = detalhes.dadosExtra[sectionName] || detalhes.dadosExtra[normalizedKey];
+    }
+    
+    // Parsing se for string JSON
+    if (typeof sectionData === 'string' && sectionData.startsWith('{')) {
+      try { sectionData = JSON.parse(sectionData); } catch {}
+    }
+
+    // Buscar o valor da resposta
+    let value = '-';
+    if (sectionData) {
+      if (fieldKey && sectionData[fieldKey] !== undefined) {
+         value = sectionData[fieldKey];
+      } else if (typeof sectionData === 'string' && !fieldKey) {
+         // CASO CRÍTICO: Se a seção é apenas uma string (ex: Atestado), retorna ela mesma
+         value = sectionData;
+      } else if (sectionData[questionText] !== undefined) {
+         value = sectionData[questionText];
+      } else if (sectionData[questionId] !== undefined) {
+         value = sectionData[questionId];
+      }
+    }
+
+    if (value === null || value === undefined || value === '') value = '-';
+    if (typeof value === 'object') value = JSON.stringify(value);
+
+    return (
+      <div className="item-row" key={questionId || index}>
+        <span className="item-label">{questionText}</span>
+        <span className="item-valor">{String(value)}</span>
+      </div>
+    );
+  };
+
+  const renderRelatorioPage = () => {
+    if (!laudo) return null;
+
+    // 1. Preparar lista de seções oficiais
+    const sections: any[] = [...(detalhes?.availableSections || [])];
+    
+    // 2. Identificar e adicionar seções órfãs (Dados Legados/Extras)
+    if (detalhes?.dadosExtra) {
+       Object.entries(detalhes.dadosExtra).forEach(([key, value]) => {
+          // Verifica se essa chave já existe nas seções oficiais (normalizando nomes)
+          const isOfficial = sections.some(s => normalizeSectionName(s.name) === normalizeSectionName(key));
+          
+          if (!isOfficial) {
+             // Criar uma estrutura de seção compatível para renderização
+             const questions = typeof value === 'object' && value !== null
+                ? Object.keys(value).map(k => ({ id: k, questionText: k }))
+                : [{ id: 'val', questionText: 'Descrição' }]; // Para strings simples
+
+             sections.push({
+                id: `extra-${key}`,
+                name: key,
+                questions: questions,
+                isExtra: true
+             });
+          }
+       });
+    }
+
+    // Distribuição em 2 colunas
+    const mid = Math.ceil(sections.length / 2);
+    const col1 = sections.slice(0, mid);
+    const col2 = sections.slice(mid);
+
+    return (
+      <div 
+        id="pdf-grid-preview"
+        style={{
+          width: '210mm',
+          height: '297mm',
+          boxSizing: 'border-box',
+          margin: '0 auto',
+          padding: '20mm',
+          backgroundColor: '#fff',
+          overflow: 'hidden',
+          fontFamily: '"Roboto", Arial, sans-serif',
+          color: 'black',
+        }}
+      >
+        <style>{`
+           .relatorio-titulo { font-size: 14px; font-weight: 700; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 20px; text-transform: uppercase; }
+           .relatorio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+           .relatorio-coluna { display: flex; flex-direction: column; gap: 10px; }
+           .categoria-box { background-color: #999; color: #fff; padding: 5px 10px; font-weight: 700; margin-bottom: 2px; font-size: 11px; text-transform: uppercase; }
+           .item-row { display: flex; align-items: center; justify-content: space-between; background-color: #d9d9d9; padding: 5px 10px; margin-bottom: 2px; font-size: 11px; }
+           .item-label { font-weight: 500; }
+           .item-valor { font-weight: 700; text-transform: uppercase; }
+        `}</style>
+        
+        <div style={{ height: '35px' }}></div>
+
+        <h2 className="relatorio-titulo">RELATÓRIO GERAL DE APONTAMENTO</h2>
+
+        <div className="relatorio-grid">
+          <div className="relatorio-coluna">
+            {col1.map((section) => (
+              <div key={section.id} className="grupo">
+                <div className="categoria-box">{section.name}</div>
+                {section.questions?.map((q, idx) => 
+                  renderItemDinamico(section.name, q.questionText || '', q.id, idx)
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="relatorio-coluna">
+            {col2.map((section) => (
+               <div key={section.id} className="grupo">
+                <div className="categoria-box">{section.name}</div>
+                {section.questions?.map((q, idx) => 
+                  renderItemDinamico(section.name, q.questionText || '', q.id, idx)
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -492,6 +673,8 @@ export default function VisualizadorPdfLaudo() {
           renderCoverPage()
         ) : hasCover && paginaAtual === 2 ? (
           renderInfoPage()
+        ) : hasCover && paginaAtual === totalPaginas ? (
+          renderRelatorioPage()
         ) : (
           <div
             id="pdf-grid-preview"
