@@ -581,7 +581,7 @@ export default function VisualizadorPdfLaudo() {
             {col1.map((section) => (
               <div key={section.id} className="grupo">
                 <div className="categoria-box">{section.name}</div>
-                {section.questions?.map((q, idx) => 
+                {section.questions?.map((q: { questionText?: string; id: string }, idx: number) => 
                   renderItemDinamico(section.name, q.questionText || '', q.id, idx)
                 )}
               </div>
@@ -592,7 +592,7 @@ export default function VisualizadorPdfLaudo() {
             {col2.map((section) => (
                <div key={section.id} className="grupo">
                 <div className="categoria-box">{section.name}</div>
-                {section.questions?.map((q, idx) => 
+                {section.questions?.map((q: { questionText?: string; id: string }, idx: number) => 
                   renderItemDinamico(section.name, q.questionText || '', q.id, idx)
                 )}
               </div>
