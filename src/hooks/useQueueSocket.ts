@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:3000/queue';
+import { API_CONFIG } from '../config/api';
+
+const SOCKET_URL = `${API_CONFIG.baseURL}/queue`;
 
 export interface QueueProgress {
   laudoId: string;
