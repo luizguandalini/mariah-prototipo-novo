@@ -84,7 +84,17 @@ export default function MeusLaudos() {
         )
       );
     } catch (err: any) {
-      toast.error(err.message || "Erro ao iniciar análise");
+      if (err.message && err.message.includes("já possui todas as imagens analisadas")) {
+        toast.success("Este laudo já foi totalmente analisado!");
+        // Atualizar status do laudo localmente para refletir a realidade
+        setLaudos((prevLaudos) =>
+          prevLaudos.map((l) =>
+            l.id === laudoId ? { ...l, status: "CONCLUIDO" as any } : l
+          )
+        );
+      } else {
+        toast.error(err.message || "Erro ao iniciar análise");
+      }
     } finally {
       setAnalisandoLaudoId(null);
     }
