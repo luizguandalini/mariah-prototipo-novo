@@ -691,6 +691,7 @@ export default function VisualizadorPdfLaudo() {
               width: '210mm',
               padding: `${configuracoes.margemPagina}px`,
               minHeight: '297mm',
+              color: 'black',
             }}
           >
             <div 
