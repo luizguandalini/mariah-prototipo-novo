@@ -11,6 +11,7 @@ import { queueService } from "../../services/queue";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
+import { FileText, Camera, Bot, Pencil, Trash2 } from "lucide-react";
 
 export default function MeusLaudos() {
   const { user, refreshUser } = useAuth();
@@ -353,82 +354,87 @@ export default function MeusLaudos() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-col gap-2">
-                        {status === "concluido" && laudo.pdfUrl && (
-                          <a
-                            href={laudo.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                      <div className="flex flex-col gap-3 w-full sm:w-48">
+                        {/* Ver Fotos - Always Visible */}
+                        <Link to={`/dashboard/laudos/${laudo.id}/galeria`}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
                           >
+                            <Camera className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                            Ver Fotos
+                          </Button>
+                        </Link>
+
+                        {/* Ver PDF - Always Visible (Smart Link) */}
+                        {laudo.pdfUrl && status === 'concluido' ? (
+                           <a
+                              href={laudo.pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                           >
                             <Button
-                              variant="primary"
+                              variant="secondary"
                               size="sm"
-                              className="whitespace-nowrap"
+                              className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
                             >
-                              📄 Ver PDF
+                              <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                              Ver PDF
                             </Button>
-                          </a>
+                           </a>
+                        ) : (
+                           <Link to={`/dashboard/laudos/${laudo.id}/pdf`}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
+                            >
+                              <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                              Ver PDF
+                            </Button>
+                           </Link>
                         )}
-                        {status === "concluido" && (
-                          <Link to={`/dashboard/laudos/${laudo.id}/preview`}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="whitespace-nowrap"
-                            >
-                              👁️ Visualizar
-                            </Button>
-                          </Link>
-                        )}
-                          <Link to={`/dashboard/laudos/${laudo.id}/galeria`}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="whitespace-nowrap"
-                            >
-                              📷 Ver Fotos
-                            </Button>
-                          </Link>
-                          <Link to={`/dashboard/laudos/${laudo.id}/pdf`}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="whitespace-nowrap"
-                            >
-                              📄 Ver PDF
-                            </Button>
-                          </Link>
-                        {/* Botão Iniciar Análise IA - apenas para não iniciados */}
+
+                        {/* Iniciar Análise - Conditional */}
                         {status === "nao_iniciado" && (
                           <Button
                             variant="primary"
                             size="sm"
-                            className="whitespace-nowrap bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                            className="w-full justify-center bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg shadow-purple-500/30 border-0 transition-all duration-300 group"
                             onClick={() => handleIniciarAnalise(laudo.id)}
                             disabled={analisandoLaudoId === laudo.id}
                           >
                             {analisandoLaudoId === laudo.id ? (
                               <>
-                                <span className="animate-spin mr-1">⏳</span>
+                                <span className="animate-spin mr-2">⏳</span>
                                 Iniciando...
                               </>
                             ) : (
-                              "🤖 Iniciar Análise IA"
+                              <>
+                                <Bot className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                                Iniciar Análise IA
+                              </>
                             )}
                           </Button>
                         )}
+
+                        {/* Editar Endereço - Always Visible */}
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
-                          className="whitespace-nowrap"
+                          className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
                           onClick={() => setLaudoEditando(laudo)}
                         >
-                          ✏️ Editar Endereço
+                          <Pencil className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                          Editar Endereço
                         </Button>
+
+                        {/* Deletar - Always Visible */}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="whitespace-nowrap text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                          className="w-full justify-center border-red-500/30 text-red-500 hover:bg-red-500/10 hover:border-red-500/50 transition-all duration-300 group"
                           onClick={() =>
                             setConfirmDelete({
                               isOpen: true,
@@ -437,7 +443,8 @@ export default function MeusLaudos() {
                             })
                           }
                         >
-                          🗑️ Deletar
+                          <Trash2 className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                          Deletar
                         </Button>
                       </div>
                     </div>
