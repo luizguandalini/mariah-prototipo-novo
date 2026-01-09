@@ -11,7 +11,8 @@ import { queueService } from "../../services/queue";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
-import { FileText, Camera, Bot, Pencil, Trash2 } from "lucide-react";
+import { FileText, Camera, Bot, Pencil, Trash2, Loader2 } from "lucide-react";
+import { useQueueSocket } from "../../hooks/useQueueSocket";
 
 export default function MeusLaudos() {
   const { user, refreshUser } = useAuth();
@@ -28,6 +29,43 @@ export default function MeusLaudos() {
     endereco: string;
   }>({ isOpen: false, id: "", endereco: "" });
   const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(null);
+  
+  // WebSocket Hook
+  const { progressMap, statusMap, joinLaudo, leaveLaudo } = useQueueSocket();
+
+  // Entrar nas salas dos laudos ao carregar e quando a lista mudar
+  useEffect(() => {
+    laudos.forEach(laudo => {
+       // Join logic: join all to listen for starts, or just active ones?
+       // Joining all lets us know when any laudo starts processing.
+       joinLaudo(laudo.id);
+    });
+    
+    return () => {
+        laudos.forEach(laudo => leaveLaudo(laudo.id));
+    };
+  }, [laudos, joinLaudo, leaveLaudo]);
+
+  // Atualizar status localmente quando receber via WS
+  useEffect(() => {
+     if (Object.keys(statusMap).length > 0) {
+         setLaudos(prev => prev.map(l => {
+             if (statusMap[l.id]) {
+                 // Map WS status (processing, completed, error) to Frontend status
+                 // WS sends lowercase: processing, completed
+                 const wsStatus = statusMap[l.id].toUpperCase();
+                 
+                 // Se completou, vamos garantir que o status seja CONCLUIDO para liberar o botão PDF
+                 if (wsStatus === 'COMPLETED') return { ...l, status: 'CONCLUIDO' as any };
+                 if (wsStatus === 'PROCESSING') return { ...l, status: 'EM_ANDAMENTO' as any };
+                 if (wsStatus === 'ERROR') return { ...l, status: 'ERROR' as any }; // ou lidar com erro
+                 
+                 return { ...l, status: wsStatus as any };
+             }
+             return l;
+         }));
+     }
+  }, [statusMap]);
 
   useEffect(() => {
     fetchLaudos();
@@ -109,9 +147,12 @@ export default function MeusLaudos() {
     > = {
       NAO_INICIADO: "nao_iniciado",
       EM_ANDAMENTO: "processando",
+      PROCESSING: "processando", // Added mapping for new WS status
       CONCLUIDO: "concluido",
+      COMPLETED: "concluido", // Added mapping
       PARALISADO: "paralisado",
     };
+
     return statusMap[status.toUpperCase()] || "nao_iniciado";
   };
 
@@ -293,6 +334,27 @@ export default function MeusLaudos() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           {getStatusBadge(status)}
+                          
+                          {/* Progress Bar for Processing Status */}
+                          {(status === "processando" || progressMap[laudo.id]) && status !== "concluido" && (
+                            <div className="mt-2 w-full max-w-xs">
+                                <div className="flex justify-between text-xs mb-1 text-[var(--text-secondary)]">
+                                    <span>Analisando imagens...</span>
+                                    <span>
+                                        {progressMap[laudo.id]?.percentage || 0}% 
+                                        ({progressMap[laudo.id]?.processedImages || 0}/{progressMap[laudo.id]?.totalImages || '?'})
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <motion.div 
+                                        className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${progressMap[laudo.id]?.percentage || 0}%` }}
+                                        transition={{ duration: 0.5 }}
+                                    />
+                                </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="mb-3">
