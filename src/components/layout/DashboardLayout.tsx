@@ -101,6 +101,13 @@ export default function DashboardLayout({
     { path: "/dashboard/pagamentos", icon: "💰", label: "Pagamentos" },
     { path: "/dashboard/perfil", icon: "👤", label: "Meu Perfil" },
 
+    // Configurações IA (Admin/Dev)
+    {
+      path: "/admin/configuracoes-ia",
+      icon: "🤖",
+      label: "Configurações IA",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
   ];
 
   const menuItems = allMenuItems.filter((item) => {

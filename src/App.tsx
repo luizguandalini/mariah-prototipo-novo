@@ -25,6 +25,7 @@ import Usuarios from "./pages/admin/Usuarios";
 import TodosLaudos from "./pages/admin/TodosLaudos";
 import GerenciarAmbientes from "./pages/admin/GerenciarAmbientes";
 import GerenciarDetalhesLaudo from "./pages/admin/GerenciarDetalhesLaudo";
+import ConfiguracoesIA from "./pages/admin/ConfiguracoesIA";
 
 function App() {
   return (
@@ -66,6 +67,10 @@ function App() {
           <Route
             path="/admin/detalhes-laudo"
             element={<ProtectedRoute requireAdmin><GerenciarDetalhesLaudo /></ProtectedRoute>}
+          />
+          <Route
+            path="/admin/configuracoes-ia"
+            element={<ProtectedRoute requireAdmin><ConfiguracoesIA /></ProtectedRoute>}
           />
         </Routes>
       </AuthProvider>

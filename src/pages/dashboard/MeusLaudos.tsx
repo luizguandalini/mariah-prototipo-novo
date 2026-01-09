@@ -7,6 +7,7 @@ import LaudoDetalhes from "../../components/LaudoDetalhes";
 import EditarEnderecoLaudo from "../../components/EditarEnderecoLaudo";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { laudosService, type Laudo } from "../../services/laudos";
+import { queueService } from "../../services/queue";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ export default function MeusLaudos() {
     id: string;
     endereco: string;
   }>({ isOpen: false, id: "", endereco: "" });
+  const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLaudos();
@@ -67,6 +69,24 @@ export default function MeusLaudos() {
     setLaudos((prevLaudos) =>
       prevLaudos.map((l) => (l.id === laudoAtualizado.id ? laudoAtualizado : l))
     );
+  };
+
+  const handleIniciarAnalise = async (laudoId: string) => {
+    try {
+      setAnalisandoLaudoId(laudoId);
+      await queueService.addToQueue(laudoId);
+      toast.success("Laudo adicionado à fila de análise!");
+      // Atualizar status do laudo na lista
+      setLaudos((prevLaudos) =>
+        prevLaudos.map((l) =>
+          l.id === laudoId ? { ...l, status: "EM_ANDAMENTO" as any } : l
+        )
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao iniciar análise");
+    } finally {
+      setAnalisandoLaudoId(null);
+    }
   };
 
   const mapStatus = (
@@ -378,6 +398,25 @@ export default function MeusLaudos() {
                               📄 Ver PDF
                             </Button>
                           </Link>
+                        {/* Botão Iniciar Análise IA - apenas para não iniciados */}
+                        {status === "nao_iniciado" && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="whitespace-nowrap bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                            onClick={() => handleIniciarAnalise(laudo.id)}
+                            disabled={analisandoLaudoId === laudo.id}
+                          >
+                            {analisandoLaudoId === laudo.id ? (
+                              <>
+                                <span className="animate-spin mr-1">⏳</span>
+                                Iniciando...
+                              </>
+                            ) : (
+                              "🤖 Iniciar Análise IA"
+                            )}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
