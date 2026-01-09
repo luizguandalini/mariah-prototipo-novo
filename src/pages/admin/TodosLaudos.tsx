@@ -5,6 +5,10 @@ import EditarEnderecoLaudo from "../../components/EditarEnderecoLaudo";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { laudosService, type Laudo } from "../../services/laudos";
 import { toast } from "sonner";
+import { queueService } from "../../services/queue";
+import { useQueueSocket } from "../../hooks/useQueueSocket";
+import { Bot, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function TodosLaudos() {
   const [laudos, setLaudos] = useState<Laudo[]>([]);
@@ -18,6 +22,39 @@ export default function TodosLaudos() {
     id: string;
     endereco: string;
   }>({ isOpen: false, id: "", endereco: "" });
+  const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(null);
+
+  // WebSocket Hook
+  const { progressMap, statusMap, joinLaudo, leaveLaudo } = useQueueSocket();
+
+  // Entrar nas salas dos laudos ao carregar e quando a lista mudar
+  useEffect(() => {
+    laudos.forEach(laudo => {
+       joinLaudo(laudo.id);
+    });
+    
+    return () => {
+        laudos.forEach(laudo => leaveLaudo(laudo.id));
+    };
+  }, [laudos, joinLaudo, leaveLaudo]);
+
+  // Atualizar status localmente quando receber via WS
+  useEffect(() => {
+     if (Object.keys(statusMap).length > 0) {
+         setLaudos(prev => prev.map(l => {
+             if (statusMap[l.id]) {
+                 const wsStatus = statusMap[l.id].toUpperCase();
+                 
+                 if (wsStatus === 'COMPLETED') return { ...l, status: 'CONCLUIDO' as any };
+                 if (wsStatus === 'PROCESSING') return { ...l, status: 'EM_ANDAMENTO' as any };
+                 if (wsStatus === 'ERROR') return { ...l, status: 'ERROR' as any };
+                 
+                 return { ...l, status: wsStatus as any };
+             }
+             return l;
+         }));
+     }
+  }, [statusMap]);
 
   useEffect(() => {
     fetchAllLaudos();
@@ -55,11 +92,40 @@ export default function TodosLaudos() {
     );
   };
 
+  const handleIniciarAnalise = async (laudoId: string) => {
+    try {
+      setAnalisandoLaudoId(laudoId);
+      await queueService.addToQueue(laudoId);
+      toast.success("Laudo adicionado à fila de análise!");
+      // Atualizar status do laudo na lista
+      setLaudos((prevLaudos) =>
+        prevLaudos.map((l) =>
+          l.id === laudoId ? { ...l, status: "EM_ANDAMENTO" as any } : l
+        )
+      );
+    } catch (err: any) {
+      if (err.message && err.message.includes("já possui todas as imagens analisadas")) {
+        toast.success("Este laudo já foi totalmente analisado!");
+        setLaudos((prevLaudos) =>
+          prevLaudos.map((l) =>
+            l.id === laudoId ? { ...l, status: "CONCLUIDO" as any } : l
+          )
+        );
+      } else {
+        toast.error(err.message || "Erro ao iniciar análise");
+      }
+    } finally {
+      setAnalisandoLaudoId(null);
+    }
+  };
+
   const mapStatus = (status: string) => {
     const mapping: Record<string, string> = {
       NAO_INICIADO: "nao_iniciado",
       EM_ANDAMENTO: "processando",
+      PROCESSING: "processando",
       CONCLUIDO: "concluido",
+      COMPLETED: "concluido",
       PARALISADO: "paralisado",
     };
     return mapping[status] || status.toLowerCase();
@@ -150,6 +216,24 @@ export default function TodosLaudos() {
                         <span className="text-xs text-[var(--text-secondary)] opacity-50 font-mono">
                           ID: {laudo.id.substring(0, 8)}
                         </span>
+                        
+                        {/* Progress Bar for Processing Status */}
+                        {(mapStatus(laudo.status) === "processando" || progressMap[laudo.id]) && mapStatus(laudo.status) !== "concluido" && (
+                          <div className="ml-4 flex-1 max-w-xs">
+                              <div className="flex justify-between text-xs mb-1 text-[var(--text-secondary)]">
+                                  <span>Analisando... ({progressMap[laudo.id]?.processedImages || 0}/{progressMap[laudo.id]?.totalImages || '?'})</span>
+                                  <span>{progressMap[laudo.id]?.percentage || 0}%</span>
+                              </div>
+                              <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                  <motion.div 
+                                      className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${progressMap[laudo.id]?.percentage || 0}%` }}
+                                      transition={{ duration: 0.5 }}
+                                  />
+                              </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mb-3">
@@ -249,6 +333,27 @@ export default function TodosLaudos() {
                       >
                         🗑️ Deletar
                       </button>
+                      
+                       {/* Iniciar Análise - Conditional */}
+                       {mapStatus(laudo.status) === "nao_iniciado" && (
+                        <button
+                          onClick={() => handleIniciarAnalise(laudo.id)}
+                          disabled={analisandoLaudoId === laudo.id}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 text-sm font-medium whitespace-nowrap transition-all shadow-sm flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                          {analisandoLaudoId === laudo.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Iniciando...
+                            </>
+                          ) : (
+                            <>
+                              <Bot className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                              Iniciar IA
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
 
