@@ -21,6 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import { ambientesService } from "../../services/ambientes";
+import { configService } from "../../services/config";
 import {
   Ambiente,
   ItemAmbiente,
@@ -420,6 +421,12 @@ export default function GerenciarAmbientes() {
     tiposImovel: [] as TipoImovel[],
   });
 
+  // Estados do prompt padrão
+  const [defaultPrompt, setDefaultPrompt] = useState("");
+  const [defaultPromptExpanded, setDefaultPromptExpanded] = useState(false);
+  const [defaultPromptLoading, setDefaultPromptLoading] = useState(false);
+  const [defaultPromptSaving, setDefaultPromptSaving] = useState(false);
+
   // Configurar sensores para drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -435,6 +442,39 @@ export default function GerenciarAmbientes() {
   useEffect(() => {
     carregarAmbientes();
   }, []);
+
+  // Carregar prompt padrão quando expandir a seção
+  useEffect(() => {
+    if (defaultPromptExpanded && !defaultPrompt && !defaultPromptLoading) {
+      carregarDefaultPrompt();
+    }
+  }, [defaultPromptExpanded]);
+
+  const carregarDefaultPrompt = async () => {
+    try {
+      setDefaultPromptLoading(true);
+      const response = await configService.getDefaultPrompt();
+      setDefaultPrompt(response.value || "");
+    } catch (error) {
+      console.error("Erro ao carregar prompt padrão:", error);
+      toast.error("Erro ao carregar prompt padrão");
+    } finally {
+      setDefaultPromptLoading(false);
+    }
+  };
+
+  const salvarDefaultPrompt = async () => {
+    try {
+      setDefaultPromptSaving(true);
+      await configService.setDefaultPrompt(defaultPrompt);
+      toast.success("Prompt padrão salvo com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar prompt padrão:", error);
+      toast.error("Erro ao salvar prompt padrão");
+    } finally {
+      setDefaultPromptSaving(false);
+    }
+  };
 
   // Scroll infinito com Intersection Observer
   useEffect(() => {
@@ -1180,6 +1220,103 @@ export default function GerenciarAmbientes() {
             ➕ Novo Ambiente
           </Button>
         </div>
+
+        {/* Seção do Prompt Padrão - Minimizável */}
+        <motion.div
+          className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-color)] overflow-hidden shadow-sm"
+          initial={false}
+          animate={{ height: "auto" }}
+        >
+          {/* Header do Prompt Padrão - Sempre visível */}
+          <button
+            onClick={() => setDefaultPromptExpanded(!defaultPromptExpanded)}
+            className="w-full p-4 flex items-center justify-between hover:bg-[var(--bg-primary)] transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">⚙️</span>
+              <div className="text-left">
+                <h3 className="font-semibold text-[var(--text-primary)]">
+                  Prompt Padrão para Análise
+                </h3>
+                <p className="text-sm text-[var(--text-secondary)] opacity-70">
+                  Este texto é adicionado antes de todos os prompts de itens na análise de imagens
+                </p>
+              </div>
+            </div>
+            <span
+              className={`transform transition-transform duration-200 text-[var(--text-secondary)] ${
+                defaultPromptExpanded ? "rotate-180" : ""
+              }`}
+            >
+              ▼
+            </span>
+          </button>
+
+          {/* Conteúdo Expandido */}
+          <AnimatePresence>
+            {defaultPromptExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="border-t border-[var(--border-color)]"
+              >
+                <div className="p-4 space-y-4">
+                  {defaultPromptLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <textarea
+                          value={defaultPrompt}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value.length <= 1000) {
+                              setDefaultPrompt(value);
+                            }
+                          }}
+                          placeholder="Digite o prompt padrão que será adicionado antes de cada análise de item..."
+                          className="w-full h-32 p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] placeholder:opacity-50 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                          maxLength={1000}
+                        />
+                        <div className="absolute bottom-3 right-3 text-sm text-[var(--text-secondary)]">
+                          <span className={defaultPrompt.length >= 900 ? "text-orange-500" : ""}>
+                            {defaultPrompt.length}
+                          </span>
+                          <span className="opacity-50">/1000</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-[var(--text-secondary)] opacity-70">
+                          💡 Exemplo: "Analise a imagem fornecida de forma técnica e detalhada, identificando..."
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={salvarDefaultPrompt}
+                          disabled={defaultPromptSaving}
+                        >
+                          {defaultPromptSaving ? (
+                            <>
+                              <span className="animate-spin mr-2">⏳</span>
+                              Salvando...
+                            </>
+                          ) : (
+                            "💾 Salvar Prompt Padrão"
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Lista de Ambientes */}
         {loading ? (
