@@ -50,7 +50,7 @@ export default function Header() {
                 Entrar
               </Button>
             </Link>
-            <Link to="/cadastro">
+            <Link to="/login">
               <Button variant="primary" size="sm">
                 Começar Agora
               </Button>

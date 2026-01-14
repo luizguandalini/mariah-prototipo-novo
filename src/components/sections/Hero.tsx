@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import Button from '../ui/Button'
 
 export default function Hero() {
@@ -28,9 +29,11 @@ export default function Hero() {
               A Mariah é sua agente de IA especializada no mercado imobiliário.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start">
-              <Button variant="primary" size="lg" className="w-full sm:w-auto">
-                Começar Agora
-              </Button>
+              <Link to="/login" className="w-full sm:w-auto">
+                <Button variant="primary" size="lg" className="w-full">
+                  Começar Agora
+                </Button>
+              </Link>
             </div>
 
             {/* Stats */}
