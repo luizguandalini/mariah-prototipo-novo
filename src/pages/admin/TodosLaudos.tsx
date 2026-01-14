@@ -207,11 +207,11 @@ export default function TodosLaudos() {
                 {laudosPaginados.map((laudo) => (
                 <div
                   key={laudo.id}
-                  className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 hover:shadow-md transition-all duration-300"
+                  className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 sm:p-6 hover:shadow-md transition-all duration-300"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
                         {getStatusBadge(mapStatus(laudo.status))}
                         <span className="text-xs text-[var(--text-secondary)] opacity-50 font-mono">
                           ID: {laudo.id.substring(0, 8)}
@@ -219,7 +219,7 @@ export default function TodosLaudos() {
                         
                         {/* Progress Bar for Processing Status */}
                         {(mapStatus(laudo.status) === "processando" || progressMap[laudo.id]) && mapStatus(laudo.status) !== "concluido" && (
-                          <div className="ml-4 flex-1 max-w-xs">
+                          <div className="flex-1 min-w-[200px] max-w-xs sm:ml-4">
                               <div className="flex justify-between text-xs mb-1 text-[var(--text-secondary)]">
                                   <span>Analisando... ({progressMap[laudo.id]?.processedImages || 0}/{progressMap[laudo.id]?.totalImages || '?'})</span>
                                   <span>{progressMap[laudo.id]?.percentage || 0}%</span>
@@ -303,21 +303,21 @@ export default function TodosLaudos() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                       {mapStatus(laudo.status) === "concluido" &&
                         laudo.pdfUrl && (
                           <a
                             href={laudo.pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm"
+                            className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm"
                           >
                             📄 Ver PDF
                           </a>
                         )}
                       <button
                         onClick={() => setLaudoEditando(laudo)}
-                        className="px-4 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] text-sm font-medium whitespace-nowrap transition-all shadow-sm"
+                        className="w-full sm:w-auto px-4 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] text-sm font-medium whitespace-nowrap transition-all shadow-sm"
                       >
                         ✏️ Editar Endereço
                       </button>
@@ -329,7 +329,7 @@ export default function TodosLaudos() {
                             endereco: laudo.rua || laudo.endereco,
                           })
                         }
-                        className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg hover:bg-red-500 hover:text-white text-sm font-medium whitespace-nowrap transition-all shadow-sm"
+                        className="w-full sm:w-auto px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg hover:bg-red-500 hover:text-white text-sm font-medium whitespace-nowrap transition-all shadow-sm"
                       >
                         🗑️ Deletar
                       </button>
@@ -339,7 +339,7 @@ export default function TodosLaudos() {
                         <button
                           onClick={() => handleIniciarAnalise(laudo.id)}
                           disabled={analisandoLaudoId === laudo.id}
-                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 text-sm font-medium whitespace-nowrap transition-all shadow-sm flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
+                          className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 text-sm font-medium whitespace-nowrap transition-all shadow-sm flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                           {analisandoLaudoId === laudo.id ? (
                             <>
