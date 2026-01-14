@@ -180,7 +180,6 @@ export default function TodosLaudos() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">Todos os Laudos</h2>
 
         {loading ? (
           <div className="flex justify-center items-center py-12">

@@ -346,36 +346,47 @@ export default function LaudoDetalhes({ laudo }: LaudoDetalhesProps) {
           </p>
         ) : (
           question.options && question.options.length > 0 ? (
-            <select
-              value={editedValue || ""}
-              onChange={(e) => {
-                const key = fieldKey || question.questionText || question.id;
-                
-                if (key) {
-                   setEditedValues({
-                    ...editedValues,
-                    [dataKey]: {
-                      ...(typeof editedValues[dataKey] === 'object' ? editedValues[dataKey] : {}),
-                      [key]: e.target.value
-                    }
-                  });
-                } else {
-                   // Fallback para valor direto se não tiver chave (ex: string simples)
-                   setEditedValues({
-                    ...editedValues,
-                    [dataKey]: e.target.value
-                  });
-                }
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Selecione uma opção</option>
-              {question.options.map((opt) => (
-                <option key={opt.id} value={opt.optionText}>
-                  {opt.optionText}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {question.options.map((opt) => {
+                const isSelected = editedValue === opt.optionText;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      const key = fieldKey || question.questionText || question.id;
+                      setEditedValues({
+                        ...editedValues,
+                        [dataKey]: {
+                          ...(typeof editedValues[dataKey] === 'object' ? editedValues[dataKey] : {}),
+                          [key]: opt.optionText
+                        }
+                      });
+                    }}
+                    className={`px-3 py-2 text-sm rounded-lg border transition-all text-left break-words max-w-full ${
+                      isSelected
+                        ? "bg-primary text-white border-primary shadow-sm"
+                        : "bg-white text-gray-700 border-gray-200 hover:border-primary/50 hover:bg-gray-50"
+                    }`}
+                  >
+                    {opt.optionText}
+                  </button>
+                );
+              })}
+              {/* Botão de Limpar Seleção (Opcional) */}
+              {editedValue && (
+                <button
+                  onClick={() => {
+                    const key = fieldKey || question.questionText || question.id;
+                    const newValue = { ...(typeof editedValues[dataKey] === 'object' ? editedValues[dataKey] : {}) };
+                    delete (newValue as any)[key];
+                    setEditedValues({ ...editedValues, [dataKey]: newValue });
+                  }}
+                  className="px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
           ) : (
             <input
               type="text"
@@ -398,7 +409,7 @@ export default function LaudoDetalhes({ laudo }: LaudoDetalhesProps) {
                   });
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           )
         )}
