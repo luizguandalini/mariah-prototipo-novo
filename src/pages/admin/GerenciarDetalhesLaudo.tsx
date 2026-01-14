@@ -441,14 +441,11 @@ export default function GerenciarDetalhesLaudo() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            Gerenciar Detalhes do Laudo
-          </h1>
+      <div className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-end items-end gap-4 mb-6">
           <Button
             onClick={() => setSectionModal({ open: true, mode: "create" })}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
           >
             Nova Seção
           </Button>
@@ -466,11 +463,11 @@ export default function GerenciarDetalhesLaudo() {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-[var(--bg-secondary)] rounded-lg shadow-md p-6 border border-[var(--border-color)]"
               >
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button
                       onClick={() => toggleSectionExpansion(section.id)}
-                      className="text-gray-500 hover:text-gray-700 transition-colors"
+                      className="text-gray-500 hover:text-gray-700 transition-colors shrink-0"
                       title={isExpanded ? "Recolher seção" : "Expandir seção"}
                     >
                       {isLoadingDetails ? (
@@ -481,11 +478,11 @@ export default function GerenciarDetalhesLaudo() {
                         </span>
                       )}
                     </button>
-                    <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                    <h2 className="text-lg sm:text-xl font-semibold text-[var(--text-primary)] break-words">
                       {section.name}
                     </h2>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-start">
                     <Button
                       onClick={() => {
                         setSectionModal({
@@ -498,6 +495,7 @@ export default function GerenciarDetalhesLaudo() {
                       variant="secondary"
                       size="sm"
                       title="Editar seção"
+                      className="flex-1 sm:flex-none"
                     >
                       ✏️
                     </Button>
@@ -505,7 +503,7 @@ export default function GerenciarDetalhesLaudo() {
                       onClick={() => handleDeleteSection(section.id)}
                       variant="outline"
                       size="sm"
-                      className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+                      className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white flex-1 sm:flex-none"
                       title="Deletar seção"
                     >
                       🗑️
@@ -524,6 +522,7 @@ export default function GerenciarDetalhesLaudo() {
                           });
                         }}
                         size="sm"
+                        className="w-full sm:w-auto mt-2 sm:mt-0"
                       >
                         Nova Pergunta
                       </Button>
@@ -543,11 +542,11 @@ export default function GerenciarDetalhesLaudo() {
                         key={question.id}
                         className="border-l-4 border-blue-200 pl-4"
                       >
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-lg font-medium text-[var(--text-primary)]">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+                          <h3 className="text-base sm:text-lg font-medium text-[var(--text-primary)] break-words w-full sm:w-auto">
                             {question.questionText || "Pergunta sem texto"}
                           </h3>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end sm:justify-start">
                             <Button
                               onClick={() => {
                                 setQuestionModal({
@@ -563,6 +562,7 @@ export default function GerenciarDetalhesLaudo() {
                               variant="secondary"
                               size="sm"
                               title="Editar pergunta"
+                              className="flex-1 sm:flex-none"
                             >
                               ✏️
                             </Button>
@@ -570,7 +570,7 @@ export default function GerenciarDetalhesLaudo() {
                               onClick={() => handleDeleteQuestion(question.id)}
                               variant="outline"
                               size="sm"
-                              className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+                              className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white flex-1 sm:flex-none"
                               title="Deletar pergunta"
                             >
                               🗑️
@@ -588,6 +588,7 @@ export default function GerenciarDetalhesLaudo() {
                                 });
                               }}
                               size="sm"
+                              className="w-full sm:w-auto mt-2 sm:mt-0"
                             >
                               Nova Opção
                             </Button>
@@ -597,42 +598,43 @@ export default function GerenciarDetalhesLaudo() {
                         <div className="space-y-2">
                           {question.options?.map((option) => (
                             <div
-                              key={option.id}
-                              className="flex justify-between items-center bg-[var(--bg-primary)] p-2 rounded border border-[var(--border-color)]"
-                            >
-                              <span className="text-[var(--text-secondary)]">
-                                {option.optionText}
-                              </span>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => {
-                                    setOptionModal({
-                                      open: true,
-                                      mode: "edit",
-                                      data: option,
-                                    });
-                                    setOptionForm({
-                                      questionId: option.questionId,
-                                      optionText: option.optionText,
-                                    });
-                                  }}
-                                  variant="secondary"
-                                  size="sm"
-                                  title="Editar opção"
-                                >
-                                  ✏️
-                                </Button>
-                                <Button
-                                  onClick={() => handleDeleteOption(option.id)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
-                                  title="Deletar opção"
-                                >
-                                  🗑️
-                                </Button>
-                              </div>
-                            </div>
+                               key={option.id}
+                               className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[var(--bg-primary)] p-3 rounded border border-[var(--border-color)] gap-3"
+                             >
+                               <span className="text-[var(--text-secondary)] text-sm sm:text-base break-words w-full sm:w-auto">
+                                 {option.optionText}
+                               </span>
+                               <div className="flex gap-2 w-full sm:w-auto justify-end">
+                                 <Button
+                                   onClick={() => {
+                                     setOptionModal({
+                                       open: true,
+                                       mode: "edit",
+                                       data: option,
+                                     });
+                                     setOptionForm({
+                                       questionId: option.questionId,
+                                       optionText: option.optionText,
+                                     });
+                                   }}
+                                   variant="secondary"
+                                   size="sm"
+                                   title="Editar opção"
+                                   className="flex-1 sm:flex-none"
+                                 >
+                                   ✏️
+                                 </Button>
+                                 <Button
+                                   onClick={() => handleDeleteOption(option.id)}
+                                   variant="outline"
+                                   size="sm"
+                                   className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white flex-1 sm:flex-none"
+                                   title="Deletar opção"
+                                 >
+                                   🗑️
+                                 </Button>
+                               </div>
+                             </div>
                           ))}
                         </div>
                       </div>
