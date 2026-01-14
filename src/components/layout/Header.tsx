@@ -13,7 +13,11 @@ export default function Header() {
     <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-glass border-b border-gray-200 dark:border-gray-800"
+      className={`fixed top-0 left-0 right-0 z-50 border-b border-gray-200 dark:border-gray-800 transition-all duration-300 ${
+        mobileMenuOpen 
+          ? 'bg-white dark:bg-[#0f172a] shadow-xl' 
+          : 'bg-glass'
+      }`}
     >
       <div className="container mx-auto px-4 py-3 md:py-4">
         <div className="flex items-center justify-between">
@@ -56,6 +60,11 @@ export default function Header() {
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-2 md:hidden">
             <ThemeToggle />
+            <Link to="/login">
+              <Button variant="outline" size="sm" className="px-3 py-1.5 h-9 text-xs whitespace-nowrap">
+                Entrar
+              </Button>
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary"
@@ -80,40 +89,42 @@ export default function Header() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden pt-4 pb-3 space-y-3"
+            className="md:hidden overflow-hidden"
           >
-            <a
-              href="#como-funciona"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-            >
-              Como Funciona
-            </a>
-            <a
-              href="#planos"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-            >
-              Planos
-            </a>
-            <a
-              href="#sobre"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-            >
-              Sobre
-            </a>
-            <div className="pt-3 space-y-2 border-t border-gray-200 dark:border-gray-800">
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full">
-                  Entrar
-                </Button>
-              </Link>
-              <Link to="/cadastro" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="primary" size="sm" className="w-full">
-                  Começar Agora
-                </Button>
-              </Link>
+            <div className="pt-4 pb-8 space-y-6">
+              <nav className="flex flex-col gap-1">
+                <a
+                  href="#como-funciona"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-4 px-1 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-medium border-b border-gray-100 dark:border-gray-800/50"
+                >
+                  Como Funciona
+                </a>
+                <a
+                  href="#planos"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-4 px-1 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-medium border-b border-gray-100 dark:border-gray-800/50"
+                >
+                  Planos
+                </a>
+                <a
+                  href="#sobre"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-4 px-1 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-medium"
+                >
+                  Sobre
+                </a>
+              </nav>
+
+              <div className="pt-2 text-center">
+                <Link 
+                  to="/cadastro" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Ainda não tem conta? Clique aqui
+                </Link>
+              </div>
             </div>
           </motion.div>
         )}
