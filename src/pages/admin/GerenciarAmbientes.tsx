@@ -118,23 +118,17 @@ function SortableAmbienteCard({
         } overflow-hidden shadow-sm`}
       >
         {/* Header do Ambiente */}
-        <div className="p-5 bg-gradient-to-r from-[var(--bg-primary)] to-[var(--bg-secondary)] border-b border-[var(--border-color)] transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
+        <div className="bg-gradient-to-r from-[var(--bg-primary)] to-[var(--bg-secondary)] border-b border-[var(--border-color)] transition-colors">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            {/* Seção Principal: Nome e Botões de Controle */}
+            <div className="p-4 sm:p-5 flex items-start gap-3 flex-1 min-w-0 overflow-hidden">
               {/* Handle para arrastar */}
               <button
                 {...attributes}
                 {...listeners}
-                className="drag-handle text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] bg-[var(--bg-primary)] border border-[var(--border-color)] rounded p-2 transition-all shadow-sm"
-                title="Arrastar para reordenar"
+                className="drag-handle text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg p-2 transition-all shadow-sm shrink-0"
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="9" cy="5" r="1.5" fill="currentColor" />
                   <circle cx="9" cy="12" r="1.5" fill="currentColor" />
                   <circle cx="9" cy="19" r="1.5" fill="currentColor" />
@@ -143,127 +137,144 @@ function SortableAmbienteCard({
                   <circle cx="15" cy="19" r="1.5" fill="currentColor" />
                 </svg>
               </button>
-              <span
-                className="text-2xl cursor-pointer"
-                onClick={() => toggleAmbiente(ambiente.id)}
-              >
-                📁
-              </span>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
+
+              <div className="flex-1 min-w-0 overflow-hidden">
+                {/* Linha do Título com Ícone e Botão + */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl shrink-0 cursor-pointer" onClick={() => toggleAmbiente(ambiente.id)}>📁</span>
                   <h3
-                    className="text-xl font-bold text-[var(--text-primary)] cursor-pointer"
+                    className="text-base sm:text-lg font-bold text-[var(--text-primary)] cursor-pointer hover:text-primary transition-colors break-words line-clamp-2"
                     onClick={() => toggleAmbiente(ambiente.id)}
+                    style={{ wordBreak: 'break-word' }}
                   >
                     {ambiente.nome}
                   </h3>
-
-                  {/* Badge indicando grupo */}
-                  {ambiente.isGrupo && (
-                    <span
-                      className="px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary-dark dark:text-primary rounded border border-primary/20"
-                      title={`Grupo de ambientes: ${ambiente.ambientes
-                        ?.map((a) => a.nome)
-                        .join(", ")}`}
-                    >
-                      👥 Grupo ({ambiente.ambientes?.length || 0})
-                    </span>
-                  )}
-
-                  {/* Botão + para Agrupar Ambientes */}
+                  {/* Botão + */}
                   <button
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setDialogGrupo({
                         open: true,
                         ambienteId: ambiente.id,
                         inputAmbiente: "",
-                      })
-                    }
-                    className="ml-2 w-7 h-7 flex items-center justify-center bg-primary hover:bg-primary-dark text-white rounded-full font-bold text-lg transition-all shadow-md hover:shadow-lg"
+                      });
+                    }}
+                    className="w-6 h-6 flex items-center justify-center bg-primary hover:bg-primary-dark text-white rounded-full font-bold text-sm transition-all shadow-md shrink-0"
                     title="Agrupar com outros ambientes"
                   >
                     +
                   </button>
-
-                  {/* Tipos de Uso - TODOS visíveis, clique para toggle */}
-                  <div className="flex gap-1 items-center">
-                    {Object.values(TipoUso).map((tipo) => (
-                      <button
-                        key={tipo}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleTipoUso(ambiente.id, tipo);
-                        }}
-                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all border ${
-                          ambiente.tiposUso?.includes(tipo)
-                            ? "bg-blue-500 text-white border-blue-600 shadow-md"
-                            : "bg-blue-500/10 text-blue-500 border-blue-500/20 opacity-60 hover:opacity-100"
-                        }`}
-                        title={
-                          ambiente.tiposUso?.includes(tipo)
-                            ? "Clique para desativar"
-                            : "Clique para ativar"
-                        }
-                      >
-                        🏢 {tipo}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Tipos de Imóvel - TODOS visíveis, clique para toggle */}
-                  <div className="flex gap-1 items-center">
-                    {Object.values(TipoImovel).map((tipo) => (
-                      <button
-                        key={tipo}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleTipoImovel(ambiente.id, tipo);
-                        }}
-                        className={`px-2 py-0.5 text-xs font-semibold rounded transition-all border ${
-                          ambiente.tiposImovel?.includes(tipo)
-                            ? "bg-green-500 text-white border-green-600 shadow-md"
-                            : "bg-green-500/10 text-green-500 border-green-500/20 opacity-60 hover:opacity-100"
-                        }`}
-                        title={
-                          ambiente.tiposImovel?.includes(tipo)
-                            ? "Clique para desativar"
-                            : "Clique para ativar"
-                        }
-                      >
-                        🏠 {tipo}
-                      </button>
-                    ))}
-                  </div>
                 </div>
-                {ambiente.descricao && (
-                  <p className="text-sm text-[var(--text-secondary)] opacity-70 mt-1">
-                    {ambiente.descricao}
-                  </p>
-                )}
+
+                {/* Badges: Grupo, Ativo, Itens */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {ambiente.isGrupo && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary rounded-full border border-primary/20">
+                      👥 Grupo ({ambiente.ambientes?.length || 0})
+                    </span>
+                  )}
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border transition-colors lg:hidden ${
+                    ambiente.ativo ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
+                  }`}>
+                    {ambiente.ativo ? "Ativo" : "Inativo"}
+                  </span>
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-full lg:hidden">
+                    {ambiente.itens?.length || 0} itens
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`px-3 py-1 text-sm font-semibold rounded-full border transition-colors ${
-                  ambiente.ativo
-                    ? "bg-green-500/10 text-green-500 border-green-500/20"
-                    : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
-                }`}
-              >
-                {ambiente.ativo ? "Ativo" : "Inativo"}
-              </span>
-              <span className="px-3 py-1 text-sm font-semibold bg-primary/10 text-primary border border-primary/20 rounded-full transition-colors">
-                {ambiente.itens?.length || 0} itens
-              </span>
-              <span
-                onClick={() => toggleAmbiente(ambiente.id)}
-                className={`transform transition-transform cursor-pointer p-2 hover:bg-white/10 rounded-full ${
-                  expandedAmbientes.has(ambiente.id) ? "rotate-180" : ""
-                }`}
-              >
-                ▼
-              </span>
+
+            {/* Seção de Configurações: Uso e Imóvel */}
+            <div className="px-4 pb-4 lg:p-0 lg:flex lg:items-center overflow-hidden">
+              <div className="bg-[var(--bg-primary)]/40 dark:bg-black/20 rounded-xl p-3 lg:bg-transparent lg:p-0 border lg:border-0 border-[var(--border-color)] lg:mr-4 w-full lg:w-auto">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+                  {/* Tipos de Uso */}
+                  <div className="w-full lg:w-auto">
+                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 lg:hidden">Uso</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.values(TipoUso).map((tipo) => (
+                        <button
+                          key={tipo}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleTipoUso(ambiente.id, tipo);
+                          }}
+                          className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all border ${
+                            ambiente.tiposUso?.includes(tipo)
+                              ? "bg-blue-500 text-white border-blue-600 shadow-sm"
+                              : "bg-blue-500/5 text-blue-500/60 border-blue-500/10 hover:border-blue-500/30"
+                          }`}
+                        >
+                          🏢 {tipo}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Divisor Visual no Desktop */}
+                  <div className="hidden lg:block w-px h-8 bg-[var(--border-color)]"></div>
+
+                  {/* Tipos de Imóvel */}
+                  <div className="w-full lg:w-auto">
+                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 lg:hidden">Imóvel</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.values(TipoImovel).map((tipo) => (
+                        <button
+                          key={tipo}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleTipoImovel(ambiente.id, tipo);
+                          }}
+                          className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all border ${
+                            ambiente.tiposImovel?.includes(tipo)
+                              ? "bg-green-500 text-white border-green-600 shadow-sm"
+                              : "bg-green-500/5 text-green-500/60 border-green-500/10 hover:border-green-500/30"
+                          }`}
+                        >
+                          🏠 {tipo}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Badges Finais e Botão Expandir (Desktop) */}
+            <div className="hidden lg:flex items-center gap-3 pr-5 py-5 border-l border-[var(--border-color)] shrink-0">
+               <span className={`px-3 py-1 text-xs font-bold rounded-full border transition-colors ${
+                  ambiente.ativo ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
+                }`}>
+                  {ambiente.ativo ? "Ativo" : "Inativo"}
+                </span>
+                <span className="px-3 py-1 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-full">
+                  {ambiente.itens?.length || 0} itens
+                </span>
+                <button
+                  onClick={() => toggleAmbiente(ambiente.id)}
+                  className={`p-2 rounded-full hover:bg-primary/10 transition-all ${expandedAmbientes.has(ambiente.id) ? "rotate-180 text-primary" : "text-[var(--text-secondary)]"}`}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+            </div>
+
+            {/* Botão Expandir Mobile (Barra inferior fina) */}
+            <button
+              onClick={() => toggleAmbiente(ambiente.id)}
+              className="lg:hidden w-full py-2 bg-[var(--bg-primary)]/60 hover:bg-primary/5 border-t border-[var(--border-color)] flex items-center justify-center text-[var(--text-secondary)] transition-colors group"
+            >
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] mr-2 group-hover:text-primary transition-colors">
+                {expandedAmbientes.has(ambiente.id) ? "Recolher Itens" : "Ver Itens"}
+              </span>
+              <div className={`transition-transform duration-300 ${expandedAmbientes.has(ambiente.id) ? "rotate-180 text-primary" : ""}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -1201,20 +1212,19 @@ export default function GerenciarAmbientes() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Cabeçalho */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">
-              🏠 Gerenciar Ambientes
-            </h2>
-            <p className="text-[var(--text-secondary)] opacity-70 mt-1">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[var(--border-color)] pb-6">
+          <div className="space-y-1">
+            <p className="text-[var(--text-secondary)] opacity-70">
               Configure ambientes, itens e prompts para análise de laudos
             </p>
-            <p className="text-sm text-primary font-medium mt-1">
-              ↕️ Arraste os blocos para reorganizar
-            </p>
+            <div className="flex items-center gap-2 text-sm text-primary font-medium">
+              <span>↕️</span>
+              <span>Arraste os blocos para reorganizar</span>
+            </div>
           </div>
           <Button
             variant="primary"
+            className="w-full sm:w-auto"
             onClick={() => abrirDialog("ambiente", "create")}
           >
             ➕ Novo Ambiente
@@ -1230,26 +1240,26 @@ export default function GerenciarAmbientes() {
           {/* Header do Prompt Padrão - Sempre visível */}
           <button
             onClick={() => setDefaultPromptExpanded(!defaultPromptExpanded)}
-            className="w-full p-4 flex items-center justify-between hover:bg-[var(--bg-primary)] transition-colors"
+            className="w-full p-3 sm:p-4 flex items-center justify-between hover:bg-[var(--bg-primary)] transition-colors group"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">⚙️</span>
-              <div className="text-left">
-                <h3 className="font-semibold text-[var(--text-primary)]">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-10 h-10 flex items-center justify-center bg-primary/10 rounded-lg text-primary shrink-0 transition-transform group-hover:scale-110">
+                <span className="text-xl">⚙️</span>
+              </div>
+              <div className="text-left min-w-0">
+                <h3 className="font-bold text-[var(--text-primary)] text-sm sm:text-base">
                   Prompt Padrão para Análise
                 </h3>
-                <p className="text-sm text-[var(--text-secondary)] opacity-70">
-                  Este texto é adicionado antes de todos os prompts de itens na análise de imagens
+                <p className="text-xs sm:text-sm text-[var(--text-secondary)] opacity-70 line-clamp-1 sm:line-clamp-none">
+                  Texto comum a todos os prompts
                 </p>
               </div>
             </div>
-            <span
-              className={`transform transition-transform duration-200 text-[var(--text-secondary)] ${
-                defaultPromptExpanded ? "rotate-180" : ""
-              }`}
-            >
-              ▼
-            </span>
+            <div className={`p-2 rounded-full hover:bg-primary/10 transition-all ${defaultPromptExpanded ? "rotate-180 text-primary" : "text-[var(--text-secondary)]"}`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
           </button>
 
           {/* Conteúdo Expandido */}
