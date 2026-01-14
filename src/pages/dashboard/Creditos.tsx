@@ -83,27 +83,37 @@ export default function Creditos() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">
-            Créditos
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
+          {/* Título removido por ser redundante com o header */}
           {isAdminOrDev && !editandoPlano && (
             <Button
               variant="primary"
               onClick={() => setMostrarFormulario(!mostrarFormulario)}
+              className="w-full sm:w-auto shadow-lg shadow-primary/20"
             >
-              {mostrarFormulario ? 'Cancelar' : '+ Novo Plano'}
+              {mostrarFormulario ? '❌ Cancelar' : '✨ Novo Plano'}
             </Button>
           )}
         </div>
 
         {/* Saldo de Créditos do Usuário */}
-        <div className="bg-gradient-to-br from-primary to-primary-dark rounded-xl p-8 text-white">
-          <h3 className="text-xl font-bold mb-4">Seus Créditos</h3>
-          <div className="flex items-baseline gap-2">
-            <p className="text-5xl font-bold">{user?.quantidadeImagens || 0}</p>
-            <p className="text-purple-200 text-lg">imagens disponíveis</p>
+        <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-primary-dark rounded-2xl p-6 sm:p-10 text-white shadow-xl shadow-primary/20">
+          <div className="relative z-10">
+            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-widest text-primary-foreground/80 mb-2">
+              Saldo em Conta
+            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+              <span className="text-5xl sm:text-7xl font-black tracking-tight">
+                {user?.quantidadeImagens?.toLocaleString() || 0}
+              </span>
+              <span className="text-primary-foreground/70 font-medium text-lg sm:text-2xl">
+                imagens disponíveis
+              </span>
+            </div>
           </div>
+          {/* Efeitos Decorativos */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-black/20 rounded-full blur-3xl pointer-events-none" />
         </div>
 
         {/* Formulário de Criação/Edição (Admin/Dev) */}
@@ -124,10 +134,13 @@ export default function Creditos() {
         )}
 
         {/* Lista de Planos */}
-        <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 transition-all">
-          <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4">
-            {isAdminOrDev ? 'Gerenciar Planos' : 'Planos Disponíveis'}
-          </h3>
+        <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-sm border border-[var(--border-color)] p-5 sm:p-8 transition-all">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1.5 h-6 bg-primary rounded-full" />
+            <h3 className="text-xl font-bold text-[var(--text-primary)]">
+              {isAdminOrDev ? 'Gerenciar Planos' : 'Planos Disponíveis'}
+            </h3>
+          </div>
 
           {isLoading ? (
             <p className="text-[var(--text-secondary)]">Carregando planos...</p>
@@ -138,26 +151,29 @@ export default function Creditos() {
               {planos.map((plano) => (
                 <div
                   key={plano.id}
-                  className="border-2 border-[var(--border-color)] rounded-lg p-6 bg-[var(--bg-primary)] transition-all hover:border-primary"
+                  className="group relative border border-[var(--border-color)] rounded-xl p-6 bg-[var(--bg-primary)] transition-all hover:border-primary hover:shadow-xl hover:shadow-primary/5"
                 >
-                  <h4 className="text-xl font-bold text-[var(--text-primary)] mb-2">
+                  <h4 className="text-xl font-bold text-[var(--text-primary)] mb-1">
                     {plano.nome}
                   </h4>
                   {plano.subtitulo && (
-                    <p className="text-sm text-[var(--text-secondary)] mb-3">
+                    <p className="text-xs font-medium text-[var(--text-secondary)] mb-4 uppercase tracking-wider">
                       {plano.subtitulo}
                     </p>
                   )}
-                  <div className="mb-4">
-                    <p className="text-4xl font-bold text-[var(--text-primary)]">
+                  <div className="mb-6 bg-[var(--bg-secondary)] p-4 rounded-lg border border-[var(--border-color)]/50 group-hover:border-primary/30 transition-colors">
+                    <p className="text-4xl font-black text-[var(--text-primary)] leading-none">
                       {plano.quantidadeImagens}
                     </p>
-                    <p className="text-sm text-[var(--text-secondary)]">imagens</p>
+                    <p className="text-xs font-bold text-[var(--text-secondary)] uppercase mt-1">Imagens Analisadas</p>
                   </div>
                   {plano.preco !== null && plano.preco !== undefined && (
-                    <p className="text-2xl font-bold text-primary mb-4">
-                      R$ {Number(plano.preco).toFixed(2)}
-                    </p>
+                    <div className="flex items-baseline gap-1 mb-6">
+                      <span className="text-sm font-bold text-primary">R$</span>
+                      <span className="text-3xl font-black text-primary">
+                        {Number(plano.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   )}
 
                   {isAdminOrDev ? (
