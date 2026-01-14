@@ -21,30 +21,74 @@ export default function Pagamentos() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h2 className="text-3xl font-bold text-[var(--text-primary)] transition-colors">Histórico de Pagamentos</h2>
+        {/* Título removido por ser redundante com o header */}
+        
+        <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-sm border border-[var(--border-color)] overflow-hidden transition-all duration-300">
+          <div className="flex items-center gap-3 p-6 border-b border-[var(--border-color)]">
+            <div className="w-1.5 h-6 bg-primary rounded-full" />
+            <h3 className="text-xl font-bold text-[var(--text-primary)]">
+              Histórico de Transações
+            </h3>
+          </div>
 
-        <div className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] transition-all">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          {/* Vista Desktop (Tabela) */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead className="bg-[var(--bg-primary)] border-b border-[var(--border-color)]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Data</th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Descrição</th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Valor</th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-[var(--text-primary)]">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Data</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Descrição</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Valor</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-[var(--border-color)]">
                 {pagamentos.map((pag) => (
-                  <tr key={pag.id} className="hover:bg-[var(--bg-primary)] transition-colors border-b border-[var(--border-color)] last:border-0">
-                    <td className="px-6 py-4 text-sm text-[var(--text-primary)]">{pag.data}</td>
-                    <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">{pag.descricao}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-[var(--text-primary)]">R$ {pag.valor}</td>
-                    <td className="px-6 py-4">{getStatusBadge(pag.status)}</td>
+                  <tr key={pag.id} className="hover:bg-[var(--bg-primary)] transition-all group">
+                    <td className="px-6 py-5 text-sm font-medium text-[var(--text-primary)]">
+                      {pag.data}
+                    </td>
+                    <td className="px-6 py-5 text-sm text-[var(--text-secondary)]">
+                      {pag.descricao}
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-sm font-black text-[var(--text-primary)]">
+                        R$ {pag.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      {getStatusBadge(pag.status)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Vista Mobile (Cards) */}
+          <div className="md:hidden divide-y divide-[var(--border-color)]">
+            {pagamentos.map((pag) => (
+              <div key={pag.id} className="p-5 space-y-4 bg-[var(--bg-secondary)] active:bg-[var(--bg-primary)] transition-colors">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">
+                      {pag.data}
+                    </p>
+                    <h4 className="font-bold text-[var(--text-primary)] leading-tight text-sm">
+                      {pag.descricao}
+                    </h4>
+                  </div>
+                  {getStatusBadge(pag.status)}
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">Valor Total</span>
+                  <span className="text-lg font-black text-primary">
+                    R$ {pag.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
