@@ -4,6 +4,8 @@ import { laudosService, Laudo } from '../../services/laudos';
 import { pdfService } from '../../services/pdfService';
 import { useAuth } from '../../contexts/AuthContext';
 import { LaudoSection } from '../../types/laudo-details';
+import { toast } from 'sonner';
+import Button from '../../components/ui/Button';
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
 const normalizeSectionName = (name: string): string => {
@@ -20,8 +22,6 @@ const SECTION_FIELD_MAP: Record<string, { dataKey: string; fields?: string[] }> 
   [normalizeSectionName("Revestimentos")]: { dataKey: "revestimentos", fields: ["tetos", "pisos", "bancadas"] },
   [normalizeSectionName("Mobilias")]: { dataKey: "mobilias", fields: ["fixa", "nao_fixa"] },
 };
-import { toast } from 'sonner';
-import Button from '../../components/ui/Button';
 
 interface ImagemPdf {
   id: string;
@@ -51,6 +51,57 @@ const METODOLOGIA_SAIDA_TEXTS = [
   "O método utilizado na vistoria consiste em uma análise meticulosa, baseando-se em procedimentos técnicos para avaliar todos os aspectos relevantes, desde apontamentos estruturais visíveis até pequenos detalhes construtivos e acessórios presentes no imóvel. Todos os aspectos são registrados de forma clara e objetiva, por textos e imagens, incluindo qualquer apontamento ou irregularidade aparente, salvo vício oculto. A abordagem é imparcial, e as fotos de cada ambiente trazem todos os ângulos necessários, como paredes, pisos, tetos, portas e janelas, entre outros que compõem o imóvel e suas instalações. As imagens são agrupadas e numeradas por ambiente, de modo que, mesmo na ausência de texto descrevendo algum apontamento, poderão ser identificadas por meio da interpretação dos registros fotográficos.",
   "Os registros encontrados como irregularidades ou avarias são indicados neste laudo de vistoria pela menção da palavra \"APONTAMENTO\"."
 ];
+
+// Componente wrapper para escalar o PDF em telas menores
+const PdfWrapper = ({ children }: { children: React.ReactNode }) => {
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const handleResize = () => {
+      // Consideramos p-6 (24px * 2) do container pai + margem de segurança
+      // Disponível = largura da janela - ~64px
+      const availableWidth = window.innerWidth - 64; 
+      const pdfBaseWidth = 794; // 210mm em pixels (aprox)
+
+      // Se a área disponível for menor que a largura do PDF, aplica escala
+      if (availableWidth < pdfBaseWidth) {
+        setScale(availableWidth / pdfBaseWidth);
+      } else {
+        setScale(1);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return (
+    <div 
+      style={{ 
+        width: '100%',
+        // Ajusta a altura do container baseado na escala
+        // 297mm é a altura fixa da página A4
+        height: scale < 1 ? `calc(297mm * ${scale})` : '297mm',
+        display: 'flex', 
+        justifyContent: 'center',
+        overflow: 'hidden'
+      }}
+    >
+      <div
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+          width: '210mm',
+          height: '297mm', // Altura fixa A4
+          flexShrink: 0
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
 
 export default function VisualizadorPdfLaudo() {
   const { id } = useParams<{ id: string }>();
@@ -590,7 +641,7 @@ export default function VisualizadorPdfLaudo() {
 
           <div className="relatorio-coluna">
             {col2.map((section) => (
-               <div key={section.id} className="grupo">
+              <div key={section.id} className="grupo">
                 <div className="categoria-box">{section.name}</div>
                 {section.questions?.map((q: { questionText?: string; id: string }, idx: number) => 
                   renderItemDinamico(section.name, q.questionText || '', q.id, idx)
@@ -677,137 +728,142 @@ export default function VisualizadorPdfLaudo() {
           </div>
         )}
         
-        {hasCover && paginaAtual === 1 ? (
-          renderCoverPage()
-        ) : hasCover && paginaAtual === 2 ? (
-          renderInfoPage()
-        ) : hasCover && paginaAtual === totalPaginas ? (
-          renderRelatorioPage()
-        ) : (
-          <div
-            id="pdf-grid-preview"
-            className={`bg-white transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}
-            style={{
-              width: '210mm',
-              padding: `${configuracoes.margemPagina}px`,
-              minHeight: '297mm',
-              color: 'black',
-            }}
-          >
-            <div 
+        <PdfWrapper>
+          {hasCover && paginaAtual === 1 ? (
+            renderCoverPage()
+          ) : hasCover && paginaAtual === 2 ? (
+            renderInfoPage()
+          ) : hasCover && paginaAtual === totalPaginas ? (
+            renderRelatorioPage()
+          ) : (
+            <div
+              id="pdf-grid-preview"
+              className={`bg-white transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: `${configuracoes.espacamentoVertical}px ${configuracoes.espacamentoHorizontal}px`,
+                width: '210mm',
+                padding: `${configuracoes.margemPagina}px`,
+                height: '297mm',
+                color: 'black',
               }}
             >
-              {imagensComUrls.map((img) => {
-                const ambienteSemNumero = img.ambiente?.replace(/^\d+\s*-\s*/, '') || img.ambiente;
-                const isEditing = editingId === img.id;
-                
-                return (
-                <div key={img.id}>
-                  <div className="border border-gray-400 mb-1">
-                    <img
-                      src={img.url}
-                      alt={`${img.ambiente} - ${img.numeroImagemNoAmbiente}`}
-                      className="w-full object-cover"
+              <div 
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: `${configuracoes.espacamentoVertical}px ${configuracoes.espacamentoHorizontal}px`,
+                }}
+              >
+                {imagensComUrls.map((img) => {
+                  const ambienteSemNumero = img.ambiente?.replace(/^\d+\s*-\s*/, '') || img.ambiente;
+                  const isEditing = editingId === img.id;
+                  
+                  return (
+                  <div key={img.id}>
+                    <div className="border border-gray-400 mb-1">
+                      <img
+                        src={img.url}
+                        alt={`${img.ambiente} - ${img.numeroImagemNoAmbiente}`}
+                        className="w-full object-cover"
+                        style={{ 
+                          height: '200px',
+                          display: 'block',
+                        }}
+                        crossOrigin="anonymous"
+                      />
+                    </div>
+                    <div 
+                      className="font-bold uppercase"
                       style={{ 
-                        height: '200px',
-                        display: 'block',
+                        fontSize: '10px',
+                        lineHeight: '1.2',
+                        textAlign: 'left',
                       }}
-                      crossOrigin="anonymous"
-                    />
-                  </div>
-                  <div 
-                    className="font-bold uppercase"
-                    style={{ 
-                      fontSize: '10px',
-                      lineHeight: '1.2',
-                      textAlign: 'left',
-                    }}
-                  >
-                    {ambienteSemNumero}
-                  </div>
-                  <div 
-                    className="text-left"
-                    style={{ 
-                      fontSize: '9px',
-                      lineHeight: '1.4',
-                    }}
-                  >
-                    {isEditing ? (
-                      <div>
-                        <div className="flex flex-wrap">
+                    >
+                      {ambienteSemNumero}
+                    </div>
+                    <div 
+                      className="text-left"
+                      style={{ 
+                        fontSize: '9px',
+                        lineHeight: '1.4',
+                      }}
+                    >
+                      {isEditing ? (
+                        <div>
+                          <div className="flex flex-wrap">
+                            <span className="font-bold mr-1">
+                              {img.numeroAmbiente} ({img.numeroImagemNoAmbiente})
+                            </span>
+                          </div>
+                          <textarea
+                            value={img.legenda}
+                            maxLength={200}
+                            onChange={(e) => {
+                              setImagensComUrls(prev =>
+                                prev.map(i => i.id === img.id ? { ...i, legenda: e.target.value } : i)
+                              );
+                            }}
+                            className="w-full border border-blue-400 outline-none resize-none bg-yellow-50 p-1 rounded mt-1"
+                            style={{
+                              fontSize: '9px',
+                              lineHeight: '1.4',
+                              fontFamily: 'inherit',
+                              minHeight: '40px',
+                            }}
+                            rows={2}
+                            autoFocus
+                          />
+                          <div className="flex justify-between items-center mt-1">
+                            <span className={`text-xs ${(img.legenda?.length || 0) > 180 ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
+                              {img.legenda?.length || 0}/200
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={async () => {
+                                  await handleLegendaChange(img.id, img.legenda);
+                                  setEditingId(null);
+                                }}
+                                className="px-2 py-0.5 bg-green-500 text-white rounded text-xs hover:bg-green-600"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setImagensComUrls(prev =>
+                                    prev.map(i => i.id === img.id ? { ...i, legenda: originalLegendasRef.current[img.id] || '' } : i)
+                                  );
+                                  setEditingId(null);
+                                }}
+                                className="px-2 py-0.5 bg-gray-300 rounded text-xs hover:bg-gray-400"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={() => {
+                            originalLegendasRef.current[img.id] = img.legenda;
+                            setEditingId(img.id);
+                          }}
+                          className="cursor-pointer hover:bg-yellow-50 rounded px-1 -mx-1"
+                          title="Clique para editar"
+                        >
                           <span className="font-bold mr-1">
                             {img.numeroAmbiente} ({img.numeroImagemNoAmbiente})
                           </span>
+                          {img.legenda || <span className="text-gray-400 italic">Sem legenda</span>}
                         </div>
-                        <textarea
-                          value={img.legenda}
-                          maxLength={200}
-                          onChange={(e) => {
-                            setImagensComUrls(prev =>
-                              prev.map(i => i.id === img.id ? { ...i, legenda: e.target.value } : i)
-                            );
-                          }}
-                          className="w-full border border-blue-400 outline-none resize-none bg-yellow-50 p-1 rounded mt-1"
-                          style={{
-                            fontSize: '9px',
-                            lineHeight: '1.4',
-                            fontFamily: 'inherit',
-                            minHeight: '40px',
-                          }}
-                          rows={2}
-                          autoFocus
-                        />
-                        <div className="flex justify-between items-center mt-1">
-                          <span className={`text-xs ${(img.legenda?.length || 0) > 180 ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
-                            {img.legenda?.length || 0}/200
-                          </span>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={async () => {
-                                await handleLegendaChange(img.id, img.legenda);
-                                setEditingId(null);
-                              }}
-                              className="px-2 py-0.5 bg-green-500 text-white rounded text-xs hover:bg-green-600"
-                            >
-                              Salvar
-                            </button>
-                            <button
-                              onClick={() => {
-                                setImagensComUrls(prev =>
-                                  prev.map(i => i.id === img.id ? { ...i, legenda: originalLegendasRef.current[img.id] || '' } : i)
-                                );
-                                setEditingId(null);
-                              }}
-                              className="px-2 py-0.5 bg-gray-300 rounded text-xs hover:bg-gray-400"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div 
-                        onClick={() => {
-                          originalLegendasRef.current[img.id] = img.legenda;
-                          setEditingId(img.id);
-                        }}
-                        className="cursor-pointer hover:bg-yellow-50 rounded px-1 -mx-1"
-                        title="Clique para editar"
-                      >
-                        <span className="font-bold">{img.numeroAmbiente} ({img.numeroImagemNoAmbiente})</span>{' '}
-                        {img.legenda || 'sem legenda'}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              );})}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </PdfWrapper>
       </div>
 
       {gerandoPdf && progresso > 0 && (
