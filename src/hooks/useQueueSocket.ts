@@ -16,6 +16,7 @@ export const useQueueSocket = () => {
   const socketRef = useRef<Socket | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, QueueProgress>>({});
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
+  const [pdfProgressMap, setPdfProgressMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
     socketRef.current = io(SOCKET_URL);
@@ -35,6 +36,13 @@ export const useQueueSocket = () => {
         setStatusMap((prev) => ({
             ...prev,
             [data.laudoId]: data.status
+        }));
+    });
+
+    socketRef.current.on('pdfProgress', (data: { laudoId: string; status: string; progress: number, url?: string, error?: string }) => {
+        setPdfProgressMap(prev => ({
+            ...prev,
+            [data.laudoId]: data
         }));
     });
 
@@ -60,6 +68,7 @@ export const useQueueSocket = () => {
   return {
     progressMap,
     statusMap,
+    pdfProgressMap,
     joinLaudo,
     leaveLaudo,
   };

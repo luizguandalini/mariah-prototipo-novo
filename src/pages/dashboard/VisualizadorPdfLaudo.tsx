@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { laudosService, Laudo } from '../../services/laudos';
 import { pdfService } from '../../services/pdfService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useQueueSocket } from '../../hooks/useQueueSocket';
 import { LaudoSection } from '../../types/laudo-details';
 import { toast } from 'sonner';
 import Button from '../../components/ui/Button';
@@ -279,42 +280,88 @@ export default function VisualizadorPdfLaudo() {
     }
   };
 
+  // Hook do WebSocket
+  const { joinLaudo, leaveLaudo, pdfProgressMap } = useQueueSocket();
+
+  // Entrar na sala do socket
+  useEffect(() => {
+    if (id) joinLaudo(id);
+    return () => { if (id) leaveLaudo(id); };
+  }, [id, joinLaudo, leaveLaudo]);
+
+  // Monitorar progresso do PDF via Socket
+  useEffect(() => {
+    if (!id || !laudo) return;
+    
+    // Verificar estado inicial do laudo (se já estava processando quando carregou)
+    if (laudo.pdfStatus === 'PROCESSING' || laudo.pdfStatus === 'PENDING') {
+        setGerandoPdf(true);
+        if (laudo.pdfProgress) setProgresso(laudo.pdfProgress);
+    } else if (laudo.pdfStatus === 'COMPLETED') {
+        setGerandoPdf(false);
+        setProgresso(100);
+    }
+
+    const update = pdfProgressMap[id];
+    if (update) {
+        if (update.status === 'PROCESSING' || update.status === 'PENDING') {
+            setGerandoPdf(true);
+            setProgresso(update.progress);
+        } else if (update.status === 'COMPLETED') {
+            setGerandoPdf(false);
+            setProgresso(100);
+            if (update.url && (!laudo.pdfUrl || laudo.pdfUrl !== update.url)) {
+                toast.success('PDF gerado com sucesso!');
+                setLaudo(prev => prev ? ({ ...prev, pdfUrl: update.url, pdfStatus: 'COMPLETED' }) : null);
+            }
+        } else if (update.status === 'ERROR') {
+            setGerandoPdf(false);
+            setProgresso(0);
+            toast.error(`Erro na geração do PDF: ${update.error || 'Desconhecido'}`);
+            setLaudo(prev => prev ? ({ ...prev, pdfStatus: 'ERROR' }) : null);
+        }
+    }
+  }, [pdfProgressMap, id, laudo?.pdfStatus]); // Dependência cuidadosa para evitar loops
+
+
   const handleGerarPdfCompleto = async () => {
     if (!id || !laudo) return;
 
+    // Se já tem PDF pronto e não está processando, abre o link
+    if (laudo.pdfUrl && laudo.pdfStatus === 'COMPLETED') {
+        window.open(laudo.pdfUrl, '_blank');
+        return;
+    }
+
+    iniciarGeracao();
+  };
+
+  const handleRegenerarPdf = async () => {
+      // Força a geração mesmo se já existir
+      iniciarGeracao();
+  };
+
+  const iniciarGeracao = async () => {
+    if (!id) return;
     try {
       setGerandoPdf(true);
       setProgresso(0);
-      abortControllerRef.current = new AbortController();
-
-      const getImagensPagina = (page: number) => laudosService.getImagensPdf(id, page, 12);
-      const getUrlsBatch = (s3Keys: string[]) => laudosService.getSignedUrlsBatch(s3Keys);
-
-      await pdfService.gerarPdfCompleto(
-        id,
-        laudo,
-        totalPaginas,
-        getImagensPagina,
-        getUrlsBatch,
-        configuracoes,
-        ambientes,
-        detalhes, // Passando detalhes dinâmicos para o gerador
-        setProgresso,
-        abortControllerRef.current.signal
-      );
-
-      toast.success('PDF completo gerado com sucesso!');
+      
+      await laudosService.requestPdfGeneration(id);
+      
+      toast.info('Geração de PDF iniciada no servidor. Aguarde...');
+      
+      // O progresso será atualizado pelo useEffect do socket
     } catch (error: any) {
-      if (error.message === 'Geração cancelada') {
-        toast.info('Geração cancelada');
-      } else {
-        toast.error('Erro ao gerar PDF');
-        console.error(error);
-      }
-    } finally {
+      console.error(error);
       setGerandoPdf(false);
-      setProgresso(0);
-      abortControllerRef.current = null;
+      
+      // Se o erro for "já está processando", a gente ignora ou avisa
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('processamento')) {
+          toast.warning('O PDF já está sendo gerado.');
+      } else {
+          toast.error('Não foi possível iniciar a geração do PDF.');
+      }
     }
   };
 
@@ -670,13 +717,32 @@ export default function VisualizadorPdfLaudo() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+            {/* Botão Secundário: Gerar Novamente (Apenas se já concluído) */}
+            {laudo?.pdfStatus === 'COMPLETED' && !gerandoPdf && (
+                <Button
+                    variant="outline"
+                    onClick={handleRegenerarPdf}
+                    disabled={gerandoPdf}
+                    className="w-full sm:w-auto justify-center"
+                >
+                    Gerar Novamente
+                </Button>
+            )}
+
             <Button
               variant="primary"
               onClick={handleGerarPdfCompleto}
               disabled={gerandoPdf || totalPaginas === 0}
-              className="w-full sm:w-auto justify-center"
+              className={`w-full sm:w-auto justify-center ${gerandoPdf ? 'opacity-80 cursor-wait' : ''}`}
             >
-              Baixar Laudo
+               {gerandoPdf ? (
+                 <>
+                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                   {progresso > 0 ? `Processando ${progresso}%` : 'Solicitando...'}
+                 </>
+               ) : (
+                 'Baixar PDF' // Ajustado texto para consistência
+               )}
             </Button>
           </div>
         </div>

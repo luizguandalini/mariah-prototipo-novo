@@ -93,6 +93,8 @@ export interface Laudo {
   status: "nao_iniciado" | "processando" | "concluido" | "paralisado";
   tamanho?: string;
   pdfUrl?: string;
+  pdfStatus?: string; // NONE, PENDING, PROCESSING, COMPLETED, ERROR
+  pdfProgress?: number;
   totalAmbientes: number;
   totalFotos: number;
 
@@ -318,6 +320,13 @@ class LaudosService {
     margemPagina?: number;
   }): Promise<any> {
     return api.put(`/users/configuracoes-pdf`, config, true);
+  }
+
+  /**
+   * Solicita a geração do PDF no backend
+   */
+  async requestPdfGeneration(laudoId: string): Promise<void> {
+    return api.post(`/laudos/${laudoId}/pdf-request`, {}, true);
   }
 }
 
