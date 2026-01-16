@@ -40,6 +40,7 @@ export const useQueueSocket = () => {
     });
 
     socketRef.current.on('pdfProgress', (data: { laudoId: string; status: string; progress: number, url?: string, error?: string }) => {
+        console.log('socket: pdfProgress received', data);
         setPdfProgressMap(prev => ({
             ...prev,
             [data.laudoId]: data
