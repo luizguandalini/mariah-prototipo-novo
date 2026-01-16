@@ -9,6 +9,7 @@ import { queueService } from "../../services/queue";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
 import { Bot, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 export default function TodosLaudos() {
   const [laudos, setLaudos] = useState<Laudo[]>([]);
@@ -305,14 +306,12 @@ export default function TodosLaudos() {
                     <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                       {mapStatus(laudo.status) === "concluido" &&
                         laudo.pdfUrl && (
-                          <a
-                            href={laudo.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <Link
+                            to={`/dashboard/laudos/${laudo.id}/pdf`}
                             className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm"
                           >
                             📄 Ver PDF
-                          </a>
+                          </Link>
                         )}
                       <button
                         onClick={() => setLaudoEditando(laudo)}

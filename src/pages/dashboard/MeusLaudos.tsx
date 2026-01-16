@@ -439,34 +439,17 @@ export default function MeusLaudos() {
                           </Button>
                         </Link>
 
-                        {/* Ver PDF - Always Visible (Smart Link) */}
-                        {laudo.pdfUrl && status === 'concluido' ? (
-                           <a
-                              href={laudo.pdfUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                           >
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
-                            >
-                              <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                              Ver PDF
-                            </Button>
-                           </a>
-                        ) : (
-                           <Link to={`/dashboard/laudos/${laudo.id}/pdf`}>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
-                            >
-                              <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                              Ver PDF
-                            </Button>
-                           </Link>
-                        )}
+                        {/* Ver PDF - Always Visible */}
+                        <Link to={`/dashboard/laudos/${laudo.id}/pdf`}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
+                          >
+                            <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                            Ver PDF
+                          </Button>
+                        </Link>
 
                         {/* Iniciar Análise - Conditional */}
                         {status === "nao_iniciado" && (
