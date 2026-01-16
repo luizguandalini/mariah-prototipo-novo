@@ -720,10 +720,10 @@ export default function VisualizadorPdfLaudo() {
             {/* Botão Secundário: Gerar Novamente (Apenas se já concluído) */}
             {laudo?.pdfStatus === 'COMPLETED' && !gerandoPdf && (
                 <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={handleRegenerarPdf}
                     disabled={gerandoPdf}
-                    className="w-full sm:w-auto justify-center"
+                    className="w-full sm:w-auto justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20"
                 >
                     Gerar Novamente
                 </Button>
