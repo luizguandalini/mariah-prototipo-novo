@@ -100,64 +100,92 @@ class PdfService {
 
     const hasCover = true;
 
-    for (let pagina = 1; pagina <= totalPaginas; pagina++) {
-      if (abortSignal?.aborted) {
-        throw new Error('Geração cancelada');
+    // Criar iframe de isolamento uma única vez
+    const iframe = this.createIsolationIframe();
+    const mountPoint = iframe.contentDocument!.body;
+
+    try {
+      for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+        if (abortSignal?.aborted) {
+          throw new Error('Geração cancelada');
+        }
+
+        await this.aguardarOciosidade();
+
+        // Limpar o ponto de montagem (não remover o iframe, apenas o conteúdo)
+        mountPoint.innerHTML = '';
+
+        let elementoParaCaptura: HTMLElement;
+
+        if (hasCover && pagina === 1) {
+          elementoParaCaptura = await this.criarCapa(laudo, configuracoes, mountPoint);
+          // Aumentei o delay para garantir carregamento da fonte
+          await new Promise(resolve => setTimeout(resolve, 800));
+        } else if (hasCover && pagina === 2) {
+          elementoParaCaptura = this.criarPaginaTermos(ambientes, mountPoint);
+          await new Promise(resolve => setTimeout(resolve, 400));
+        } else if (hasCover && pagina === totalPaginas) {
+          // Nova condição: Se for Entrada, a última página é o Relatório
+          elementoParaCaptura = this.criarPaginaRelatorio(laudo, detalhes, mountPoint);
+          await new Promise(resolve => setTimeout(resolve, 400));
+        } else {
+          const backendPage = hasCover ? pagina - 2 : pagina;
+          const response = await getImagensPagina(backendPage);
+          const imagens = response.data;
+          const s3Keys = imagens.map((img: any) => img.s3Key);
+          const urls = await getUrlsBatch(s3Keys);
+
+          elementoParaCaptura = this.criarPaginaTemporaria(imagens, urls, configuracoes, mountPoint);
+          await this.aguardarCarregamentoImagens(elementoParaCaptura);
+        }
+
+        const canvas = await html2canvas(elementoParaCaptura, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 1600, // IMPORTANTE: Força renderização desktop
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.75);
+
+        if (paginaAdicionada) {
+          pdf.addPage();
+        }
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        paginaAdicionada = true;
+
+        onProgress((pagina / totalPaginas) * 100);
       }
-
-      await this.aguardarOciosidade();
-
-      let elementoParaCaptura: HTMLElement;
-
-      if (hasCover && pagina === 1) {
-        elementoParaCaptura = await this.criarCapa(laudo, configuracoes);
-        // Aumentei o delay para garantir carregamento da fonte
-        await new Promise(resolve => setTimeout(resolve, 800));
-      } else if (hasCover && pagina === 2) {
-        elementoParaCaptura = this.criarPaginaTermos(ambientes);
-        await new Promise(resolve => setTimeout(resolve, 400));
-      } else if (hasCover && pagina === totalPaginas) {
-        // Nova condição: Se for Entrada, a última página é o Relatório
-        elementoParaCaptura = this.criarPaginaRelatorio(laudo, detalhes);
-        await new Promise(resolve => setTimeout(resolve, 400));
-      } else {
-        const backendPage = hasCover ? pagina - 2 : pagina;
-        const response = await getImagensPagina(backendPage);
-        const imagens = response.data;
-        const s3Keys = imagens.map((img: any) => img.s3Key);
-        const urls = await getUrlsBatch(s3Keys);
-
-        elementoParaCaptura = this.criarPaginaTemporaria(imagens, urls, configuracoes);
-        await this.aguardarCarregamentoImagens(elementoParaCaptura);
-      }
-
-      const canvas = await html2canvas(elementoParaCaptura, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 1600, // IMPORTANTE: Força renderização desktop
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.75);
-
-      if (paginaAdicionada) {
-        pdf.addPage();
-      }
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      paginaAdicionada = true;
-
-      document.body.removeChild(elementoParaCaptura);
-      canvas.width = 0;
-      canvas.height = 0;
-
-      onProgress((pagina / totalPaginas) * 100);
+    } finally {
+        if (iframe.parentNode) {
+            document.body.removeChild(iframe);
+        }
     }
 
     pdf.save(`laudo-completo-${laudoId}.pdf`);
+  }
+
+  private createIsolationIframe(): HTMLIFrameElement {
+    const iframe = document.createElement('iframe');
+    iframe.style.visibility = 'hidden';
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.width = '0';
+    iframe.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    
+    const doc = iframe.contentDocument!;
+    doc.open();
+    doc.write('<!DOCTYPE html><html><head><style>body { margin: 0; padding: 0; background: #fff; }</style></head><body></body></html>');
+    doc.close();
+    
+    return iframe;
   }
 
   private aguardarOciosidade(): Promise<void> {
@@ -170,7 +198,7 @@ class PdfService {
     });
   }
 
-  private async criarCapa(laudo: any, config: any): Promise<HTMLElement> {
+  private async criarCapa(laudo: any, config: any, parent: HTMLElement = document.body): Promise<HTMLElement> {
     const container = document.createElement('div');
     // Adicionei box-sizing: border-box aqui explicitamente
     container.style.cssText = `
@@ -254,7 +282,7 @@ class PdfService {
       </div>
     `;
 
-    document.body.appendChild(container);
+    parent.appendChild(container);
 
     const images = Array.from(container.querySelectorAll('img'));
     await Promise.all(images.map(img => {
@@ -268,7 +296,7 @@ class PdfService {
     return container;
   }
 
-  private criarPaginaTermos(ambientes: any[]): HTMLElement {
+  private criarPaginaTermos(ambientes: any[], parent: HTMLElement = document.body): HTMLElement {
     const itemsPerColumn = 18;
     const columns = [[], [], [], []] as any[][];
     
@@ -347,11 +375,11 @@ class PdfService {
       </div>
     `;
 
-    document.body.appendChild(container); // IMPORTANTE: Anexar ao body para ser renderizado pelo html2canvas
+    parent.appendChild(container); // IMPORTANTE: Anexar ao elemento pai fornecido
     return container;
   }
 
-   private criarPaginaRelatorio(laudo: any, detalhes: any): HTMLElement {
+   private criarPaginaRelatorio(laudo: any, detalhes: any, parent: HTMLElement = document.body): HTMLElement {
     const container = document.createElement('div');
     container.style.cssText = `
       position: fixed;
@@ -475,14 +503,15 @@ class PdfService {
       </div>
     `;
 
-    document.body.appendChild(container); 
+    parent.appendChild(container); 
     return container;
   }
 
   private criarPaginaTemporaria(
     imagens: any[],
     urls: Record<string, string>,
-    config: any
+    config: any,
+    parent: HTMLElement = document.body
   ): HTMLElement {
     const container = document.createElement('div');
     container.style.cssText = `
@@ -520,7 +549,7 @@ class PdfService {
       </div>
     `;
     
-    document.body.appendChild(container);
+    parent.appendChild(container);
     return container;
   }
 

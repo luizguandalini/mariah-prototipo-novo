@@ -671,20 +671,12 @@ export default function VisualizadorPdfLaudo() {
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
             <Button
-              variant="outline"
-              onClick={handleGerarPdfPagina}
-              disabled={gerandoPdf || (loading && !hasCover && imagensComUrls.length === 0)}
-              className="text-gray-700 hover:text-gray-900 border-gray-300 w-full sm:w-auto justify-center"
-            >
-              📄 Baixar Esta Página
-            </Button>
-            <Button
               variant="primary"
               onClick={handleGerarPdfCompleto}
               disabled={gerandoPdf || totalPaginas === 0}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto justify-center"
             >
-              📚 Baixar Todas as Páginas
+              Baixar Laudo
             </Button>
           </div>
         </div>
