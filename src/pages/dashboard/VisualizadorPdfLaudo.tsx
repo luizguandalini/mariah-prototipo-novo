@@ -658,23 +658,23 @@ export default function VisualizadorPdfLaudo() {
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4 md:gap-0">
+          <div className="flex items-center gap-4 w-full md:w-auto">
             <button
               onClick={() => navigate('/dashboard/laudos')}
               className="text-gray-600 hover:text-gray-900"
             >
               ← Voltar
             </button>
-            <h1 className="text-2xl font-bold">Visualizador de PDF</h1>
+            <h1 className="text-xl md:text-2xl font-bold truncate">Visualizador de PDF</h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
             <Button
               variant="outline"
               onClick={handleGerarPdfPagina}
               disabled={gerandoPdf || (loading && !hasCover && imagensComUrls.length === 0)}
-              className="text-gray-700 hover:text-gray-900 border-gray-300"
+              className="text-gray-700 hover:text-gray-900 border-gray-300 w-full sm:w-auto justify-center"
             >
               📄 Baixar Esta Página
             </Button>
@@ -682,6 +682,7 @@ export default function VisualizadorPdfLaudo() {
               variant="primary"
               onClick={handleGerarPdfCompleto}
               disabled={gerandoPdf || totalPaginas === 0}
+              className="w-full sm:w-auto"
             >
               📚 Baixar Todas as Páginas
             </Button>
@@ -689,28 +690,28 @@ export default function VisualizadorPdfLaudo() {
         </div>
 
         {/* Paginação */}
-        <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
-          <div className="text-sm text-gray-600">
+        <div className="flex flex-col md:flex-row items-center justify-between bg-white rounded-lg shadow-sm p-4 gap-4 md:gap-0">
+          <div className="text-sm text-gray-600 text-center md:text-left">
             Página {paginaAtual} de {totalPaginas} • {totalImagens} imagens no total
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-2 w-full md:w-auto">
             <button
               onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
               disabled={paginaAtual === 1 || loading}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex-1 sm:flex-none justify-center"
             >
               ← Anterior
             </button>
             
-            <span className="px-4 py-2 text-gray-700">
+            <span className="px-4 py-2 text-gray-700 whitespace-nowrap">
               {paginaAtual} / {totalPaginas}
             </span>
 
             <button
               onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
               disabled={paginaAtual === totalPaginas || loading}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex-1 sm:flex-none justify-center"
             >
               Próxima →
             </button>
