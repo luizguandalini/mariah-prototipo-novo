@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { laudosService, Laudo } from '../../services/laudos';
 import { pdfService } from '../../services/pdfService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -107,7 +107,20 @@ const PdfWrapper = ({ children }: { children: React.ReactNode }) => {
 export default function VisualizadorPdfLaudo() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   
+  const handleVoltar = () => {
+    const from = (location.state as any)?.from;
+    if (from) {
+      navigate(from);
+    } else {
+      // Fallback inteligente baseada no cargo
+      const isAdmin = user?.role === 'ADMIN' || user?.role === 'DEV';
+      navigate(isAdmin ? '/admin/laudos' : '/dashboard/laudos');
+    }
+  };
+
   const [laudo, setLaudo] = useState<Laudo | null>(null);
   const [imagensComUrls, setImagensComUrls] = useState<any[]>([]);
   const [ambientes, setAmbientes] = useState<any[]>([]);
@@ -708,7 +721,7 @@ export default function VisualizadorPdfLaudo() {
         <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4 md:gap-0">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <button
-              onClick={() => navigate('/dashboard/laudos')}
+              onClick={handleVoltar}
               className="text-gray-600 hover:text-gray-900"
             >
               ← Voltar

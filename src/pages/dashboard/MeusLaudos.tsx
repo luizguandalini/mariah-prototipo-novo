@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
@@ -16,6 +16,7 @@ import { useQueueSocket } from "../../hooks/useQueueSocket";
 
 export default function MeusLaudos() {
   const { user, refreshUser } = useAuth();
+  const location = useLocation();
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [laudos, setLaudos] = useState<Laudo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -440,7 +441,7 @@ export default function MeusLaudos() {
                         </Link>
 
                         {/* Ver PDF - Always Visible */}
-                        <Link to={`/dashboard/laudos/${laudo.id}/pdf`}>
+                        <Link to={`/dashboard/laudos/${laudo.id}/pdf`} state={{ from: location.pathname }}>
                           <Button
                             variant="secondary"
                             size="sm"

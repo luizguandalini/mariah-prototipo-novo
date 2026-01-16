@@ -9,9 +9,10 @@ import { queueService } from "../../services/queue";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
 import { Bot, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export default function TodosLaudos() {
+  const location = useLocation();
   const [laudos, setLaudos] = useState<Laudo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -308,6 +309,7 @@ export default function TodosLaudos() {
                         laudo.pdfUrl && (
                           <Link
                             to={`/dashboard/laudos/${laudo.id}/pdf`}
+                            state={{ from: location.pathname }}
                             className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm"
                           >
                             📄 Ver PDF
