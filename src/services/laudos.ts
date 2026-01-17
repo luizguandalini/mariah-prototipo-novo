@@ -72,6 +72,8 @@ export interface PaginatedResponse<T> {
 
 export interface Laudo {
   id: string;
+  usuarioNome?: string;
+  usuarioEmail?: string;
   endereco: string;
 
   // Endereço detalhado
