@@ -138,7 +138,6 @@ export default function VisualizadorPdfLaudo() {
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [progresso, setProgresso] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const wasTriggeredRef = useRef(false);
   const originalLegendasRef = useRef<Record<string, string>>({});
   const pagesCache = useRef<Record<number, any[]>>({});
@@ -392,11 +391,6 @@ export default function VisualizadorPdfLaudo() {
     }
   };
 
-  const handleCancelar = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-  };
 
   const renderCoverPage = () => {
     if (!laudo) return null;
@@ -985,14 +979,6 @@ export default function VisualizadorPdfLaudo() {
                 </div>
               </div>
 
-              <div className="w-full mt-8">
-                <button
-                  onClick={handleCancelar}
-                  className="w-full py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  Cancelar Geração
-                </button>
-              </div>
             </div>
           </motion.div>
         </div>
