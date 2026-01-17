@@ -138,6 +138,7 @@ export default function VisualizadorPdfLaudo() {
   const [progresso, setProgresso] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const wasTriggeredRef = useRef(false);
   const originalLegendasRef = useRef<Record<string, string>>({});
   const pagesCache = useRef<Record<number, any[]>>({});
 
@@ -323,13 +324,24 @@ export default function VisualizadorPdfLaudo() {
         } else if (update.status === 'COMPLETED') {
             setGerandoPdf(false);
             setProgresso(100);
-            if (update.url && (!laudo.pdfUrl || laudo.pdfUrl !== update.url)) {
+            
+            const isFirstLoad = !laudo.pdfUrl && update.url;
+            const isUpdated = update.url && laudo.pdfUrl !== update.url;
+
+            if (update.url && (isFirstLoad || isUpdated)) {
                 toast.success('PDF gerado com sucesso!');
                 setLaudo(prev => prev ? ({ ...prev, pdfUrl: update.url, pdfStatus: 'COMPLETED' }) : null);
+            }
+
+            // Abre automaticamente se foi acionado pelo usuário nesta sessão
+            if (wasTriggeredRef.current && update.url) {
+                window.open(update.url, '_blank');
+                wasTriggeredRef.current = false;
             }
         } else if (update.status === 'ERROR') {
             setGerandoPdf(false);
             setProgresso(0);
+            wasTriggeredRef.current = false;
             toast.error(`Erro na geração do PDF: ${update.error || 'Desconhecido'}`);
             setLaudo(prev => prev ? ({ ...prev, pdfStatus: 'ERROR' }) : null);
         }
@@ -359,6 +371,7 @@ export default function VisualizadorPdfLaudo() {
     try {
       setGerandoPdf(true);
       setProgresso(0);
+      wasTriggeredRef.current = true;
       
       await laudosService.requestPdfGeneration(id);
       
