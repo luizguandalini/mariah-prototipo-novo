@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useQueueSocket } from '../../hooks/useQueueSocket';
 import { LaudoSection } from '../../types/laudo-details';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
@@ -951,20 +952,49 @@ export default function VisualizadorPdfLaudo() {
         </PdfWrapper>
       </div>
 
-      {gerandoPdf && progresso > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold mb-4">Gerando PDF Completo</h3>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-              <div
-                className="bg-blue-600 h-2.5 rounded-full transition-all"
-                style={{ width: `${progresso}%` }}
-              ></div>
+      {gerandoPdf && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-8 max-w-md w-full border border-white/20 dark:border-slate-800"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Gerando PDF
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm">
+                Estamos processando as imagens e organizando o laudo completo...
+              </p>
+
+              <div className="w-full mb-2">
+                <div className="flex justify-between text-sm font-medium mb-2">
+                  <span className="text-slate-600 dark:text-slate-300">Progresso</span>
+                  <span className="text-primary">{progresso}%</span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                  <motion.div
+                    className="bg-gradient-to-r from-primary to-purple-600 h-full transition-all duration-300"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progresso}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="w-full mt-8">
+                <button
+                  onClick={handleCancelar}
+                  className="w-full py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancelar Geração
+                </button>
+              </div>
             </div>
-            <Button variant="outline" onClick={handleCancelar} className="w-full">
-              Cancelar
-            </Button>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
