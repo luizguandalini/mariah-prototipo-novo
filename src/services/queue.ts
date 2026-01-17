@@ -54,8 +54,8 @@ export const queueService = {
   /**
    * Adiciona laudo à fila de análise
    */
-  async addToQueue(laudoId: string): Promise<{ success: boolean; position: number; totalImages: number }> {
-    return api.post(`/queue/analisar-laudo/${laudoId}`, {}, true);
+  async addToQueue(laudoId: string, force: boolean = false): Promise<{ success: boolean; position: number; totalImages: number }> {
+    return api.post(`/queue/analisar-laudo/${laudoId}`, { force }, true);
   },
 
   /**

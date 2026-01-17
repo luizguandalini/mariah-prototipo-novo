@@ -94,11 +94,17 @@ export default function TodosLaudos() {
     );
   };
 
-  const handleIniciarAnalise = async (laudoId: string) => {
+  const handleIniciarAnalise = async (laudoId: string, force: boolean = false) => {
     try {
       setAnalisandoLaudoId(laudoId);
-      await queueService.addToQueue(laudoId);
-      toast.success("Laudo adicionado à fila de análise!");
+      await queueService.addToQueue(laudoId, force);
+      
+      if (force) {
+          toast.success("Reanálise iniciada com sucesso!");
+      } else {
+          toast.success("Laudo adicionado à fila de análise!");
+      }
+      
       // Atualizar status do laudo na lista
       setLaudos((prevLaudos) =>
         prevLaudos.map((l) =>
@@ -106,7 +112,7 @@ export default function TodosLaudos() {
         )
       );
     } catch (err: any) {
-      if (err.message && err.message.includes("já possui todas as imagens analisadas")) {
+      if (err.message && err.message.includes("já possui todas as imagens analisadas") && !force) {
         toast.success("Este laudo já foi totalmente analisado!");
         setLaudos((prevLaudos) =>
           prevLaudos.map((l) =>
@@ -334,22 +340,40 @@ export default function TodosLaudos() {
                         🗑️ Deletar
                       </button>
                       
-                       {/* Iniciar Análise - Conditional */}
-                       {mapStatus(laudo.status) === "nao_iniciado" && (
+                       {/* Iniciar Análise / Reanalisar */}
+                       {(mapStatus(laudo.status) === "nao_iniciado" || 
+                         mapStatus(laudo.status) === "concluido" || 
+                         mapStatus(laudo.status) === "paralisado" ||
+                         mapStatus(laudo.status) === "error") && (
                         <button
-                          onClick={() => handleIniciarAnalise(laudo.id)}
+                          onClick={() => handleIniciarAnalise(laudo.id, mapStatus(laudo.status) !== "nao_iniciado")}
                           disabled={analisandoLaudoId === laudo.id}
-                          className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 text-sm font-medium whitespace-nowrap transition-all shadow-sm flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
+                          className={`w-full sm:w-auto px-4 py-2 text-white rounded-lg text-sm font-medium whitespace-nowrap transition-all shadow-sm flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed
+                            ${mapStatus(laudo.status) === "nao_iniciado" 
+                              ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                              : "bg-blue-600 hover:bg-blue-700"}
+                          `}
                         >
                           {analisandoLaudoId === laudo.id ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              Iniciando...
+                              {mapStatus(laudo.status) === "nao_iniciado" ? "Iniciando..." : "Reiniciando..."}
                             </>
                           ) : (
                             <>
-                              <Bot className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                              Iniciar IA
+                              {mapStatus(laudo.status) === "nao_iniciado" ? (
+                                <>
+                                  <Bot className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                  Iniciar IA
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  </svg>
+                                  Reanalisar
+                                </>
+                              )}
                             </>
                           )}
                         </button>
