@@ -7,7 +7,7 @@ import { laudosService, type Laudo } from "../../services/laudos";
 import { toast } from "sonner";
 import { queueService } from "../../services/queue";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
-import { Bot, Loader2 } from "lucide-react";
+import { Bot, Loader2, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 
@@ -311,16 +311,15 @@ export default function TodosLaudos() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
-                      {mapStatus(laudo.status) === "concluido" &&
-                        laudo.pdfUrl && (
-                          <Link
-                            to={`/dashboard/laudos/${laudo.id}/pdf`}
-                            state={{ from: location.pathname }}
-                            className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm"
-                          >
-                            📄 Ver PDF
-                          </Link>
-                        )}
+                       {/* Ver PDF - Always Visible */}
+                       <Link
+                         to={`/dashboard/laudos/${laudo.id}/pdf`}
+                         state={{ from: location.pathname }}
+                         className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm flex items-center justify-center gap-2 group"
+                       >
+                         <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                         Ver PDF
+                       </Link>
                       <button
                         onClick={() => setLaudoEditando(laudo)}
                         className="w-full sm:w-auto px-4 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] text-sm font-medium whitespace-nowrap transition-all shadow-sm"
