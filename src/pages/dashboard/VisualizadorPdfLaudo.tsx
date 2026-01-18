@@ -382,9 +382,11 @@ export default function VisualizadorPdfLaudo() {
       console.error(error);
       setGerandoPdf(false);
       
-      // Se o erro for "já está processando", a gente ignora ou avisa
-      if (error.response?.status === 400 && error.response?.data?.message?.includes('processamento')) {
-          toast.warning('O PDF já está sendo gerado.');
+      // Se o erro for "já está processando" ou "já está na fila", avisa o usuário
+      if (error.response?.status === 400 && 
+          (error.response?.data?.message?.includes('processamento') || 
+           error.response?.data?.message?.includes('fila'))) {
+          toast.warning('O PDF já está sendo gerado ou está na fila. Aguarde.');
       } else {
           toast.error('Não foi possível iniciar a geração do PDF.');
       }
