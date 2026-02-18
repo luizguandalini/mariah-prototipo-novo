@@ -409,6 +409,7 @@ export default function VisualizadorPdfLaudo() {
           padding: '10mm 20mm 20mm 20mm',
           backgroundColor: '#fff',
           overflow: 'hidden',
+          position: 'relative',
           fontFamily: '"Roboto", Arial, sans-serif',
           color: 'black',
         }}
@@ -494,6 +495,18 @@ export default function VisualizadorPdfLaudo() {
             <p key={index}>{text}</p>
           ))}
         </div>
+
+        {/* Número de página */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10mm',
+          right: '15mm',
+          fontFamily: '"Roboto", Arial, sans-serif',
+          fontSize: '10px',
+          color: '#555',
+        }}>
+          {paginaAtual}
+        </div>
       </div>
     );
   };
@@ -522,6 +535,7 @@ export default function VisualizadorPdfLaudo() {
           padding: '20mm',
           backgroundColor: '#fff',
           overflow: 'hidden',
+          position: 'relative',
           fontFamily: '"Roboto", Arial, sans-serif',
           color: 'black',
         }}
@@ -575,6 +589,18 @@ export default function VisualizadorPdfLaudo() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Número de página */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10mm',
+          right: '15mm',
+          fontFamily: '"Roboto", Arial, sans-serif',
+          fontSize: '10px',
+          color: '#555',
+        }}>
+          {paginaAtual}
         </div>
       </div>
     );
@@ -679,6 +705,7 @@ export default function VisualizadorPdfLaudo() {
           padding: '20mm',
           backgroundColor: '#fff',
           overflow: 'hidden',
+          position: 'relative',
           fontFamily: '"Roboto", Arial, sans-serif',
           color: 'black',
         }}
@@ -719,6 +746,18 @@ export default function VisualizadorPdfLaudo() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Número de página */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10mm',
+          right: '15mm',
+          fontFamily: '"Roboto", Arial, sans-serif',
+          fontSize: '10px',
+          color: '#555',
+        }}>
+          {paginaAtual}
         </div>
       </div>
     );
@@ -826,6 +865,8 @@ export default function VisualizadorPdfLaudo() {
                 padding: `${configuracoes.margemPagina}px`,
                 height: '297mm',
                 color: 'black',
+                position: 'relative',
+                fontFamily: '"Roboto", Arial, sans-serif',
               }}
             >
               <div 
@@ -942,6 +983,18 @@ export default function VisualizadorPdfLaudo() {
                   </div>
                   );
                 })}
+              </div>
+
+              {/* Número de página */}
+              <div style={{
+                position: 'absolute',
+                bottom: '10mm',
+                right: '15mm',
+                fontFamily: '"Roboto", Arial, sans-serif',
+                fontSize: '10px',
+                color: '#555',
+              }}>
+                {paginaAtual}
               </div>
             </div>
           )}
