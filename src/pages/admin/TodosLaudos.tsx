@@ -7,7 +7,7 @@ import { laudosService, type Laudo } from "../../services/laudos";
 import { toast } from "sonner";
 import { queueService } from "../../services/queue";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
-import { Bot, Loader2, FileText } from "lucide-react";
+import { Bot, Loader2, FileText, Camera } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 
@@ -317,6 +317,15 @@ export default function TodosLaudos() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+                       {/* Ver Fotos - Always Visible */}
+                       <Link
+                         to={`/dashboard/laudos/${laudo.id}/galeria`}
+                         state={{ from: location.pathname }}
+                         className="w-full sm:w-auto px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm flex items-center justify-center gap-2 group"
+                       >
+                         <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                         Ver Fotos
+                       </Link>
                        {/* Ver PDF - Always Visible */}
                        <Link
                          to={`/dashboard/laudos/${laudo.id}/pdf`}

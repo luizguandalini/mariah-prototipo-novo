@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Trash2, Calendar, MapPin, Tag, Info, FolderOpen, ChevronRight, Image as ImageIcon, CheckCircle } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -7,11 +7,20 @@ import Button from "../../components/ui/Button";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { laudosService, type ImagemLaudo, type AmbienteInfo } from "../../services/laudos";
 import { useAuth } from "../../contexts/AuthContext";
+import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
 
 export default function GaleriaImagens() {
   const { id } = useParams<{ id: string }>();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Determina para onde voltar quando sai da galeria
+  const backDestination = (location.state as any)?.from ||
+    ([UserRole.ADMIN, UserRole.DEV].includes(user?.role as UserRole)
+      ? "/admin/laudos"
+      : "/dashboard/laudos");
   
   // Estado para ambientes
   const [ambientes, setAmbientes] = useState<AmbienteInfo[]>([]);
@@ -175,11 +184,9 @@ export default function GaleriaImagens() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             ) : (
-              <Link to="/dashboard/laudos">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-              </Link>
+              <Button variant="outline" size="sm" onClick={() => navigate(backDestination)}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
             )}
             <div>
               <h2 className="text-2xl font-bold text-[var(--text-primary)]">
