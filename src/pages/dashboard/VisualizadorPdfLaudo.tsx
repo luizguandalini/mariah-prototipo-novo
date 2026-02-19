@@ -461,7 +461,6 @@ export default function VisualizadorPdfLaudo() {
               margin-left: 3px; 
               border: 1px dashed transparent; 
               background: transparent; 
-              width: 100%; 
               font-family: inherit;
               padding: 0;
           }
@@ -491,6 +490,7 @@ export default function VisualizadorPdfLaudo() {
                 <strong>Uso:</strong>
                 <input 
                     className={`valor-campo-input ${editedFields.tipoUso ? 'field-edited' : ''}`}
+                    style={{ flex: 1 }}
                     value={laudo.tipoUso || ''}
                     onChange={(e) => handleFieldChange('tipoUso', e.target.value)}
                     maxLength={200}
@@ -500,6 +500,7 @@ export default function VisualizadorPdfLaudo() {
                 <strong>Endereço:</strong>
                 <input 
                     className={`valor-campo-input ${editedFields.endereco ? 'field-edited' : ''}`}
+                    style={{ flex: 1 }}
                     value={laudo.endereco || ''}
                     onChange={(e) => handleFieldChange('endereco', e.target.value)}
                     maxLength={200}
@@ -512,6 +513,7 @@ export default function VisualizadorPdfLaudo() {
                 <strong>Tipo:</strong>
                 <input 
                     className={`valor-campo-input ${editedFields.tipoImovel ? 'field-edited' : ''}`}
+                    style={{ flex: 1 }}
                     value={laudo.tipoImovel || laudo.tipo || ''}
                     onChange={(e) => handleFieldChange('tipoImovel', e.target.value)}
                     maxLength={200}
@@ -521,6 +523,7 @@ export default function VisualizadorPdfLaudo() {
                 <strong>CEP:</strong>
                 <input 
                     className={`valor-campo-input ${editedFields.cep ? 'field-edited' : ''}`}
+                    style={{ flex: 1 }}
                     value={laudo.cep || ''}
                     onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9-]/g, '');
@@ -536,6 +539,7 @@ export default function VisualizadorPdfLaudo() {
                 <strong>Unidade:</strong>
                 <input 
                     className={`valor-campo-input ${editedFields.unidade ? 'field-edited' : ''}`}
+                    style={{ flex: 1 }}
                     value={laudo.unidade || laudo.numero || ''}
                     onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9]/g, '');
@@ -546,19 +550,17 @@ export default function VisualizadorPdfLaudo() {
               </div>
               <div className="formatacao-campos campo-longo">
                 <strong>Tamanho do imóvel:</strong>
-                <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <input 
-                        className={`valor-campo-input ${editedFields.tamanho ? 'field-edited' : ''}`}
-                        style={{ width: '50px', flex: 'none' }}
-                        value={laudo.tamanho ? laudo.tamanho.replace(' m²', '') : ''}
-                        onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, '');
-                            const finalVal = val ? `${val} m²` : '';
-                            handleFieldChange('tamanho', finalVal);
-                        }}
-                    />
-                    <span style={{ fontSize: '12px', marginLeft: '2px' }}>m²</span>
-                </div>
+                <input 
+                    className={`valor-campo-input ${editedFields.tamanho ? 'field-edited' : ''}`}
+                    style={{ width: '24px', marginLeft: '2px' }}
+                    value={laudo.tamanho ? laudo.tamanho.replace(' m²', '') : ''}
+                    onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        const finalVal = val ? `${val} m²` : '';
+                        handleFieldChange('tamanho', finalVal);
+                    }}
+                />
+                <span style={{ fontSize: '12px' }}>m²</span>
               </div>
             </div>
 
@@ -569,7 +571,7 @@ export default function VisualizadorPdfLaudo() {
                     className={`valor-campo-input ${editedFields.tipoVistoria ? 'field-edited' : ''}`}
                     value={(laudo.tipoVistoria || '').toUpperCase()}
                     onChange={(e) => handleFieldChange('tipoVistoria', e.target.value)}
-                    style={{ background: 'transparent', border: 'none', width: '100%' }}
+                    style={{ background: 'transparent', border: 'none', flex: 1 }}
                 >
                     <option value="ENTRADA">Entrada</option>
                     <option value="SAIDA">Saída</option>
@@ -580,6 +582,7 @@ export default function VisualizadorPdfLaudo() {
                 <input 
                     type="date"
                     className={`valor-campo-input ${editedFields.dataVistoria ? 'field-edited' : ''}`}
+                    style={{ flex: 1 }}
                     value={laudo.dataVistoria ? new Date(laudo.dataVistoria).toISOString().split('T')[0] : (laudo.createdAt ? new Date(laudo.createdAt).toISOString().split('T')[0] : '')}
                     onChange={(e) => handleFieldChange('dataVistoria', e.target.value)}
                 />
