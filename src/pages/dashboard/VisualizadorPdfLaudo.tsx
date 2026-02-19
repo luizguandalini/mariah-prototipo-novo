@@ -214,10 +214,9 @@ export default function VisualizadorPdfLaudo() {
            const response = await laudosService.getImagensPdf(id, 1, 12);
            const isEntrada = ((response.data?.[0]?.laudo?.tipoVistoria || '') + (laudo?.tipoVistoria || '')).toLowerCase().includes('entrada');
            
-           // Se for Entrada: Capa + Termos + Imagens + Relatório = Total + 3
-           // Se não for Entrada: Apenas Imagens = Total
-           // Nota: o check de 'hasCover' já encapsula a lógica de 'entrada'
-           const adicional = hasCover ? 3 : 0;
+           // Se for Entrada: Capa + Termos + Imagens + Relatório + Assinaturas = Total + 4
+           // Se não for Entrada: Apenas Imagens = Total (ajustar conforme necessidade)
+           const adicional = hasCover ? 4 : 0;
            
            setTotalPaginas(response.meta.totalPages + adicional);
            setTotalImagens(response.meta.totalImages);
@@ -231,7 +230,14 @@ export default function VisualizadorPdfLaudo() {
       return;
     }
 
-    // Se for página de Relatório (Última Página), não carrega imagens
+    // Se for página de Relatório (Penúltima Página), não carrega imagens
+    if (hasCover && paginaAtual === totalPaginas - 1) {
+      setImagensComUrls([]);
+      setLoading(false);
+      return;
+    }
+
+    // Se for página de Assinaturas (Última Página), não carrega imagens
     if (hasCover && paginaAtual === totalPaginas) {
       setImagensComUrls([]);
       setLoading(false);
@@ -250,7 +256,7 @@ export default function VisualizadorPdfLaudo() {
       setLoading(true);
       const response = await laudosService.getImagensPdf(id, backendPage, 12);
       
-      setTotalPaginas(hasCover ? response.meta.totalPages + 3 : response.meta.totalPages);
+      setTotalPaginas(hasCover ? response.meta.totalPages + 4 : response.meta.totalPages);
       setTotalImagens(response.meta.totalImages);
 
       const s3Keys = response.data.map((img: any) => img.s3Key);
@@ -942,6 +948,205 @@ export default function VisualizadorPdfLaudo() {
     );
   };
 
+  const renderAssinaturasPage = () => {
+    if (!laudo) return null;
+
+    const dataFull = laudo.dataVistoria ? new Date(laudo.dataVistoria) : new Date();
+    const dia = dataFull.getDate().toString().padStart(2, '0');
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const mes = meses[dataFull.getMonth()];
+    const ano = dataFull.getFullYear();
+    const cidade = laudo.cidade || 'São Paulo';
+
+    return (
+      <div 
+        id="pdf-grid-preview"
+        style={{
+          width: '210mm',
+          height: '297mm',
+          boxSizing: 'border-box',
+          margin: '0 auto',
+          padding: '20mm',
+          backgroundColor: '#fff',
+          overflow: 'hidden',
+          position: 'relative',
+          fontFamily: '"Roboto", Arial, sans-serif',
+          color: 'black',
+        }}
+      >
+        <style>{`
+           .assinaturas-titulo { font-size: 14px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #c0c0c0; padding-bottom: 4px; margin-bottom: 20px; }
+           .assinaturas-texto { font-size: 11px; line-height: 1.6; text-align: justify; margin-bottom: 40px; }
+           .assinaturas-data { text-align: center; font-size: 12px; margin-bottom: 60px; }
+           
+           .assinaturas-box-wrapper { position: relative; width: 100%; margin-bottom: 40px; }
+           .assinaturas-box { display: flex; flex-direction: column; width: 100%; border: 1px solid #000; height: 120px; }
+           .assinaturas-box-header { font-size: 11px; margin-bottom: 2px; text-transform: uppercase; position: absolute; top: -18px; left: 0; background: #fff; padding-right: 5px; z-index: 10; font-weight: 700; }
+           .assinaturas-box-content { display: flex; height: 100%; }
+           .assinaturas-box-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; position: relative; }
+           .assinaturas-box-col:first-child { border-right: 1px solid #000; }
+           .assinaturas-label { border-top: 1px solid #000; padding-top: 2px; font-size: 10px; width: 100%; }
+           
+           .testemunhas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
+           .testemunha-item { display: flex; flex-direction: column; gap: 5px; }
+           .testemunha-linha { display: flex; align-items: baseline; border-bottom: 1px solid #000; font-size: 11px; padding-bottom: 2px; }
+           .testemunha-linha strong { margin-right: 5px; min-width: 40px; }
+           
+           .campo-input-assinatura {
+             border: 1px dashed transparent;
+             width: 100%;
+             background: transparent;
+             font-family: inherit;
+             font-size: 10px;
+             text-align: center;
+             margin-bottom: 5px;
+           }
+           .campo-input-assinatura:hover, .campo-input-assinatura:focus {
+             border-bottom: 1px dashed #666;
+             outline: none;
+           }
+           .field-edited {
+               border-bottom: 1px dashed #22c55e !important;
+               background-color: #f0fdf4 !important;
+           }
+        `}</style>
+        
+        <div style={{ height: '35px' }}></div>
+        
+        <h2 className="assinaturas-titulo">ASSINATURAS</h2>
+        
+        <p className="assinaturas-texto">
+          Declaram as partes estarem cientes das imagens e textos apresentados no presente
+          termo, estando em conformidade com a vontade dos contratantes que, "As Partes e as
+          testemunhas envolvidas neste instrumento afirmam e declaram que esse poderá ser
+          assinado presencialmente ou eletronicamente, sendo as assinaturas consideradas
+          válidas, vinculantes e executáveis, desde que firmadas pelos representantes legais das
+          Partes. e pôr estarem justos e contratados, assinam o presente, para um só efeito, diante
+          de 02 (duas) testemunhas.
+        </p>
+
+        <div className="assinaturas-data">
+          {cidade}, {dia} de {mes} de {ano}
+        </div>
+
+        {/* LOCADOR */}
+        <div className="assinaturas-box-wrapper">
+            <div className="assinaturas-box-header">LOCADOR(A)</div>
+            <div className="assinaturas-box">
+            <div className="assinaturas-box-content">
+                <div className="assinaturas-box-col">
+                    <input 
+                        className={`campo-input-assinatura ${editedFields.locadorNome ? 'field-edited' : ''}`}
+                        placeholder="Nome do Locador"
+                        value={laudo.locadorNome || ''}
+                        onChange={(e) => handleFieldChange('locadorNome', e.target.value)}
+                    />
+                    <div className="assinaturas-label">Qualificação / Nome</div>
+                </div>
+                <div className="assinaturas-box-col">
+                    <input 
+                        className={`campo-input-assinatura ${editedFields.locadorAssinatura ? 'field-edited' : ''}`}
+                        placeholder="Assinatura locador"
+                        value={laudo.locadorAssinatura || ''}
+                        onChange={(e) => handleFieldChange('locadorAssinatura', e.target.value)}
+                    />
+                    <div className="assinaturas-label">Assinatura</div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        {/* LOCATÁRIO */}
+        <div className="assinaturas-box-wrapper">
+            <div className="assinaturas-box-header">LOCATÁRIO(A)</div>
+            <div className="assinaturas-box">
+            <div className="assinaturas-box-content">
+                <div className="assinaturas-box-col">
+                    <input 
+                        className={`campo-input-assinatura ${editedFields.locatarioNome ? 'field-edited' : ''}`}
+                        placeholder="Nome do Locatário"
+                        value={laudo.locatarioNome || ''}
+                        onChange={(e) => handleFieldChange('locatarioNome', e.target.value)}
+                    />
+                    <div className="assinaturas-label">Qualificação / Nome</div>
+                </div>
+                <div className="assinaturas-box-col">
+                    <input 
+                        className={`campo-input-assinatura ${editedFields.locatarioAssinatura ? 'field-edited' : ''}`}
+                        placeholder="Assinatura locatário"
+                        value={laudo.locatarioAssinatura || ''}
+                        onChange={(e) => handleFieldChange('locatarioAssinatura', e.target.value)}
+                    />
+                    <div className="assinaturas-label">Assinatura</div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        {/* TESTEMUNHAS */}
+        <div className="testemunhas-grid">
+            <div className="testemunha-item">
+                <div className="testemunha-linha">
+                    <strong>Nome:</strong>
+                    <input 
+                        style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', borderBottom: '1px dashed transparent' }}
+                        className={`${editedFields.testemunha1Nome ? 'field-edited' : ''}`}
+                        value={laudo.testemunha1Nome || ''}
+                        onChange={(e) => handleFieldChange('testemunha1Nome', e.target.value)}
+                        placeholder="Nome Testemunha 1"
+                    />
+                </div>
+                <div className="testemunha-linha">
+                    <strong>RG:</strong>
+                    <input 
+                        style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', borderBottom: '1px dashed transparent' }}
+                        className={`${editedFields.testemunha1Rg ? 'field-edited' : ''}`}
+                        value={laudo.testemunha1Rg || ''}
+                        onChange={(e) => handleFieldChange('testemunha1Rg', e.target.value)}
+                        placeholder="RG Testemunha 1"
+                    />
+                </div>
+            </div>
+
+            <div className="testemunha-item">
+                <div className="testemunha-linha">
+                    <strong>Nome:</strong>
+                    <input 
+                        style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', borderBottom: '1px dashed transparent' }}
+                        className={`${editedFields.testemunha2Nome ? 'field-edited' : ''}`}
+                        value={laudo.testemunha2Nome || ''}
+                        onChange={(e) => handleFieldChange('testemunha2Nome', e.target.value)}
+                        placeholder="Nome Testemunha 2"
+                    />
+                </div>
+                <div className="testemunha-linha">
+                    <strong>RG:</strong>
+                    <input 
+                        style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', borderBottom: '1px dashed transparent' }}
+                        className={`${editedFields.testemunha2Rg ? 'field-edited' : ''}`}
+                        value={laudo.testemunha2Rg || ''}
+                        onChange={(e) => handleFieldChange('testemunha2Rg', e.target.value)}
+                        placeholder="RG Testemunha 2"
+                    />
+                </div>
+            </div>
+
+            {/* Número de página */}
+            <div style={{
+              position: 'absolute',
+              bottom: '10mm',
+              right: '15mm',
+              fontFamily: '"Roboto", Arial, sans-serif',
+              fontSize: '10px',
+              color: '#555',
+            }}>
+              {paginaAtual}
+            </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -1050,8 +1255,10 @@ export default function VisualizadorPdfLaudo() {
             renderCoverPage()
           ) : hasCover && paginaAtual === 2 ? (
             renderInfoPage()
-          ) : hasCover && paginaAtual === totalPaginas ? (
+          ) : hasCover && paginaAtual === totalPaginas - 1 ? (
             renderRelatorioPage()
+          ) : hasCover && paginaAtual === totalPaginas ? (
+            renderAssinaturasPage()
           ) : (
             <div
               id="pdf-grid-preview"

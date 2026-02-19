@@ -115,6 +115,15 @@ export interface Laudo {
   revestimentos?: Revestimentos;
   mobilias?: Mobilias;
   dadosExtra?: object;
+  
+  locadorNome?: string;
+  locadorAssinatura?: string;
+  locatarioNome?: string;
+  locatarioAssinatura?: string;
+  testemunha1Nome?: string;
+  testemunha1Rg?: string;
+  testemunha2Nome?: string;
+  testemunha2Rg?: string;
   dataVistoria?: string;
 
 
