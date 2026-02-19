@@ -951,12 +951,14 @@ export default function VisualizadorPdfLaudo() {
   const renderAssinaturasPage = () => {
     if (!laudo) return null;
 
-    const dataFull = laudo.dataVistoria ? new Date(laudo.dataVistoria) : new Date();
+    const dataRef = laudo.dataRelatorio || laudo.dataVistoria || laudo.createdAt || new Date().toISOString();
+    const dataFull = new Date(dataRef);
     const dia = dataFull.getDate().toString().padStart(2, '0');
     const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const mes = meses[dataFull.getMonth()];
     const ano = dataFull.getFullYear();
-    const cidade = laudo.cidade || 'São Paulo';
+    const cidadeDb = laudo.cidade || '';
+    const cidade = (cidadeDb === '' || cidadeDb.toUpperCase() === 'SP') ? 'São Paulo' : cidadeDb;
 
     return (
       <div 
@@ -1025,8 +1027,26 @@ export default function VisualizadorPdfLaudo() {
           de 02 (duas) testemunhas.
         </p>
 
-        <div className="assinaturas-data">
-          {cidade}, {dia} de {mes} de {ano}
+        <div className="assinaturas-data" style={{ textAlign: 'center', fontSize: '12px', marginBottom: '60px' }}>
+          <span 
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => handleFieldChange('cidade', e.currentTarget.innerText)}
+            className={`${editedFields.cidade ? 'bg-green-50 border-b border-dashed border-green-500' : ''}`}
+            style={{ outline: 'none', cursor: 'text', minWidth: '10px', display: 'inline-block' }}
+          >
+            {cidade}
+          </span>
+          <span>, </span>
+          <span
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => handleFieldChange('dataRelatorio', e.currentTarget.innerText)}
+            className={`${editedFields.dataRelatorio ? 'bg-green-50 border-b border-dashed border-green-500' : ''}`}
+            style={{ outline: 'none', cursor: 'text', minWidth: '10px', display: 'inline-block' }}
+          >
+            {laudo.dataRelatorio || `${dia} de ${mes} de ${ano}`}
+          </span>
         </div>
 
         {/* LOCADOR */}

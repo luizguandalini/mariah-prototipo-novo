@@ -125,6 +125,7 @@ export interface Laudo {
   testemunha2Nome?: string;
   testemunha2Rg?: string;
   dataVistoria?: string;
+  dataRelatorio?: string;
 
 
   createdAt: string;
