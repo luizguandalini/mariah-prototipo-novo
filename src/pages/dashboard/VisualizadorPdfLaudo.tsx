@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import { QRCodeSVG } from 'qrcode.react';
+import { Save, Check, Loader2 } from 'lucide-react';
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
 const normalizeSectionName = (name: string): string => {
@@ -159,7 +160,7 @@ export default function VisualizadorPdfLaudo() {
       }
       carregarImagens();
     }
-  }, [id, paginaAtual, laudo]);
+  }, [id, paginaAtual, laudo?.id]);
 
   const carregarAmbientes = async () => {
     if (!id) return;
@@ -267,6 +268,30 @@ export default function VisualizadorPdfLaudo() {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [editedFields, setEditedFields] = useState<Partial<Laudo>>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleFieldChange = (field: keyof Laudo | 'dataVistoria', value: any) => {
+    setLaudo(prev => prev ? ({ ...prev, [field]: value }) : null);
+    setEditedFields(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!id || Object.keys(editedFields).length === 0) return;
+    
+    setIsSaving(true);
+    try {
+      await laudosService.updateLaudo(id, editedFields as any);
+      toast.success('Alterações salvas com sucesso!');
+      setEditedFields({});
+    } catch (error) {
+      toast.error('Erro ao salvar alterações');
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -431,6 +456,23 @@ export default function VisualizadorPdfLaudo() {
           .div-metodologia { margin-top: 17px; }
           .div-metodologia > h1 { font-size: 14px; border-bottom: solid #c0c0c0 1px; margin: 0; padding-bottom: 2px; font-weight: 700; }
           .div-metodologia > p { font-weight: 400; font-size: 16px; text-align: justify; margin: 10px 0; line-height: 1.4; }
+          .valor-campo-input { 
+              font-size: 12px; 
+              margin-left: 3px; 
+              border: 1px dashed transparent; 
+              background: transparent; 
+              width: 100%; 
+              font-family: inherit;
+              padding: 0;
+          }
+          .valor-campo-input:hover, .valor-campo-input:focus {
+              border-bottom: 1px dashed #666;
+              outline: none;
+          }
+          .field-edited {
+              border-bottom: 1px dashed #22c55e !important;
+              background-color: #f0fdf4 !important;
+          }
         `}</style>
         
         {/* Espaço reservado para o topo (logo removida conforme pedido) */}
@@ -447,44 +489,100 @@ export default function VisualizadorPdfLaudo() {
             <div className="linha-campos">
               <div className="formatacao-campos campo-curto">
                 <strong>Uso:</strong>
-                <p className="valor-campo">{(laudo.tipoUso || 'Industrial').toLowerCase()}</p>
+                <input 
+                    className={`valor-campo-input ${editedFields.tipoUso ? 'field-edited' : ''}`}
+                    value={laudo.tipoUso || ''}
+                    onChange={(e) => handleFieldChange('tipoUso', e.target.value)}
+                    maxLength={200}
+                />
               </div>
               <div className="formatacao-campos campo-longo">
                 <strong>Endereço:</strong>
-                <p>{laudo.endereco}</p>
+                <input 
+                    className={`valor-campo-input ${editedFields.endereco ? 'field-edited' : ''}`}
+                    value={laudo.endereco || ''}
+                    onChange={(e) => handleFieldChange('endereco', e.target.value)}
+                    maxLength={200}
+                />
               </div>
             </div>
 
             <div className="linha-campos">
               <div className="formatacao-campos campo-curto">
                 <strong>Tipo:</strong>
-                <p className="valor-campo">{(laudo.tipoImovel || laudo.tipo || '').toLowerCase()}</p>
+                <input 
+                    className={`valor-campo-input ${editedFields.tipoImovel ? 'field-edited' : ''}`}
+                    value={laudo.tipoImovel || laudo.tipo || ''}
+                    onChange={(e) => handleFieldChange('tipoImovel', e.target.value)}
+                    maxLength={200}
+                />
               </div>
               <div className="formatacao-campos campo-longo">
                 <strong>CEP:</strong>
-                <p>{laudo.cep}</p>
+                <input 
+                    className={`valor-campo-input ${editedFields.cep ? 'field-edited' : ''}`}
+                    value={laudo.cep || ''}
+                    onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9-]/g, '');
+                        handleFieldChange('cep', val);
+                    }}
+                    maxLength={9}
+                />
               </div>
             </div>
 
             <div className="linha-campos">
               <div className="formatacao-campos campo-curto">
                 <strong>Unidade:</strong>
-                <p>{laudo.numero || ''}</p>
+                <input 
+                    className={`valor-campo-input ${editedFields.unidade ? 'field-edited' : ''}`}
+                    value={laudo.unidade || laudo.numero || ''}
+                    onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        handleFieldChange('unidade', val);
+                    }}
+                    maxLength={20}
+                />
               </div>
               <div className="formatacao-campos campo-longo">
                 <strong>Tamanho do imóvel:</strong>
-                <p>{laudo.tamanho || ''}</p>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <input 
+                        className={`valor-campo-input ${editedFields.tamanho ? 'field-edited' : ''}`}
+                        style={{ width: '50px', flex: 'none' }}
+                        value={laudo.tamanho ? laudo.tamanho.replace(' m²', '') : ''}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            const finalVal = val ? `${val} m²` : '';
+                            handleFieldChange('tamanho', finalVal);
+                        }}
+                    />
+                    <span style={{ fontSize: '12px', marginLeft: '2px' }}>m²</span>
+                </div>
               </div>
             </div>
 
             <div className="linha-campos">
               <div className="formatacao-campos campo-curto">
                 <strong>Tipo de Vistoria:</strong>
-                <p className="valor-campo">{(laudo.tipoVistoria || '').toLowerCase()}</p>
+                <select 
+                    className={`valor-campo-input ${editedFields.tipoVistoria ? 'field-edited' : ''}`}
+                    value={(laudo.tipoVistoria || '').toUpperCase()}
+                    onChange={(e) => handleFieldChange('tipoVistoria', e.target.value)}
+                    style={{ background: 'transparent', border: 'none', width: '100%' }}
+                >
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saída</option>
+                </select>
               </div>
               <div className="formatacao-campos campo-longo">
                 <strong>Realizada em:</strong>
-                <p></p>
+                <input 
+                    type="date"
+                    className={`valor-campo-input ${editedFields.dataVistoria ? 'field-edited' : ''}`}
+                    value={laudo.dataVistoria ? new Date(laudo.dataVistoria).toISOString().split('T')[0] : (laudo.createdAt ? new Date(laudo.createdAt).toISOString().split('T')[0] : '')}
+                    onChange={(e) => handleFieldChange('dataVistoria', e.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -838,6 +936,23 @@ export default function VisualizadorPdfLaudo() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+            {/* Botão Salvar (Apenas se houver alterações) */}
+            {Object.keys(editedFields).length > 0 && (
+                <Button
+                    onClick={handleSaveChanges}
+                    disabled={isSaving}
+                    variant="primary"
+                    className="w-full sm:w-auto justify-center bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-900/20"
+                >
+                    {isSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Salvar Alterações
+                </Button>
+            )}
+
             {/* Botão Secundário: Gerar Novamente (Apenas se já concluído) */}
             {laudo?.pdfStatus === 'COMPLETED' && !gerandoPdf && (
                 <Button

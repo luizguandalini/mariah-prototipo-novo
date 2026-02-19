@@ -115,6 +115,7 @@ export interface Laudo {
   revestimentos?: Revestimentos;
   mobilias?: Mobilias;
   dadosExtra?: object;
+  dataVistoria?: string;
 
 
   createdAt: string;
