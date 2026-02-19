@@ -916,22 +916,11 @@ export default function VisualizadorPdfLaudo() {
           <div className="encerramento-titulo">ENCERRAMENTO</div>
           <hr className="encerramento-divisor" />
           <p className="encerramento-text">
-            Encerra o presente termo, a empresa PROMOVE VISTORIAS, inscrita no CNPJ 40.249.900/0001-91,
-            sediada na Rua Orense, 41, Sala 1106 - Centro - Diadema, representada pelo vistoriador
-            certificado e responsável técnico, o qual certifica e dá fé dos registros apresentados.
+            Encerra o presente termo, o qual certifica e dá fé dos registros apresentados.
           </p>
-          <p className="encerramento-fechamento">Cordialmente,</p>
-          <div className="encerramento-rodape">
-            <div className="encerramento-responsavel">
-              Responsável Técnico<br />
-              Renato Saavedra Gomes - CERT 30535050
-            </div>
-            <div className="encerramento-logo-bloco">
-              <img src="/promove-vistorias-imobiliarias.png" alt="Promove Vistorias" />
-              <div className="encerramento-logo-nome">PROMOVE VISTORIAS IMOBILIÁRIAS</div>
+            <div className="encerramento-rodape">
             </div>
           </div>
-        </div>
 
         {/* Número de página */}
         <div style={{
