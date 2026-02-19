@@ -8,6 +8,7 @@ import { LaudoSection } from '../../types/laudo-details';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
 const normalizeSectionName = (name: string): string => {
@@ -718,6 +719,11 @@ export default function VisualizadorPdfLaudo() {
            .item-row { display: flex; align-items: center; justify-content: space-between; background-color: #d9d9d9; padding: 5px 10px; margin-bottom: 2px; font-size: 11px; }
            .item-label { font-weight: 500; }
            .item-valor { font-weight: 700; text-transform: uppercase; }
+           .download-fotos-section { margin-top: 24px; border-top: 2px solid #000; padding-top: 10px; }
+           .download-fotos-titulo { font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+           .download-fotos-content { display: flex; align-items: flex-start; gap: 20px; }
+           .download-fotos-text { flex: 1; font-size: 11px; line-height: 1.6; text-align: justify; color: #000; margin: 0; }
+           .download-fotos-qrcode img { width: 100px; height: 100px; display: block; }
         `}</style>
         
         <div style={{ height: '35px' }}></div>
@@ -747,6 +753,27 @@ export default function VisualizadorPdfLaudo() {
             ))}
           </div>
         </div>
+
+        {/* Seção Download de Fotos com QR Code */}
+        {(() => {
+          const galeriaUrl = `${window.location.origin}/dashboard/laudos/${id}/galeria`;
+          return (
+            <div className="download-fotos-section">
+              <div className="download-fotos-titulo">DOWNLOAD DE FOTOS</div>
+              <div className="download-fotos-content">
+                <p className="download-fotos-text">
+                  Para maior conveniência e acessibilidade, as fotos poderão ser baixadas diretamente através do
+                  QR Code fornecido neste documento. Ressaltamos que as imagens obtidas são adequadas para outras
+                  análises e avaliações, independentemente do que estiver registrado em texto neste laudo. Esta
+                  abordagem garante uma verificação visual completa e transparente das condições do imóvel.
+                </p>
+                <div className="download-fotos-qrcode">
+                  <QRCodeSVG value={galeriaUrl} size={100} />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Número de página */}
         <div style={{

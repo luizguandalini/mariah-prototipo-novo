@@ -9,4 +9,7 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  server: {
+    host: true, // Expõe o servidor em todas as interfaces de rede (acesso pelo IP local)
+  },
 })
