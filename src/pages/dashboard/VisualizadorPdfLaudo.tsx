@@ -774,16 +774,30 @@ export default function VisualizadorPdfLaudo() {
     // 1. Preparar lista de seções oficiais
     const sections: any[] = [...(detalhes?.availableSections || [])];
     
+    // Mapeamento de IDs para textos (para evitar UUIDs em labels extras na prévia)
+    const questionIdToText = new Map<string, string>();
+    sections.forEach(s => {
+       s.questions?.forEach((q: any) => {
+          if (q.id && q.questionText) {
+             questionIdToText.set(q.id, q.questionText);
+          }
+       });
+    });
+
     // 2. Identificar e adicionar seções órfãs (Dados Legados/Extras)
     if (detalhes?.dadosExtra) {
        Object.entries(detalhes.dadosExtra).forEach(([key, value]) => {
+          const normalizedKey = normalizeSectionName(key);
+          
           // Verifica se essa chave já existe nas seções oficiais (normalizando nomes)
-          const isOfficial = sections.some(s => normalizeSectionName(s.name) === normalizeSectionName(key));
+          // Também checa se a chave do dadosExtra corresponde a algum dataKey oficial
+          const isOfficial = sections.some(s => normalizeSectionName(s.name) === normalizedKey) ||
+                           Object.values(SECTION_FIELD_MAP).some(m => m.dataKey === key);
           
           if (!isOfficial) {
              // Criar uma estrutura de seção compatível para renderização
              const questions = typeof value === 'object' && value !== null
-                ? Object.keys(value).map(k => ({ id: k, questionText: k }))
+                ? Object.keys(value).map(k => ({ id: k, questionText: questionIdToText.get(k) || k }))
                 : [{ id: 'val', questionText: 'Descrição' }]; // Para strings simples
 
              sections.push({
