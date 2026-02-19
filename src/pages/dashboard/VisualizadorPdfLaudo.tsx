@@ -724,10 +724,16 @@ export default function VisualizadorPdfLaudo() {
            .download-fotos-content { display: flex; align-items: flex-start; gap: 20px; }
            .download-fotos-text { flex: 1; font-size: 11px; line-height: 1.6; text-align: justify; color: #000; margin: 0; }
            .download-fotos-qrcode img { width: 100px; height: 100px; display: block; }
-           .encerramento-section { margin-top: 20px; border-top: 2px solid #000; padding-top: 10px; }
-           .encerramento-titulo { font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
-           .encerramento-text { font-size: 11px; line-height: 1.6; text-align: justify; color: #000; margin: 0 0 10px 0; }
-           .encerramento-fechamento { font-size: 11px; color: #000; margin: 0; }
+           .encerramento-section { margin-top: 20px; padding-top: 0; }
+           .encerramento-titulo { font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 0 0 4px 0; }
+           .encerramento-divisor { border: none; border-top: 2px solid #000; margin: 0 0 10px 0; }
+           .encerramento-text { font-size: 11px; line-height: 1.6; text-align: justify; color: #000; margin: 0 0 8px 0; }
+           .encerramento-fechamento { font-size: 11px; color: #000; margin: 0 0 20px 0; }
+           .encerramento-rodape { position: absolute; bottom: 15mm; left: 20mm; right: 20mm; display: flex; align-items: flex-end; justify-content: space-between; }
+           .encerramento-responsavel { font-size: 10px; font-weight: 700; line-height: 1.6; color: #000; }
+           .encerramento-logo-bloco { display: flex; flex-direction: column; align-items: center; width: 170px; }
+           .encerramento-logo-bloco img { width: 100%; height: auto; display: block; margin-bottom: 4px; }
+           .encerramento-logo-nome { font-size: 9px; font-weight: 700; text-transform: uppercase; text-align: center; color: #000; width: 100%; letter-spacing: 0.5px; }
         `}</style>
         
         <div style={{ height: '35px' }}></div>
@@ -782,11 +788,23 @@ export default function VisualizadorPdfLaudo() {
         {/* Seção Encerramento */}
         <div className="encerramento-section">
           <div className="encerramento-titulo">ENCERRAMENTO</div>
+          <hr className="encerramento-divisor" />
           <p className="encerramento-text">
             Encerra o presente termo, a empresa PROMOVE VISTORIAS, inscrita no CNPJ 40.249.900/0001-91,
             sediada na Rua Orense, 41, Sala 1106 - Centro - Diadema, representada pelo vistoriador
             certificado e responsável técnico, o qual certifica e dá fé dos registros apresentados.
           </p>
+          <p className="encerramento-fechamento">Cordialmente,</p>
+          <div className="encerramento-rodape">
+            <div className="encerramento-responsavel">
+              Responsável Técnico<br />
+              Renato Saavedra Gomes - CERT 30535050
+            </div>
+            <div className="encerramento-logo-bloco">
+              <img src="/promove-vistorias-imobiliarias.png" alt="Promove Vistorias" />
+              <div className="encerramento-logo-nome">PROMOVE VISTORIAS IMOBILIÁRIAS</div>
+            </div>
+          </div>
         </div>
 
         {/* Número de página */}
