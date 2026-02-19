@@ -552,13 +552,18 @@ export default function VisualizadorPdfLaudo() {
                 <strong>Tamanho do imóvel:</strong>
                 <input 
                     className={`valor-campo-input ${editedFields.tamanho ? 'field-edited' : ''}`}
-                    style={{ width: '24px', marginLeft: '2px' }}
+                    style={{ 
+                        width: `${Math.max(20, (laudo.tamanho ? laudo.tamanho.replace(' m²', '').length : 1) * 8)}px`,
+                        marginLeft: '4px',
+                        flex: 'none'
+                    }}
                     value={laudo.tamanho ? laudo.tamanho.replace(' m²', '') : ''}
                     onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        const val = e.target.value.replace(/[^0-9]/g, '').substring(0, 10);
                         const finalVal = val ? `${val} m²` : '';
                         handleFieldChange('tamanho', finalVal);
                     }}
+                    maxLength={10}
                 />
                 <span style={{ fontSize: '12px' }}>m²</span>
               </div>
