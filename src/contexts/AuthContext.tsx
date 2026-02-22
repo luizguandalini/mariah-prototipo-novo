@@ -1,20 +1,26 @@
 /**
  * Contexto de Autenticação
- * 
+ *
  * Prove estado global de autenticação para toda a aplicação.
  * Permite que qualquer componente acesse informações do usuário
  * e funções de login/logout.
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService } from '../services/auth';
-import { usersService } from '../services/users';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { authService } from "../services/auth";
+import { usersService } from "../services/users";
 import type {
   User,
   LoginCredentials,
   RegisterData,
   AuthContextType,
-} from '../types/auth';
+} from "../types/auth";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -31,13 +37,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const loadUser = async () => {
       let loadedFromCache = false;
       try {
+        const currentUrl = new URL(window.location.href);
+        let accessToken = currentUrl.searchParams.get("access_token");
+        let refreshToken = currentUrl.searchParams.get("refresh_token");
+        let hashParams: URLSearchParams | null = null;
+
+        if (!accessToken && !refreshToken && currentUrl.hash) {
+          const rawHash = currentUrl.hash.startsWith("#")
+            ? currentUrl.hash.slice(1)
+            : currentUrl.hash;
+          const normalizedHash = rawHash.startsWith("?")
+            ? rawHash.slice(1)
+            : rawHash;
+          hashParams = new URLSearchParams(normalizedHash);
+          accessToken = hashParams.get("access_token");
+          refreshToken = hashParams.get("refresh_token");
+        }
+
+        if (accessToken) {
+          const userFromToken = authService.setAuthFromTokens(
+            accessToken,
+            refreshToken || undefined
+          );
+          currentUrl.searchParams.delete("access_token");
+          currentUrl.searchParams.delete("refresh_token");
+          if (hashParams) {
+            hashParams.delete("access_token");
+            hashParams.delete("refresh_token");
+            const cleanedHash = hashParams.toString();
+            currentUrl.hash = cleanedHash ? `#${cleanedHash}` : "";
+          }
+          window.history.replaceState(
+            {},
+            document.title,
+            `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`
+          );
+          if (userFromToken) {
+            setUser(userFromToken);
+            loadedFromCache = true;
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing auth tokens from URL:", error);
+      }
+
+      try {
         const currentUser = authService.getCurrentUser();
         if (currentUser && authService.isAuthenticated()) {
           setUser(currentUser);
           loadedFromCache = true;
         }
       } catch (error) {
-        console.error('Error loading user from cache:', error);
+        console.error("Error loading user from cache:", error);
       }
 
       // Mesmo se carregou do cache, ou se não carregou, tentamos buscar do servidor se tiver token
@@ -47,14 +98,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(updatedUser);
           authService.updateStoredUser(updatedUser);
         } catch (error) {
-          console.error('Error fetching fresh user data:', error);
+          console.error("Error fetching fresh user data:", error);
           // Se falhar refresh e não tinha cache, estamos deslogados ou sem rede
           if (!loadedFromCache) {
-             // Opcional: logout? Por enquanto mantemos comportamento padrão
+            // Opcional: logout? Por enquanto mantemos comportamento padrão
           }
         }
       }
-      
+
       setIsLoading(false);
     };
 
@@ -99,7 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Atualiza no estado e no localStorage
       updateUser(updatedUser);
     } catch (error) {
-      console.error('Erro ao atualizar dados do usuário:', error);
+      console.error("Erro ao atualizar dados do usuário:", error);
     }
   };
 
@@ -123,7 +174,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
   }
   return context;
 }

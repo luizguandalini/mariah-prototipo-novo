@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import AuthTicket from "./pages/AuthTicket";
 import ProtectedRoute from "./components/routing/ProtectedRoute";
 
 // Dashboard User
@@ -37,6 +38,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Register />} />
+          <Route path="/auth/ticket" element={<AuthTicket />} />
 
           {/* User Dashboard Routes - Protected */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
