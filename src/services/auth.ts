@@ -15,7 +15,7 @@ import type {
 } from "../types/auth";
 
 interface WebLoginTicketExchangeResponse extends AuthResponse {
-  laudoId: string;
+  laudoId: string | null;
 }
 
 class AuthService {
@@ -71,7 +71,7 @@ class AuthService {
     }
   }
 
-  async exchangeWebLoginTicket(ticket: string): Promise<string> {
+  async exchangeWebLoginTicket(ticket: string): Promise<string | null> {
     try {
       const response = await api.post<WebLoginTicketExchangeResponse>(
         "/auth/web-login-ticket/exchange",
@@ -81,7 +81,7 @@ class AuthService {
 
       this.setAuthData(response);
 
-      return response.laudoId;
+      return response.laudoId ?? null;
     } catch (error) {
       console.error("Web login ticket error:", error);
       throw new Error(

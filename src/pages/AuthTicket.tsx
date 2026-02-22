@@ -21,7 +21,11 @@ export default function AuthTicket() {
     authService
       .exchangeWebLoginTicket(ticket)
       .then((laudoId) => {
-        navigate(`/dashboard/laudos/${laudoId}/pdf`, { replace: true });
+        if (laudoId) {
+          navigate(`/dashboard/laudos/${laudoId}/pdf`, { replace: true });
+          return;
+        }
+        navigate("/dashboard/laudos", { replace: true });
       })
       .catch((error) => {
         toast.error(
