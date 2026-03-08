@@ -27,6 +27,7 @@ import TodosLaudos from "./pages/admin/TodosLaudos";
 import GerenciarAmbientes from "./pages/admin/GerenciarAmbientes";
 import GerenciarDetalhesLaudo from "./pages/admin/GerenciarDetalhesLaudo";
 import ConfiguracoesIA from "./pages/admin/ConfiguracoesIA";
+import Kanban from "./pages/admin/Kanban";
 
 function App() {
   return (
@@ -73,6 +74,10 @@ function App() {
           <Route
             path="/admin/configuracoes-ia"
             element={<ProtectedRoute requireAdmin><ConfiguracoesIA /></ProtectedRoute>}
+          />
+          <Route
+            path="/admin/kanban"
+            element={<ProtectedRoute requireAdmin><Kanban /></ProtectedRoute>}
           />
         </Routes>
       </AuthProvider>

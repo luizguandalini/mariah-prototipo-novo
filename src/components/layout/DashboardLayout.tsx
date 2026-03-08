@@ -87,6 +87,12 @@ export default function DashboardLayout({
       label: "Gerenciar Ambientes",
       roles: [UserRole.ADMIN, UserRole.DEV],
     },
+    {
+      path: "/admin/kanban",
+      icon: "🗂️",
+      label: "Kanban",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
 
     // 4. Gestão de Usuários (Admin/Dev)
     {
