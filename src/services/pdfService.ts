@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 export interface ProgressCallback {
   (percent: number): void;
@@ -9,16 +9,16 @@ const METODOLOGIA_TEXTS = [
   "Este documento tem como objetivo garantir às partes da locação o registro do estado de entrega do imóvel, integrando-se como anexo ao contrato formado. Ele concilia as obrigações contratuais e serve como referência para a aferição de eventuais alterações no imóvel ao longo do período de uso.",
   "O laudo de vistoria foi elaborado de maneira técnica por um especialista qualificado, que examinou critérios específicos para avaliar todos os aspectos relevantes, desde apontamentos estruturais aparentes até pequenos detalhes construtivos e acessórios presentes no imóvel. O objetivo foi registrar, de forma clara e objetiva, por meio de textos e imagens, qualquer apontamento ou irregularidade, garantindo uma abordagem sistemática, imparcial e organizada em ordem cronológica, com separação por ambientes e legendas contidas e numerações sequenciais.",
   "O documento inclui fotos de todas as paredes, pisos, tetos, portas, janelas e demais elementos que compõem o imóvel e suas instalações. As imagens foram capturadas com angulação precisa, permitindo análises previstas do estado de conservação atual do imóvel e verificações futuras. Fica reservado o direito, a qualquer tempo, das partes identificadas, por meio das imagens, qualquer ponto que não tenha sido especificado por escrito.",
-  "Os registros identificados como irregularidades ou avarias estão destacados neste laudo sob a denominação \"APONTAMENTOS\" e podem ser facilmente localizados utilizando o recurso de busca por palavras.",
-  "Este laudo não emprega termos subjetivos, como \"bom\", \"regular\" ou \"ótimo\" estado, nas análises. A descrição foi construída de forma objetiva, baseada exclusivamente em fatos observáveis, com o objetivo de evitar interpretações divergentes que possam surgir de perspectivas pessoais e garantir que as informações registradas sejam precisas e imparciais.",
-  "Os elementos adicionais ao imóvel, como acessórios, eletrodomésticos, equipamentos de arcondicionado, dispositivos em geral, lustres ou luminárias, mobília não embutida, entre outros, serão identificados no laudo pela denominação \"ITEM\"."
+  'Os registros identificados como irregularidades ou avarias estão destacados neste laudo sob a denominação "APONTAMENTOS" e podem ser facilmente localizados utilizando o recurso de busca por palavras.',
+  'Este laudo não emprega termos subjetivos, como "bom", "regular" ou "ótimo" estado, nas análises. A descrição foi construída de forma objetiva, baseada exclusivamente em fatos observáveis, com o objetivo de evitar interpretações divergentes que possam surgir de perspectivas pessoais e garantir que as informações registradas sejam precisas e imparciais.',
+  'Os elementos adicionais ao imóvel, como acessórios, eletrodomésticos, equipamentos de arcondicionado, dispositivos em geral, lustres ou luminárias, mobília não embutida, entre outros, serão identificados no laudo pela denominação "ITEM".',
 ];
 
 const METODOLOGIA_SAIDA_TEXTS = [
   "Este documento traz como condições de devolução do imóvel, o qual será utilizado para averiguação comparativa com a vistoria de entrada, a fim de constatar possíveis divergências que possam ter surgido no decorrer da locação.",
   "Caberá às partes utilizar as análises apresentadas neste laudo como base comparativa com o laudo anterior, considerando o grau de relevância dos apontamentos, a atribuição de responsabilidade e a necessidade de reparo imediato dos danos causados pela locatária durante o período de uso. Conforme estabelece o art. 23, inciso III, da Lei nº 8.245/91, cabe ao locatário a restituição do imóvel no mesmo estado em que o recebeu, de acordo com o laudo de vistoria inicial. Deve-se analisar, em especial, equipamentos elétricos, quadros de distribuição de energia, instalações hidráulicas e elétricas, sistemas de ar condicionado, sistemas de aquecimento em geral ou danos decorrentes do mau uso, tais como: danos ao encanamento provocados pelo descarte de objetos em ralos e vasos sanitários, conservação de móveis, eletrodomésticos ou bens de razão estrutural, como portas, janelas, esquadrias, pias, armários, entre outros.",
   "O método utilizado na vistoria consiste em uma análise meticulosa, baseando-se em procedimentos técnicos para avaliar todos os aspectos relevantes, desde apontamentos estruturais visíveis até pequenos detalhes construtivos e acessórios presentes no imóvel. Todos os aspectos são registrados de forma clara e objetiva, por textos e imagens, incluindo qualquer apontamento ou irregularidade aparente, salvo vício oculto. A abordagem é imparcial, e as fotos de cada ambiente trazem todos os ângulos necessários, como paredes, pisos, tetos, portas e janelas, entre outros que compõem o imóvel e suas instalações. As imagens são agrupadas e numeradas por ambiente, de modo que, mesmo na ausência de texto descrevendo algum apontamento, poderão ser identificadas por meio da interpretação dos registros fotográficos.",
-  "Os registros encontrados como irregularidades ou avarias são indicados neste laudo de vistoria pela menção da palavra \"APONTAMENTO\"."
+  'Os registros encontrados como irregularidades ou avarias são indicados neste laudo de vistoria pela menção da palavra "APONTAMENTO".',
 ];
 
 // CSS idêntico ao usado no componente React
@@ -43,40 +43,69 @@ const COVER_PAGE_CSS = `
 
 // Função auxiliar para normalizar nomes de seções
 const normalizeSectionName = (name: string): string => {
-  return name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+  return name
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "");
 };
 
 // Mapeamento de seção -> campo de dados
-const SECTION_FIELD_MAP: Record<string, { dataKey: string; fields?: string[] }> = {
+const SECTION_FIELD_MAP: Record<
+  string,
+  { dataKey: string; fields?: string[] }
+> = {
   [normalizeSectionName("Atestado da vistoria")]: { dataKey: "atestado" },
-  [normalizeSectionName("Análises Hidráulicas")]: { dataKey: "analisesHidraulicas", fields: ["fluxo_agua", "vazamentos"] },
-  [normalizeSectionName("Análises Elétricas")]: { dataKey: "analisesEletricas", fields: ["funcionamento", "disjuntores"] },
-  [normalizeSectionName("Sistema de ar")]: { dataKey: "sistemaAr", fields: ["ar_condicionado", "aquecimento"] },
-  [normalizeSectionName("Mecanismos de abertura")]: { dataKey: "mecanismosAbertura", fields: ["portas", "macanetas", "janelas"] },
-  [normalizeSectionName("Revestimentos")]: { dataKey: "revestimentos", fields: ["tetos", "pisos", "bancadas"] },
-  [normalizeSectionName("Mobilias")]: { dataKey: "mobilias", fields: ["fixa", "nao_fixa"] },
+  [normalizeSectionName("Análises Hidráulicas")]: {
+    dataKey: "analisesHidraulicas",
+    fields: ["fluxo_agua", "vazamentos"],
+  },
+  [normalizeSectionName("Análises Elétricas")]: {
+    dataKey: "analisesEletricas",
+    fields: ["funcionamento", "disjuntores"],
+  },
+  [normalizeSectionName("Sistema de ar")]: {
+    dataKey: "sistemaAr",
+    fields: ["ar_condicionado", "aquecimento"],
+  },
+  [normalizeSectionName("Mecanismos de abertura")]: {
+    dataKey: "mecanismosAbertura",
+    fields: ["portas", "macanetas", "janelas"],
+  },
+  [normalizeSectionName("Revestimentos")]: {
+    dataKey: "revestimentos",
+    fields: ["tetos", "pisos", "bancadas"],
+  },
+  [normalizeSectionName("Mobilias")]: {
+    dataKey: "mobilias",
+    fields: ["fixa", "nao_fixa"],
+  },
 };
 
 class PdfService {
-  async gerarPdfPaginaUnica(elementoId: string, nomeArquivo: string = 'laudo-pagina.pdf'): Promise<void> {
+  async gerarPdfPaginaUnica(
+    elementoId: string,
+    nomeArquivo: string = "laudo-pagina.pdf"
+  ): Promise<void> {
     const elemento = document.getElementById(elementoId);
-    if (!elemento) throw new Error('Elemento não encontrado');
+    if (!elemento) throw new Error("Elemento não encontrado");
 
     const canvas = await html2canvas(elemento, {
       scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff',
+      backgroundColor: "#ffffff",
       windowWidth: 1600, // Força largura desktop para evitar quebras
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.8);
-    const pdf = new jsPDF('portrait', 'mm', 'a4');
-    
+    const imgData = canvas.toDataURL("image/jpeg", 0.8);
+    const pdf = new jsPDF("portrait", "mm", "a4");
+
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+    pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
     pdf.save(nomeArquivo);
 
     canvas.width = 0;
@@ -95,7 +124,7 @@ class PdfService {
     onProgress: ProgressCallback,
     abortSignal?: AbortSignal
   ): Promise<void> {
-    const pdf = new jsPDF('portrait', 'mm', 'a4');
+    const pdf = new jsPDF("portrait", "mm", "a4");
     let paginaAdicionada = false;
 
     const hasCover = true;
@@ -107,27 +136,35 @@ class PdfService {
     try {
       for (let pagina = 1; pagina <= totalPaginas; pagina++) {
         if (abortSignal?.aborted) {
-          throw new Error('Geração cancelada');
+          throw new Error("Geração cancelada");
         }
 
         await this.aguardarOciosidade();
 
         // Limpar o ponto de montagem (não remover o iframe, apenas o conteúdo)
-        mountPoint.innerHTML = '';
+        mountPoint.innerHTML = "";
 
         let elementoParaCaptura: HTMLElement;
 
         if (hasCover && pagina === 1) {
-          elementoParaCaptura = await this.criarCapa(laudo, configuracoes, mountPoint);
+          elementoParaCaptura = await this.criarCapa(
+            laudo,
+            configuracoes,
+            mountPoint
+          );
           // Aumentei o delay para garantir carregamento da fonte
-          await new Promise(resolve => setTimeout(resolve, 800));
+          await new Promise((resolve) => setTimeout(resolve, 800));
         } else if (hasCover && pagina === 2) {
           elementoParaCaptura = this.criarPaginaTermos(ambientes, mountPoint);
-          await new Promise(resolve => setTimeout(resolve, 400));
+          await new Promise((resolve) => setTimeout(resolve, 400));
         } else if (hasCover && pagina === totalPaginas) {
           // Nova condição: Se for Entrada, a última página é o Relatório
-          elementoParaCaptura = this.criarPaginaRelatorio(laudo, detalhes, mountPoint);
-          await new Promise(resolve => setTimeout(resolve, 400));
+          elementoParaCaptura = this.criarPaginaRelatorio(
+            laudo,
+            detalhes,
+            mountPoint
+          );
+          await new Promise((resolve) => setTimeout(resolve, 400));
         } else {
           const backendPage = hasCover ? pagina - 2 : pagina;
           const response = await getImagensPagina(backendPage);
@@ -135,7 +172,12 @@ class PdfService {
           const s3Keys = imagens.map((img: any) => img.s3Key);
           const urls = await getUrlsBatch(s3Keys);
 
-          elementoParaCaptura = this.criarPaginaTemporaria(imagens, urls, configuracoes, mountPoint);
+          elementoParaCaptura = this.criarPaginaTemporaria(
+            imagens,
+            urls,
+            configuracoes,
+            mountPoint
+          );
           await this.aguardarCarregamentoImagens(elementoParaCaptura);
         }
 
@@ -143,54 +185,56 @@ class PdfService {
           scale: 2,
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
           windowWidth: 1600, // IMPORTANTE: Força renderização desktop
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.75);
+        const imgData = canvas.toDataURL("image/jpeg", 0.75);
 
         if (paginaAdicionada) {
           pdf.addPage();
         }
-        
+
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
         paginaAdicionada = true;
 
         onProgress((pagina / totalPaginas) * 100);
       }
     } finally {
-        if (iframe.parentNode) {
-            document.body.removeChild(iframe);
-        }
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe);
+      }
     }
 
     pdf.save(`laudo-completo-${laudoId}.pdf`);
   }
 
   private createIsolationIframe(): HTMLIFrameElement {
-    const iframe = document.createElement('iframe');
-    iframe.style.visibility = 'hidden';
-    iframe.style.position = 'fixed';
-    iframe.style.left = '-10000px';
-    iframe.style.top = '0';
-    iframe.width = '0';
-    iframe.height = '0';
-    iframe.style.border = 'none';
+    const iframe = document.createElement("iframe");
+    iframe.style.visibility = "hidden";
+    iframe.style.position = "fixed";
+    iframe.style.left = "-10000px";
+    iframe.style.top = "0";
+    iframe.width = "0";
+    iframe.height = "0";
+    iframe.style.border = "none";
     document.body.appendChild(iframe);
-    
+
     const doc = iframe.contentDocument!;
     doc.open();
-    doc.write('<!DOCTYPE html><html><head><style>body { margin: 0; padding: 0; background: #fff; }</style></head><body></body></html>');
+    doc.write(
+      "<!DOCTYPE html><html><head><style>body { margin: 0; padding: 0; background: #fff; }</style></head><body></body></html>"
+    );
     doc.close();
-    
+
     return iframe;
   }
 
   private aguardarOciosidade(): Promise<void> {
-    return new Promise(resolve => {
-      if ('requestIdleCallback' in window) {
+    return new Promise((resolve) => {
+      if ("requestIdleCallback" in window) {
         (window as any).requestIdleCallback(() => resolve(), { timeout: 2000 });
       } else {
         setTimeout(resolve, 100);
@@ -198,8 +242,12 @@ class PdfService {
     });
   }
 
-  private async criarCapa(laudo: any, config: any, parent: HTMLElement = document.body): Promise<HTMLElement> {
-    const container = document.createElement('div');
+  private async criarCapa(
+    laudo: any,
+    config: any,
+    parent: HTMLElement = document.body
+  ): Promise<HTMLElement> {
+    const container = document.createElement("div");
     // Adicionei box-sizing: border-box aqui explicitamente
     container.style.cssText = `
       position: fixed;
@@ -232,7 +280,9 @@ class PdfService {
           <div class="linha-campos">
             <div class="formatacao-campos campo-curto">
               <strong>Uso:</strong>
-              <p class="valor-campo">${(laudo.tipoUso || 'Industrial').toLowerCase()}</p>
+              <p class="valor-campo">${(
+                laudo.tipoUso || "Industrial"
+              ).toLowerCase()}</p>
             </div>
             <div class="formatacao-campos campo-longo">
               <strong>Endereço:</strong>
@@ -243,7 +293,11 @@ class PdfService {
           <div class="linha-campos">
             <div class="formatacao-campos campo-curto">
               <strong>Tipo:</strong>
-              <p class="valor-campo">${(laudo.tipoImovel || laudo.tipo || '').toLowerCase()}</p>
+              <p class="valor-campo">${(
+                laudo.tipoImovel ||
+                laudo.tipo ||
+                ""
+              ).toLowerCase()}</p>
             </div>
             <div class="formatacao-campos campo-longo">
               <strong>CEP:</strong>
@@ -254,18 +308,20 @@ class PdfService {
           <div class="linha-campos">
             <div class="formatacao-campos campo-curto">
               <strong>Unidade:</strong>
-              <p>${laudo.numero || ''}</p>
+              <p>${laudo.numero || ""}</p>
             </div>
             <div class="formatacao-campos campo-longo">
               <strong>Tamanho do imóvel:</strong>
-              <p>${laudo.tamanho || ''}</p>
+              <p>${laudo.tamanho || ""}</p>
             </div>
           </div>
 
           <div class="linha-campos">
             <div class="formatacao-campos campo-curto">
               <strong>Tipo de Vistoria:</strong>
-              <p class="valor-campo">${(laudo.tipoVistoria || '').toLowerCase()}</p>
+              <p class="valor-campo">${(
+                laudo.tipoVistoria || ""
+              ).toLowerCase()}</p>
             </div>
             <div class="formatacao-campos campo-longo">
               <strong>Realizada em:</strong>
@@ -278,28 +334,39 @@ class PdfService {
       
       <div class="div-metodologia">
         <h1>METODOLOGIA</h1>
-        ${(laudo.tipoVistoria?.toLowerCase() === 'saída' || laudo.tipoVistoria?.toLowerCase() === 'saida' ? METODOLOGIA_SAIDA_TEXTS : METODOLOGIA_TEXTS).map(text => `<p>${text}</p>`).join('')}
+        ${(laudo.tipoVistoria?.toLowerCase() === "saída" ||
+        laudo.tipoVistoria?.toLowerCase() === "saida"
+          ? METODOLOGIA_SAIDA_TEXTS
+          : METODOLOGIA_TEXTS
+        )
+          .map((text) => `<p>${text}</p>`)
+          .join("")}
       </div>
     `;
 
     parent.appendChild(container);
 
-    const images = Array.from(container.querySelectorAll('img'));
-    await Promise.all(images.map(img => {
-      if (img.complete) return Promise.resolve();
-      return new Promise(resolve => {
-        img.onload = resolve;
-        img.onerror = resolve; // Resolve anyway to avoid blocking
-      });
-    }));
+    const images = Array.from(container.querySelectorAll("img"));
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve; // Resolve anyway to avoid blocking
+        });
+      })
+    );
 
     return container;
   }
 
-  private criarPaginaTermos(ambientes: any[], parent: HTMLElement = document.body): HTMLElement {
+  private criarPaginaTermos(
+    ambientes: any[],
+    parent: HTMLElement = document.body
+  ): HTMLElement {
     const itemsPerColumn = 18;
     const columns = [[], [], [], []] as any[][];
-    
+
     ambientes.forEach((amb, index) => {
       const colIndex = Math.floor(index / itemsPerColumn);
       if (colIndex < 4) {
@@ -307,7 +374,7 @@ class PdfService {
       }
     });
 
-    const container = document.createElement('div');
+    const container = document.createElement("div");
     container.style.cssText = `
       position: fixed;
       top: -10000px;
@@ -362,15 +429,26 @@ class PdfService {
       <div class="ambientes-section">
         <h2>Ambientes</h2>
         <div class="ambientes-container">
-          ${columns.map(col => `
+          ${columns
+            .map(
+              (col) => `
             <div class="ambiente-col">
-              ${col.map(amb => `
+              ${col
+                .map(
+                  (amb) => `
                 <div class="ambiente-item">
-                  ${amb.originalIndex}. ${amb.ambiente.replace(/^\d+\s*-\s*/, '')}
+                  ${amb.originalIndex}. ${amb.ambiente.replace(
+                    /^\d+\s*-\s*/,
+                    ""
+                  )}
                 </div>
-              `).join('')}
+              `
+                )
+                .join("")}
             </div>
-          `).join('')}
+          `
+            )
+            .join("")}
         </div>
       </div>
     `;
@@ -379,8 +457,12 @@ class PdfService {
     return container;
   }
 
-   private criarPaginaRelatorio(laudo: any, detalhes: any, parent: HTMLElement = document.body): HTMLElement {
-    const container = document.createElement('div');
+  private criarPaginaRelatorio(
+    laudo: any,
+    detalhes: any,
+    parent: HTMLElement = document.body
+  ): HTMLElement {
+    const container = document.createElement("div");
     container.style.cssText = `
       position: fixed;
       top: -10000px;
@@ -400,69 +482,116 @@ class PdfService {
 
     // 2. Identificar e adicionar seções órfãs (Dados Legados/Extras)
     if (detalhes?.dadosExtra) {
-       Object.entries(detalhes.dadosExtra).forEach(([key, value]) => {
-          // Verifica se essa chave já existe nas seções oficiais (normalizando nomes)
-          const isOfficial = sections.some((s: any) => normalizeSectionName(s.name) === normalizeSectionName(key));
-          
-          if (!isOfficial) {
-             // Criar uma estrutura de seção compatível para renderização
-             const questions = typeof value === 'object' && value !== null
-                ? Object.keys(value).map(k => ({ id: k, questionText: k }))
-                : [{ id: 'val', questionText: 'Descrição' }]; // Para strings simples
+      Object.entries(detalhes.dadosExtra).forEach(([key, value]) => {
+        // Verifica se essa chave já existe nas seções oficiais (normalizando nomes)
+        const isOfficial = sections.some(
+          (s: any) => normalizeSectionName(s.name) === normalizeSectionName(key)
+        );
 
-             sections.push({
-                id: `extra-${key}`,
-                name: key,
-                questions: questions,
-                isExtra: true
-             });
-          }
-       });
+        if (!isOfficial) {
+          // Criar uma estrutura de seção compatível para renderização
+          const questions =
+            typeof value === "object" && value !== null
+              ? Object.keys(value).map((k) => ({ id: k, questionText: k }))
+              : [{ id: "val", questionText: "Descrição" }]; // Para strings simples
+
+          sections.push({
+            id: `extra-${key}`,
+            name: key,
+            questions: questions,
+            isExtra: true,
+          });
+        }
+      });
     }
 
     const mid = Math.ceil(sections.length / 2);
     const col1 = sections.slice(0, mid);
     const col2 = sections.slice(mid);
 
-    // Função auxiliar para renderizar item (precisa estar no escopo ou ser inline)
-    const renderItem = (sectionName: any, questionText: any, questionId: any, index: any) => {
-        const normalizedKey = normalizeSectionName(sectionName);
-        const mapping = SECTION_FIELD_MAP[normalizedKey];
-        
-        let dataKey = mapping?.dataKey || normalizedKey;
-        let fieldKey = mapping?.fields?.[index];
+    const normalizeRespostaStatus = (value: unknown) =>
+      String(value ?? "")
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ");
 
-        let sectionData = detalhes[dataKey];
-        
-        // Fallback: tentar buscar em dadosExtra
-        if (!sectionData && detalhes.dadosExtra) {
-             sectionData = detalhes.dadosExtra[sectionName] || detalhes.dadosExtra[normalizedKey];
+    const getRespostaStatusClass = (value: unknown) => {
+      const normalized = normalizeRespostaStatus(value);
+      if (normalized === "sem irregularidades")
+        return "item-valor item-valor-sem-irregularidades";
+      if (
+        normalized === "com apontamento" ||
+        normalized === "com irregularidades"
+      )
+        return "item-valor item-valor-com-apontamento";
+      return "item-valor";
+    };
+
+    const formatRespostaStatus = (value: unknown) => {
+      const normalized = normalizeRespostaStatus(value);
+      if (normalized === "sem irregularidades") return "sem irregularidades";
+      if (
+        normalized === "com apontamento" ||
+        normalized === "com irregularidades"
+      )
+        return "com apontamento";
+      if (normalized === "outros") return "outros";
+      return String(value).toLowerCase();
+    };
+
+    const renderItem = (
+      sectionName: any,
+      questionText: any,
+      questionId: any,
+      index: any
+    ) => {
+      const normalizedKey = normalizeSectionName(sectionName);
+      const mapping = SECTION_FIELD_MAP[normalizedKey];
+
+      let dataKey = mapping?.dataKey || normalizedKey;
+      let fieldKey = mapping?.fields?.[index];
+
+      let sectionData = detalhes[dataKey];
+
+      // Fallback: tentar buscar em dadosExtra
+      if (!sectionData && detalhes.dadosExtra) {
+        sectionData =
+          detalhes.dadosExtra[sectionName] ||
+          detalhes.dadosExtra[normalizedKey];
+      }
+
+      if (typeof sectionData === "string" && sectionData.startsWith("{")) {
+        try {
+          sectionData = JSON.parse(sectionData);
+        } catch {}
+      }
+
+      let value = "-";
+      if (sectionData) {
+        if (fieldKey && sectionData[fieldKey] !== undefined) {
+          value = sectionData[fieldKey];
+        } else if (typeof sectionData === "string" && !fieldKey) {
+          value = sectionData;
+        } else if (sectionData[questionText] !== undefined) {
+          value = sectionData[questionText];
+        } else if (sectionData[questionId] !== undefined) {
+          value = sectionData[questionId];
         }
-        
-        if (typeof sectionData === 'string' && sectionData.startsWith('{')) {
-            try { sectionData = JSON.parse(sectionData); } catch {}
-        }
+      }
 
-        let value = '-';
-        if (sectionData) {
-            if (fieldKey && sectionData[fieldKey] !== undefined) {
-               value = sectionData[fieldKey];
-            } else if (typeof sectionData === 'string' && !fieldKey) {
-               value = sectionData;
-            } else if (sectionData[questionText] !== undefined) {
-               value = sectionData[questionText];
-            } else if (sectionData[questionId] !== undefined) {
-               value = sectionData[questionId];
-            }
-        }
+      if (value === null || value === undefined || value === "") value = "-";
+      if (typeof value === "object") value = JSON.stringify(value);
 
-        if (value === null || value === undefined || value === '') value = '-';
-        if (typeof value === 'object') value = JSON.stringify(value);
+      const displayValue = formatRespostaStatus(value);
 
-        return `
+      return `
             <div class="item-row">
                 <span class="item-label">${questionText}</span>
-                <span class="item-valor">${value}</span>
+                <span class="${getRespostaStatusClass(
+                  value
+                )}">${displayValue}</span>
             </div>
         `;
     };
@@ -473,9 +602,11 @@ class PdfService {
          .relatorio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
          .relatorio-coluna { display: flex; flex-direction: column; gap: 10px; }
          .categoria-box { background-color: #999; color: #fff; padding: 5px 10px; font-weight: 700; margin-bottom: 2px; font-size: 11px; text-transform: uppercase; }
-         .item-row { display: flex; align-items: center; justify-content: space-between; background-color: #d9d9d9; padding: 5px 10px; margin-bottom: 2px; font-size: 11px; }
-         .item-label { font-weight: 500; }
-         .item-valor { font-weight: 700; text-transform: uppercase; }
+         .item-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; background-color: #d9d9d9; padding: 5px 10px; margin-bottom: 2px; font-size: 11px; }
+         .item-label { font-weight: 500; flex: 1; min-width: 0; line-height: 1.3; }
+         .item-valor { font-weight: 700; font-size: 10px; text-transform: lowercase; text-align: right; max-width: 45%; min-width: 92px; line-height: 1.3; overflow-wrap: anywhere; }
+         .item-valor-sem-irregularidades { color: #15803d; }
+         .item-valor-com-apontamento { color: #dc2626; }
       </style>
       
       <div style="height: 35px;"></div>
@@ -484,26 +615,42 @@ class PdfService {
 
       <div class="relatorio-grid">
         <div class="relatorio-coluna">
-          ${col1.map((section: any) => `
+          ${col1
+            .map(
+              (section: any) => `
               <div class="grupo">
                   <div class="categoria-box">${section.name}</div>
-                  ${section.questions?.map((q: any, idx: number) => renderItem(section.name, q.questionText || '', q.id, idx)).join('')}
+                  ${section.questions
+                    ?.map((q: any, idx: number) =>
+                      renderItem(section.name, q.questionText || "", q.id, idx)
+                    )
+                    .join("")}
               </div>
-          `).join('')}
+          `
+            )
+            .join("")}
         </div>
 
         <div class="relatorio-coluna">
-            ${col2.map((section: any) => `
+            ${col2
+              .map(
+                (section: any) => `
               <div class="grupo">
                   <div class="categoria-box">${section.name}</div>
-                  ${section.questions?.map((q: any, idx: number) => renderItem(section.name, q.questionText || '', q.id, idx)).join('')}
+                  ${section.questions
+                    ?.map((q: any, idx: number) =>
+                      renderItem(section.name, q.questionText || "", q.id, idx)
+                    )
+                    .join("")}
               </div>
-          `).join('')}
+          `
+              )
+              .join("")}
         </div>
       </div>
     `;
 
-    parent.appendChild(container); 
+    parent.appendChild(container);
     return container;
   }
 
@@ -513,7 +660,7 @@ class PdfService {
     config: any,
     parent: HTMLElement = document.body
   ): HTMLElement {
-    const container = document.createElement('div');
+    const container = document.createElement("div");
     container.style.cssText = `
       position: fixed;
       top: -10000px;
@@ -521,15 +668,19 @@ class PdfService {
       background: white;
       padding: ${config.margemPagina || 20}px;
     `;
-    
+
     const espacH = config.espacamentoHorizontal || 10;
     const espacV = config.espacamentoVertical || 15;
 
     container.innerHTML = `
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: ${espacV}px ${espacH}px;">
-        ${imagens.map(img => {
-          const ambienteSemNumero = (img.ambiente || 'AMBIENTE').replace(/^\d+\s*-\s*/, '');
-          return `
+        ${imagens
+          .map((img) => {
+            const ambienteSemNumero = (img.ambiente || "AMBIENTE").replace(
+              /^\d+\s*-\s*/,
+              ""
+            );
+            return `
           <div>
             <div style="border: 1px solid #999; margin-bottom: 4px;">
               <img 
@@ -542,26 +693,33 @@ class PdfService {
               ${ambienteSemNumero}
             </div>
             <div style="font-size: 9px; line-height: 1.4; text-align: left;">
-              <strong>${img.numeroAmbiente} (${img.numeroImagemNoAmbiente})</strong> ${img.legenda || 'sem legenda'}
+              <strong>${img.numeroAmbiente} (${
+              img.numeroImagemNoAmbiente
+            })</strong> ${img.legenda || "sem legenda"}
             </div>
           </div>
-        `;}).join('')}
+        `;
+          })
+          .join("")}
       </div>
     `;
-    
+
     parent.appendChild(container);
     return container;
   }
 
   private aguardarCarregamentoImagens(container: HTMLElement): Promise<void> {
-    const imagens = Array.from(container.querySelectorAll('img'));
+    const imagens = Array.from(container.querySelectorAll("img"));
     return Promise.all(
-      imagens.map(img => new Promise<void>((resolve, reject) => {
-        if ((img as HTMLImageElement).complete) return resolve();
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Falha ao carregar imagem'));
-        setTimeout(() => reject(new Error('Timeout')), 15000);
-      }))
+      imagens.map(
+        (img) =>
+          new Promise<void>((resolve, reject) => {
+            if ((img as HTMLImageElement).complete) return resolve();
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error("Falha ao carregar imagem"));
+            setTimeout(() => reject(new Error("Timeout")), 15000);
+          })
+      )
     ).then(() => {});
   }
 }
