@@ -111,6 +111,51 @@ const splitParagrafos = (texto: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+// Componente para edição de texto sem o bug de re-render
+const EditableText = ({
+  value,
+  onSave,
+  className,
+  style,
+  tag: Tag = "p",
+}: {
+  value: string;
+  onSave: (val: string) => void;
+  className?: string;
+  style?: React.CSSProperties;
+  tag?: any;
+}) => {
+  const ref = useRef<HTMLElement>(null);
+
+  // Sincroniza o valor inicial e mudanças externas (como restaurar original)
+  useEffect(() => {
+    if (ref.current && ref.current.textContent !== value) {
+      ref.current.textContent = value;
+    }
+  }, [value]);
+
+  return (
+    <Tag
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={(e: React.FocusEvent<HTMLElement>) => {
+        const newValue = e.currentTarget.textContent || "";
+        if (newValue !== value) {
+          onSave(newValue);
+        }
+      }}
+      className={className}
+      style={{
+        outline: "none",
+        cursor: "text",
+        whiteSpace: "pre-wrap",
+        ...style,
+      }}
+    />
+  );
+};
+
 // Componente wrapper para escalar o PDF em telas menores
 const PdfWrapper = ({ children }: { children: React.ReactNode }) => {
   const [scale, setScale] = useState(1);
@@ -187,14 +232,32 @@ export default function VisualizadorPdfLaudo() {
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalImagens, setTotalImagens] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPdf>({
-    espacamentoHorizontal: 10,
-    espacamentoVertical: 15,
-    margemPagina: 20,
-    metodologiaTexto: null,
-    termosGeraisTexto: null,
-    assinaturaTexto: null,
+  const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPdf>(() => {
+    // Tenta carregar do sessionStorage se existir para persistir entre navegação
+    const saved = sessionStorage.getItem(`pdf_config_${id}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Erro ao carregar configurações do cache:", e);
+      }
+    }
+    return {
+      espacamentoHorizontal: 10,
+      espacamentoVertical: 15,
+      margemPagina: 20,
+      metodologiaTexto: null,
+      termosGeraisTexto: null,
+      assinaturaTexto: null,
+    };
   });
+
+  // Salva no sessionStorage sempre que as configurações mudarem
+  useEffect(() => {
+    if (id) {
+      sessionStorage.setItem(`pdf_config_${id}`, JSON.stringify(configuracoes));
+    }
+  }, [configuracoes, id]);
   const [configuracoesOriginais, setConfiguracoesOriginais] =
     useState<ConfiguracoesPdf>({
       espacamentoHorizontal: 10,
@@ -208,15 +271,17 @@ export default function VisualizadorPdfLaudo() {
   const [progresso, setProgresso] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const wasTriggeredRef = useRef(false);
+  const isConfigLoadedRef = useRef(false);
   const originalLegendasRef = useRef<Record<string, string>>({});
   const pagesCache = useRef<Record<number, any[]>>({});
 
   const hasCover = true;
 
   useEffect(() => {
-    carregarConfiguracoes();
-    if (id) {
+    if (id && !isConfigLoadedRef.current) {
+      carregarConfiguracoes();
       carregarLaudo();
+      isConfigLoadedRef.current = true;
     }
   }, [id]);
 
@@ -251,7 +316,12 @@ export default function VisualizadorPdfLaudo() {
         termosGeraisTexto: config.termosGeraisTexto ?? null,
         assinaturaTexto: config.assinaturaTexto ?? null,
       };
-      setConfiguracoes(configNormalizada);
+
+      // Só atualiza configuracoes se não houver rascunho no sessionStorage
+      const hasDraft = !!sessionStorage.getItem(`pdf_config_${id}`);
+      if (!hasDraft) {
+        setConfiguracoes(configNormalizada);
+      }
       setConfiguracoesOriginais(configNormalizada);
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
@@ -386,6 +456,8 @@ export default function VisualizadorPdfLaudo() {
     ];
     return keys.reduce<Record<string, any>>((acc, key) => {
       if (configuracoes[key] !== configuracoesOriginais[key]) {
+        // Garantir que se o valor for string vazia, ele seja enviado corretamente
+        // Se for null, o backend pode interpretar como "remover customização"
         acc[key] = configuracoes[key];
       }
       return acc;
@@ -396,19 +468,9 @@ export default function VisualizadorPdfLaudo() {
     field: "metodologiaTexto" | "termosGeraisTexto" | "assinaturaTexto",
     value: string
   ) => {
+    // Se o valor for vazio, salvamos uma string vazia em vez de null
+    // para evitar que o operador || ou verificações de falsy resetem para o padrão
     setConfiguracoes((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleConfigParagraphChange = (
-    field: "metodologiaTexto" | "termosGeraisTexto",
-    index: number,
-    value: string,
-    fallbackText: string
-  ) => {
-    const paragrafos = splitParagrafos(configuracoes[field] || fallbackText);
-    const atualizados = [...paragrafos];
-    atualizados[index] = value.trim();
-    handleConfigTextChange(field, atualizados.join("\n\n"));
   };
 
   const handleRestoreDefaultText = (
@@ -430,6 +492,13 @@ export default function VisualizadorPdfLaudo() {
 
     const hasLaudoChanges = Object.keys(editedFields).length > 0;
     const hasConfigChanges = configuracoesAlteradas();
+
+    console.log("Iniciando salvamento:", {
+      hasLaudoChanges,
+      hasConfigChanges,
+      payloadConfig: hasConfigChanges ? payloadConfiguracoesAlteradas() : null,
+    });
+
     if (!hasLaudoChanges && !hasConfigChanges) return;
 
     setIsSaving(true);
@@ -440,13 +509,17 @@ export default function VisualizadorPdfLaudo() {
       }
       if (hasConfigChanges) {
         const payload = payloadConfiguracoesAlteradas();
+        console.log("Enviando payload de configurações:", payload);
         await laudosService.updateConfiguracoesPdf(payload);
         setConfiguracoesOriginais((prev) => ({ ...prev, ...payload }));
+
+        // Limpa rascunho do sessionStorage após salvar com sucesso
+        sessionStorage.removeItem(`pdf_config_${id}`);
       }
       toast.success("Alterações salvas com sucesso!");
     } catch (error) {
       toast.error("Erro ao salvar alterações");
-      console.error(error);
+      console.error("Erro no salvamento:", error);
     } finally {
       setIsSaving(false);
     }
@@ -817,55 +890,52 @@ export default function VisualizadorPdfLaudo() {
             <h1 style={{ borderBottom: "none", paddingBottom: 0 }}>
               METODOLOGIA
             </h1>
-            <button
-              type="button"
-              onClick={() => handleRestoreDefaultText("metodologiaTexto")}
-              style={{
-                fontSize: "11px",
-                color: "#4338ca",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              Restaurar texto original
-            </button>
+            {configuracoes.metodologiaTexto !== null &&
+              configuracoes.metodologiaTexto !==
+                getMetodologiaPadrao(laudo.tipoVistoria) && (
+                <button
+                  type="button"
+                  onClick={() => handleRestoreDefaultText("metodologiaTexto")}
+                  style={{
+                    fontSize: "11px",
+                    color: "#4338ca",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  Restaurar texto original
+                </button>
+              )}
           </div>
-          {splitParagrafos(
-            configuracoes.metodologiaTexto ||
-              getMetodologiaPadrao(laudo.tipoVistoria)
-          ).map((text, index) => (
-            <p
-              key={index}
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) =>
-                handleConfigParagraphChange(
-                  "metodologiaTexto",
-                  index,
-                  e.currentTarget.innerText,
+          <EditableText
+            value={
+              configuracoes.metodologiaTexto !== null
+                ? configuracoes.metodologiaTexto
+                : getMetodologiaPadrao(laudo.tipoVistoria)
+            }
+            onSave={(newValue) =>
+              handleConfigTextChange("metodologiaTexto", newValue)
+            }
+            style={{
+              fontSize: "12px",
+              textAlign: "justify",
+              lineHeight: "1.5",
+              borderBottom:
+                configuracoes.metodologiaTexto !== null &&
+                configuracoes.metodologiaTexto !==
                   getMetodologiaPadrao(laudo.tipoVistoria)
-                )
-              }
-              style={{
-                outline: "none",
-                cursor: "text",
-                borderBottom:
-                  configuracoes.metodologiaTexto !==
-                  configuracoesOriginais.metodologiaTexto
-                    ? "1px dashed #22c55e"
-                    : "1px dashed transparent",
-                backgroundColor:
-                  configuracoes.metodologiaTexto !==
-                  configuracoesOriginais.metodologiaTexto
-                    ? "#f0fdf4"
-                    : "transparent",
-              }}
-            >
-              {text}
-            </p>
-          ))}
+                  ? "1px dashed #22c55e"
+                  : "1px dashed transparent",
+              backgroundColor:
+                configuracoes.metodologiaTexto !== null &&
+                configuracoes.metodologiaTexto !==
+                  getMetodologiaPadrao(laudo.tipoVistoria)
+                  ? "#f0fdf4"
+                  : "transparent",
+            }}
+          />
         </div>
 
         {/* Número de página */}
@@ -947,54 +1017,52 @@ export default function VisualizadorPdfLaudo() {
             >
               Termos Gerais
             </h2>
-            <button
-              type="button"
-              onClick={() => handleRestoreDefaultText("termosGeraisTexto")}
-              style={{
-                fontSize: "11px",
-                color: "#4338ca",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              Restaurar texto original
-            </button>
+            {configuracoes.termosGeraisTexto !== null &&
+              configuracoes.termosGeraisTexto !==
+                TERMOS_GERAIS_TEXTS.join("\n\n") && (
+                <button
+                  type="button"
+                  onClick={() => handleRestoreDefaultText("termosGeraisTexto")}
+                  style={{
+                    fontSize: "11px",
+                    color: "#4338ca",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  Restaurar texto original
+                </button>
+              )}
           </div>
-          {splitParagrafos(
-            configuracoes.termosGeraisTexto || TERMOS_GERAIS_TEXTS.join("\n\n")
-          ).map((texto, index) => (
-            <p
-              key={index}
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) =>
-                handleConfigParagraphChange(
-                  "termosGeraisTexto",
-                  index,
-                  e.currentTarget.innerText,
+          <EditableText
+            value={
+              configuracoes.termosGeraisTexto !== null
+                ? configuracoes.termosGeraisTexto
+                : TERMOS_GERAIS_TEXTS.join("\n\n")
+            }
+            onSave={(newValue) =>
+              handleConfigTextChange("termosGeraisTexto", newValue)
+            }
+            style={{
+              fontSize: "12px",
+              textAlign: "justify",
+              lineHeight: "1.5",
+              borderBottom:
+                configuracoes.termosGeraisTexto !== null &&
+                configuracoes.termosGeraisTexto !==
                   TERMOS_GERAIS_TEXTS.join("\n\n")
-                )
-              }
-              style={{
-                outline: "none",
-                cursor: "text",
-                borderBottom:
-                  configuracoes.termosGeraisTexto !==
-                  configuracoesOriginais.termosGeraisTexto
-                    ? "1px dashed #22c55e"
-                    : "1px dashed transparent",
-                backgroundColor:
-                  configuracoes.termosGeraisTexto !==
-                  configuracoesOriginais.termosGeraisTexto
-                    ? "#f0fdf4"
-                    : "transparent",
-              }}
-            >
-              {texto}
-            </p>
-          ))}
+                  ? "1px dashed #22c55e"
+                  : "1px dashed transparent",
+              backgroundColor:
+                configuracoes.termosGeraisTexto !== null &&
+                configuracoes.termosGeraisTexto !==
+                  TERMOS_GERAIS_TEXTS.join("\n\n")
+                  ? "#f0fdf4"
+                  : "transparent",
+            }}
+          />
         </div>
 
         <div className="ambientes-section">
@@ -1415,46 +1483,48 @@ export default function VisualizadorPdfLaudo() {
           >
             ASSINATURAS
           </h2>
-          <button
-            type="button"
-            onClick={() => handleRestoreDefaultText("assinaturaTexto")}
-            style={{
-              fontSize: "11px",
-              color: "#4338ca",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-            }}
-          >
-            Restaurar texto original
-          </button>
+          {configuracoes.assinaturaTexto !== null &&
+            configuracoes.assinaturaTexto !== ASSINATURA_TEXTO && (
+              <button
+                type="button"
+                onClick={() => handleRestoreDefaultText("assinaturaTexto")}
+                style={{
+                  fontSize: "11px",
+                  color: "#4338ca",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                Restaurar texto original
+              </button>
+            )}
         </div>
 
-        <p
+        <EditableText
           className="assinaturas-texto"
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={(e) =>
-            handleConfigTextChange("assinaturaTexto", e.currentTarget.innerText)
+          value={
+            configuracoes.assinaturaTexto !== null
+              ? configuracoes.assinaturaTexto
+              : ASSINATURA_TEXTO
+          }
+          onSave={(newValue) =>
+            handleConfigTextChange("assinaturaTexto", newValue)
           }
           style={{
-            outline: "none",
-            cursor: "text",
             borderBottom:
-              configuracoes.assinaturaTexto !==
-              configuracoesOriginais.assinaturaTexto
+              configuracoes.assinaturaTexto !== null &&
+              configuracoes.assinaturaTexto !== ASSINATURA_TEXTO
                 ? "1px dashed #22c55e"
                 : "1px dashed transparent",
             backgroundColor:
-              configuracoes.assinaturaTexto !==
-              configuracoesOriginais.assinaturaTexto
+              configuracoes.assinaturaTexto !== null &&
+              configuracoes.assinaturaTexto !== ASSINATURA_TEXTO
                 ? "#f0fdf4"
                 : "transparent",
           }}
-        >
-          {configuracoes.assinaturaTexto || ASSINATURA_TEXTO}
-        </p>
+        />
 
         <div
           className="assinaturas-data"
@@ -1464,47 +1534,35 @@ export default function VisualizadorPdfLaudo() {
             marginBottom: "60px",
           }}
         >
-          <span
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) =>
-              handleFieldChange("cidade", e.currentTarget.innerText)
-            }
+          <EditableText
+            tag="span"
+            value={cidade}
+            onSave={(newValue) => handleFieldChange("cidade", newValue)}
             className={`${
               editedFields.cidade
                 ? "bg-green-50 border-b border-dashed border-green-500"
                 : ""
             }`}
             style={{
-              outline: "none",
-              cursor: "text",
               minWidth: "10px",
               display: "inline-block",
             }}
-          >
-            {cidade}
-          </span>
+          />
           <span>, </span>
-          <span
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) =>
-              handleFieldChange("dataRelatorio", e.currentTarget.innerText)
-            }
+          <EditableText
+            tag="span"
+            value={laudo.dataRelatorio || `${dia} de ${mes} de ${ano}`}
+            onSave={(newValue) => handleFieldChange("dataRelatorio", newValue)}
             className={`${
               editedFields.dataRelatorio
                 ? "bg-green-50 border-b border-dashed border-green-500"
                 : ""
             }`}
             style={{
-              outline: "none",
-              cursor: "text",
               minWidth: "10px",
               display: "inline-block",
             }}
-          >
-            {laudo.dataRelatorio || `${dia} de ${mes} de ${ano}`}
-          </span>
+          />
         </div>
 
         {/* LOCADOR */}
