@@ -27,5 +27,8 @@ export interface ConfiguracaoPdfUsuario {
   espacamentoHorizontal: number;
   espacamentoVertical: number;
   margemPagina: number;
+  metodologiaTexto: string | null;
+  termosGeraisTexto: string | null;
+  assinaturaTexto: string | null;
   updatedAt: string;
 }

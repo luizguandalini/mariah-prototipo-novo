@@ -82,6 +82,35 @@ const METODOLOGIA_SAIDA_TEXTS = [
   'Os registros encontrados como irregularidades ou avarias são indicados neste laudo de vistoria pela menção da palavra "APONTAMENTO".',
 ];
 
+const TERMOS_GERAIS_TEXTS = [
+  "É obrigação do locatário o reparo imediato dos danos causados por si mesmo ou por terceiros durante a vigência do contrato de locação, cabendo ao locatário restituir o imóvel no mesmo estado em que o recebeu, de acordo com este laudo de vistoria, comprometendo-se com o zelo e promovendo a manutenção preventiva do mesmo e de seus equipamentos porventura existentes, em especial, equipamentos elétricos, quadros de distribuição de energia, instalações hidráulicas, elétricas, sistemas de ar, sistema de aquecimento em geral ou danos decorrentes do mau uso, tais como: danos ao encanamento provocados pelo descarte de objetos em ralos, em vasos sanitários, conservação dos móveis ou de bens de razão estrutural, como portas, janelas, esquadrias, pias, gabinetes, entre outros.",
+  "O locatário será isento de responsabilidade quanto aos desgastes naturais decorrentes do uso normal e zeloso do imóvel, desde que tais condições sejam compatíveis com o período de locação e não decorram de negligência, mau uso ou ausência de manutenção regular. Eventuais danos que ultrapassem o desgaste esperado ou sejam causados por uso inadequado serão de responsabilidade do locatário, firmando compromisso do uso zeloso pelo período em que se der início a locação até a efetiva devolução das chaves.",
+];
+
+const ASSINATURA_TEXTO = `Declaram as partes estarem cientes das imagens e textos apresentados no presente termo, estando em conformidade com a vontade dos contratantes que, "As Partes e as testemunhas envolvidas neste instrumento afirmam e declaram que esse poderá ser assinado presencialmente ou eletronicamente, sendo as assinaturas consideradas válidas, vinculantes e executáveis, desde que firmadas pelos representantes legais das Partes. e pôr estarem justos e contratados, assinam o presente, para um só efeito, diante de 02 (duas) testemunhas.`;
+
+interface ConfiguracoesPdf {
+  espacamentoHorizontal: number;
+  espacamentoVertical: number;
+  margemPagina: number;
+  metodologiaTexto: string | null;
+  termosGeraisTexto: string | null;
+  assinaturaTexto: string | null;
+}
+
+const getMetodologiaPadrao = (tipoVistoria?: string) => {
+  const isSaida =
+    tipoVistoria?.toLowerCase() === "saída" ||
+    tipoVistoria?.toLowerCase() === "saida";
+  return (isSaida ? METODOLOGIA_SAIDA_TEXTS : METODOLOGIA_TEXTS).join("\n\n");
+};
+
+const splitParagrafos = (texto: string) =>
+  texto
+    .split(/\n\s*\n/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 // Componente wrapper para escalar o PDF em telas menores
 const PdfWrapper = ({ children }: { children: React.ReactNode }) => {
   const [scale, setScale] = useState(1);
@@ -158,11 +187,23 @@ export default function VisualizadorPdfLaudo() {
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalImagens, setTotalImagens] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [configuracoes, setConfiguracoes] = useState<any>({
+  const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPdf>({
     espacamentoHorizontal: 10,
     espacamentoVertical: 15,
     margemPagina: 20,
+    metodologiaTexto: null,
+    termosGeraisTexto: null,
+    assinaturaTexto: null,
   });
+  const [configuracoesOriginais, setConfiguracoesOriginais] =
+    useState<ConfiguracoesPdf>({
+      espacamentoHorizontal: 10,
+      espacamentoVertical: 15,
+      margemPagina: 20,
+      metodologiaTexto: null,
+      termosGeraisTexto: null,
+      assinaturaTexto: null,
+    });
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [progresso, setProgresso] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -202,7 +243,16 @@ export default function VisualizadorPdfLaudo() {
   const carregarConfiguracoes = async () => {
     try {
       const config = await laudosService.getConfiguracoesPdf();
-      setConfiguracoes(config);
+      const configNormalizada: ConfiguracoesPdf = {
+        espacamentoHorizontal: config.espacamentoHorizontal ?? 10,
+        espacamentoVertical: config.espacamentoVertical ?? 15,
+        margemPagina: config.margemPagina ?? 20,
+        metodologiaTexto: config.metodologiaTexto ?? null,
+        termosGeraisTexto: config.termosGeraisTexto ?? null,
+        assinaturaTexto: config.assinaturaTexto ?? null,
+      };
+      setConfiguracoes(configNormalizada);
+      setConfiguracoesOriginais(configNormalizada);
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
     }
@@ -311,6 +361,62 @@ export default function VisualizadorPdfLaudo() {
   const [editedFields, setEditedFields] = useState<Partial<Laudo>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  const configuracoesAlteradas = useCallback(() => {
+    const keys: (keyof ConfiguracoesPdf)[] = [
+      "espacamentoHorizontal",
+      "espacamentoVertical",
+      "margemPagina",
+      "metodologiaTexto",
+      "termosGeraisTexto",
+      "assinaturaTexto",
+    ];
+    return keys.some(
+      (key) => configuracoes[key] !== configuracoesOriginais[key]
+    );
+  }, [configuracoes, configuracoesOriginais]);
+
+  const payloadConfiguracoesAlteradas = useCallback(() => {
+    const keys: (keyof ConfiguracoesPdf)[] = [
+      "espacamentoHorizontal",
+      "espacamentoVertical",
+      "margemPagina",
+      "metodologiaTexto",
+      "termosGeraisTexto",
+      "assinaturaTexto",
+    ];
+    return keys.reduce<Record<string, any>>((acc, key) => {
+      if (configuracoes[key] !== configuracoesOriginais[key]) {
+        acc[key] = configuracoes[key];
+      }
+      return acc;
+    }, {});
+  }, [configuracoes, configuracoesOriginais]);
+
+  const handleConfigTextChange = (
+    field: "metodologiaTexto" | "termosGeraisTexto" | "assinaturaTexto",
+    value: string
+  ) => {
+    setConfiguracoes((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleConfigParagraphChange = (
+    field: "metodologiaTexto" | "termosGeraisTexto",
+    index: number,
+    value: string,
+    fallbackText: string
+  ) => {
+    const paragrafos = splitParagrafos(configuracoes[field] || fallbackText);
+    const atualizados = [...paragrafos];
+    atualizados[index] = value.trim();
+    handleConfigTextChange(field, atualizados.join("\n\n"));
+  };
+
+  const handleRestoreDefaultText = (
+    field: "metodologiaTexto" | "termosGeraisTexto" | "assinaturaTexto"
+  ) => {
+    setConfiguracoes((prev) => ({ ...prev, [field]: null }));
+  };
+
   const handleFieldChange = (
     field: keyof Laudo | "dataVistoria",
     value: any
@@ -320,13 +426,24 @@ export default function VisualizadorPdfLaudo() {
   };
 
   const handleSaveChanges = async () => {
-    if (!id || Object.keys(editedFields).length === 0) return;
+    if (!id) return;
+
+    const hasLaudoChanges = Object.keys(editedFields).length > 0;
+    const hasConfigChanges = configuracoesAlteradas();
+    if (!hasLaudoChanges && !hasConfigChanges) return;
 
     setIsSaving(true);
     try {
-      await laudosService.updateLaudo(id, editedFields as any);
+      if (hasLaudoChanges) {
+        await laudosService.updateLaudo(id, editedFields as any);
+        setEditedFields({});
+      }
+      if (hasConfigChanges) {
+        const payload = payloadConfiguracoesAlteradas();
+        await laudosService.updateConfiguracoesPdf(payload);
+        setConfiguracoesOriginais((prev) => ({ ...prev, ...payload }));
+      }
       toast.success("Alterações salvas com sucesso!");
-      setEditedFields({});
     } catch (error) {
       toast.error("Erro ao salvar alterações");
       console.error(error);
@@ -687,13 +804,67 @@ export default function VisualizadorPdfLaudo() {
         </div>
 
         <div className="div-metodologia">
-          <h1>METODOLOGIA</h1>
-          {(laudo.tipoVistoria?.toLowerCase() === "saída" ||
-          laudo.tipoVistoria?.toLowerCase() === "saida"
-            ? METODOLOGIA_SAIDA_TEXTS
-            : METODOLOGIA_TEXTS
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "8px",
+              borderBottom: "solid #c0c0c0 1px",
+              paddingBottom: "2px",
+            }}
+          >
+            <h1 style={{ borderBottom: "none", paddingBottom: 0 }}>
+              METODOLOGIA
+            </h1>
+            <button
+              type="button"
+              onClick={() => handleRestoreDefaultText("metodologiaTexto")}
+              style={{
+                fontSize: "11px",
+                color: "#4338ca",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              Restaurar texto original
+            </button>
+          </div>
+          {splitParagrafos(
+            configuracoes.metodologiaTexto ||
+              getMetodologiaPadrao(laudo.tipoVistoria)
           ).map((text, index) => (
-            <p key={index}>{text}</p>
+            <p
+              key={index}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) =>
+                handleConfigParagraphChange(
+                  "metodologiaTexto",
+                  index,
+                  e.currentTarget.innerText,
+                  getMetodologiaPadrao(laudo.tipoVistoria)
+                )
+              }
+              style={{
+                outline: "none",
+                cursor: "text",
+                borderBottom:
+                  configuracoes.metodologiaTexto !==
+                  configuracoesOriginais.metodologiaTexto
+                    ? "1px dashed #22c55e"
+                    : "1px dashed transparent",
+                backgroundColor:
+                  configuracoes.metodologiaTexto !==
+                  configuracoesOriginais.metodologiaTexto
+                    ? "#f0fdf4"
+                    : "transparent",
+              }}
+            >
+              {text}
+            </p>
           ))}
         </div>
 
@@ -756,31 +927,74 @@ export default function VisualizadorPdfLaudo() {
         <div style={{ height: "35px" }}></div>
 
         <div className="termos-gerais">
-          <h2>Termos Gerais</h2>
-          <p>
-            É obrigação do locatário o reparo imediato dos danos causados por si
-            mesmo ou por terceiros durante a vigência do contrato de locação,
-            cabendo ao locatário restituir o imóvel no mesmo estado em que o
-            recebeu, de acordo com este laudo de vistoria, comprometendo-se com
-            o zelo e promovendo a manutenção preventiva do mesmo e de seus
-            equipamentos porventura existentes, em especial, equipamentos
-            elétricos, quadros de distribuição de energia, instalações
-            hidráulicas, elétricas, sistemas de ar, sistema de aquecimento em
-            geral ou danos decorrentes do mau uso, tais como: danos ao
-            encanamento provocados pelo descarte de objetos em ralos, em vasos
-            sanitários, conservação dos móveis ou de bens de razão estrutural,
-            como portas, janelas, esquadrias, pias, gabinetes, entre outros.
-          </p>
-          <p>
-            O locatário será isento de responsabilidade quanto aos desgastes
-            naturais decorrentes do uso normal e zeloso do imóvel, desde que
-            tais condições sejam compatíveis com o período de locação e não
-            decorram de negligência, mau uso ou ausência de manutenção regular.
-            Eventuais danos que ultrapassem o desgaste esperado ou sejam
-            causados por uso inadequado serão de responsabilidade do locatário,
-            firmando compromisso do uso zeloso pelo período em que se der início
-            a locação até a efetiva devolução das chaves.
-          </p>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "8px",
+              borderBottom: "1px solid #c0c0c0",
+              paddingBottom: "4px",
+              marginBottom: "15px",
+            }}
+          >
+            <h2
+              style={{
+                borderBottom: "none",
+                paddingBottom: 0,
+                marginBottom: 0,
+              }}
+            >
+              Termos Gerais
+            </h2>
+            <button
+              type="button"
+              onClick={() => handleRestoreDefaultText("termosGeraisTexto")}
+              style={{
+                fontSize: "11px",
+                color: "#4338ca",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              Restaurar texto original
+            </button>
+          </div>
+          {splitParagrafos(
+            configuracoes.termosGeraisTexto || TERMOS_GERAIS_TEXTS.join("\n\n")
+          ).map((texto, index) => (
+            <p
+              key={index}
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) =>
+                handleConfigParagraphChange(
+                  "termosGeraisTexto",
+                  index,
+                  e.currentTarget.innerText,
+                  TERMOS_GERAIS_TEXTS.join("\n\n")
+                )
+              }
+              style={{
+                outline: "none",
+                cursor: "text",
+                borderBottom:
+                  configuracoes.termosGeraisTexto !==
+                  configuracoesOriginais.termosGeraisTexto
+                    ? "1px dashed #22c55e"
+                    : "1px dashed transparent",
+                backgroundColor:
+                  configuracoes.termosGeraisTexto !==
+                  configuracoesOriginais.termosGeraisTexto
+                    ? "#f0fdf4"
+                    : "transparent",
+              }}
+            >
+              {texto}
+            </p>
+          ))}
         </div>
 
         <div className="ambientes-section">
@@ -1184,18 +1398,62 @@ export default function VisualizadorPdfLaudo() {
 
         <div style={{ height: "35px" }}></div>
 
-        <h2 className="assinaturas-titulo">ASSINATURAS</h2>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "8px",
+            borderBottom: "1px solid #c0c0c0",
+            paddingBottom: "4px",
+            marginBottom: "20px",
+          }}
+        >
+          <h2
+            className="assinaturas-titulo"
+            style={{ borderBottom: "none", marginBottom: 0, paddingBottom: 0 }}
+          >
+            ASSINATURAS
+          </h2>
+          <button
+            type="button"
+            onClick={() => handleRestoreDefaultText("assinaturaTexto")}
+            style={{
+              fontSize: "11px",
+              color: "#4338ca",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            Restaurar texto original
+          </button>
+        </div>
 
-        <p className="assinaturas-texto">
-          Declaram as partes estarem cientes das imagens e textos apresentados
-          no presente termo, estando em conformidade com a vontade dos
-          contratantes que, "As Partes e as testemunhas envolvidas neste
-          instrumento afirmam e declaram que esse poderá ser assinado
-          presencialmente ou eletronicamente, sendo as assinaturas consideradas
-          válidas, vinculantes e executáveis, desde que firmadas pelos
-          representantes legais das Partes. e pôr estarem justos e contratados,
-          assinam o presente, para um só efeito, diante de 02 (duas)
-          testemunhas.
+        <p
+          className="assinaturas-texto"
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={(e) =>
+            handleConfigTextChange("assinaturaTexto", e.currentTarget.innerText)
+          }
+          style={{
+            outline: "none",
+            cursor: "text",
+            borderBottom:
+              configuracoes.assinaturaTexto !==
+              configuracoesOriginais.assinaturaTexto
+                ? "1px dashed #22c55e"
+                : "1px dashed transparent",
+            backgroundColor:
+              configuracoes.assinaturaTexto !==
+              configuracoesOriginais.assinaturaTexto
+                ? "#f0fdf4"
+                : "transparent",
+          }}
+        >
+          {configuracoes.assinaturaTexto || ASSINATURA_TEXTO}
         </p>
 
         <div
@@ -1425,6 +1683,9 @@ export default function VisualizadorPdfLaudo() {
     );
   };
 
+  const hasPendingChanges =
+    Object.keys(editedFields).length > 0 || configuracoesAlteradas();
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -1444,7 +1705,7 @@ export default function VisualizadorPdfLaudo() {
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
             {/* Botão Salvar (Apenas se houver alterações) */}
-            {Object.keys(editedFields).length > 0 && (
+            {hasPendingChanges && (
               <Button
                 onClick={handleSaveChanges}
                 disabled={isSaving}

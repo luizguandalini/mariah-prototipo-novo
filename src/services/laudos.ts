@@ -331,6 +331,9 @@ class LaudosService {
     espacamentoHorizontal?: number;
     espacamentoVertical?: number;
     margemPagina?: number;
+    metodologiaTexto?: string | null;
+    termosGeraisTexto?: string | null;
+    assinaturaTexto?: string | null;
   }): Promise<any> {
     return api.put(`/users/configuracoes-pdf`, config, true);
   }
