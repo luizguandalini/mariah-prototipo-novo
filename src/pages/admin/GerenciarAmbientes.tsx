@@ -58,6 +58,7 @@ function SortableAmbienteCard({
   setDialogEditarAmbientes,
   ambientes,
   loading,
+  tiposImovelPorUso,
 }: {
   ambiente: Ambiente;
   expandedAmbientes: Set<string>;
@@ -92,6 +93,7 @@ function SortableAmbienteCard({
   }) => void;
   ambientes: Ambiente[];
   loading?: boolean;
+  tiposImovelPorUso: Record<string, string[]>;
 }) {
   const {
     attributes,
@@ -107,6 +109,16 @@ function SortableAmbienteCard({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  const tiposUsoSelecionados = ambiente.tiposUso || [];
+  const tiposImovelFiltrados = tiposUsoSelecionados.length
+    ? Array.from(
+        new Set(
+          tiposUsoSelecionados.flatMap(
+            (tipoUso) => tiposImovelPorUso[tipoUso] || []
+          )
+        )
+      )
+    : [];
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -114,7 +126,9 @@ function SortableAmbienteCard({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={`bg-[var(--bg-secondary)] rounded-xl border-2 transition-all duration-300 ${
-          isDragging ? "border-primary shadow-2xl" : "border-[var(--border-color)]"
+          isDragging
+            ? "border-primary shadow-2xl"
+            : "border-[var(--border-color)]"
         } overflow-hidden shadow-sm`}
       >
         {/* Header do Ambiente */}
@@ -128,7 +142,13 @@ function SortableAmbienteCard({
                 {...listeners}
                 className="drag-handle text-[var(--text-secondary)] hover:text-primary hover:bg-primary/10 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg p-2 transition-all shadow-sm shrink-0"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <circle cx="9" cy="5" r="1.5" fill="currentColor" />
                   <circle cx="9" cy="12" r="1.5" fill="currentColor" />
                   <circle cx="9" cy="19" r="1.5" fill="currentColor" />
@@ -141,11 +161,16 @@ function SortableAmbienteCard({
               <div className="flex-1 min-w-0 overflow-hidden">
                 {/* Linha do Título com Ícone e Botão + */}
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xl shrink-0 cursor-pointer" onClick={() => toggleAmbiente(ambiente.id)}>📁</span>
+                  <span
+                    className="text-xl shrink-0 cursor-pointer"
+                    onClick={() => toggleAmbiente(ambiente.id)}
+                  >
+                    📁
+                  </span>
                   <h3
                     className="text-base sm:text-lg font-bold text-[var(--text-primary)] cursor-pointer hover:text-primary transition-colors break-words line-clamp-2"
                     onClick={() => toggleAmbiente(ambiente.id)}
-                    style={{ wordBreak: 'break-word' }}
+                    style={{ wordBreak: "break-word" }}
                   >
                     {ambiente.nome}
                   </h3>
@@ -173,9 +198,13 @@ function SortableAmbienteCard({
                       👥 Grupo ({ambiente.ambientes?.length || 0})
                     </span>
                   )}
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border transition-colors lg:hidden ${
-                    ambiente.ativo ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
-                  }`}>
+                  <span
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded-full border transition-colors lg:hidden ${
+                      ambiente.ativo
+                        ? "bg-green-500/10 text-green-500 border-green-500/20"
+                        : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
+                    }`}
+                  >
                     {ambiente.ativo ? "Ativo" : "Inativo"}
                   </span>
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-full lg:hidden">
@@ -191,7 +220,9 @@ function SortableAmbienteCard({
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
                   {/* Tipos de Uso */}
                   <div className="w-full lg:w-auto">
-                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 lg:hidden">Uso</p>
+                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 lg:hidden">
+                      Uso
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {Object.values(TipoUso).map((tipo) => (
                         <button
@@ -217,9 +248,11 @@ function SortableAmbienteCard({
 
                   {/* Tipos de Imóvel */}
                   <div className="w-full lg:w-auto">
-                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 lg:hidden">Imóvel</p>
+                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 lg:hidden">
+                      Imóvel
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {Object.values(TipoImovel).map((tipo) => (
+                      {tiposImovelFiltrados.map((tipo) => (
                         <button
                           key={tipo}
                           onClick={(e) => {
@@ -243,22 +276,39 @@ function SortableAmbienteCard({
 
             {/* Badges Finais e Botão Expandir (Desktop) */}
             <div className="hidden lg:flex items-center gap-3 pr-5 py-5 border-l border-[var(--border-color)] shrink-0">
-               <span className={`px-3 py-1 text-xs font-bold rounded-full border transition-colors ${
-                  ambiente.ativo ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
-                }`}>
-                  {ambiente.ativo ? "Ativo" : "Inativo"}
-                </span>
-                <span className="px-3 py-1 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-full">
-                  {ambiente.itens?.length || 0} itens
-                </span>
-                <button
-                  onClick={() => toggleAmbiente(ambiente.id)}
-                  className={`p-2 rounded-full hover:bg-primary/10 transition-all ${expandedAmbientes.has(ambiente.id) ? "rotate-180 text-primary" : "text-[var(--text-secondary)]"}`}
+              <span
+                className={`px-3 py-1 text-xs font-bold rounded-full border transition-colors ${
+                  ambiente.ativo
+                    ? "bg-green-500/10 text-green-500 border-green-500/20"
+                    : "bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-color)]"
+                }`}
+              >
+                {ambiente.ativo ? "Ativo" : "Inativo"}
+              </span>
+              <span className="px-3 py-1 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-full">
+                {ambiente.itens?.length || 0} itens
+              </span>
+              <button
+                onClick={() => toggleAmbiente(ambiente.id)}
+                className={`p-2 rounded-full hover:bg-primary/10 transition-all ${
+                  expandedAmbientes.has(ambiente.id)
+                    ? "rotate-180 text-primary"
+                    : "text-[var(--text-secondary)]"
+                }`}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
             </div>
 
             {/* Botão Expandir Mobile (Barra inferior fina) */}
@@ -267,10 +317,27 @@ function SortableAmbienteCard({
               className="lg:hidden w-full py-2 bg-[var(--bg-primary)]/60 hover:bg-primary/5 border-t border-[var(--border-color)] flex items-center justify-center text-[var(--text-secondary)] transition-colors group"
             >
               <span className="text-[10px] font-black uppercase tracking-[0.2em] mr-2 group-hover:text-primary transition-colors">
-                {expandedAmbientes.has(ambiente.id) ? "Recolher Itens" : "Ver Itens"}
+                {expandedAmbientes.has(ambiente.id)
+                  ? "Recolher Itens"
+                  : "Ver Itens"}
               </span>
-              <div className={`transition-transform duration-300 ${expandedAmbientes.has(ambiente.id) ? "rotate-180 text-primary" : ""}`}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <div
+                className={`transition-transform duration-300 ${
+                  expandedAmbientes.has(ambiente.id)
+                    ? "rotate-180 text-primary"
+                    : ""
+                }`}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </div>
@@ -316,22 +383,28 @@ function SortableAmbienteCard({
                     onClick={async () => {
                       // Para grupos, buscar dados completos na API para garantir edição correta
                       if (ambiente.isGrupo && ambiente.ambientes) {
-                         try {
-                           const toastId = toast.loading("Carregando ambientes...");
-                           // Buscar cada ambiente do grupo individualmente para ter os dados completos
-                           const promises = ambiente.ambientes.map(a => ambientesService.buscarAmbiente(a.id));
-                           const ambientesCompletos = await Promise.all(promises);
-                           toast.dismiss(toastId);
-                           
-                           setDialogEditarAmbientes({
-                             open: true,
-                             ambientes: ambientesCompletos,
-                           });
-                         } catch (error) {
-                           toast.dismiss();
-                           toast.error("Erro ao carregar detalhes do grupo");
-                           console.error(error);
-                         }
+                        try {
+                          const toastId = toast.loading(
+                            "Carregando ambientes..."
+                          );
+                          // Buscar cada ambiente do grupo individualmente para ter os dados completos
+                          const promises = ambiente.ambientes.map((a) =>
+                            ambientesService.buscarAmbiente(a.id)
+                          );
+                          const ambientesCompletos = await Promise.all(
+                            promises
+                          );
+                          toast.dismiss(toastId);
+
+                          setDialogEditarAmbientes({
+                            open: true,
+                            ambientes: ambientesCompletos,
+                          });
+                        } catch (error) {
+                          toast.dismiss();
+                          toast.error("Erro ao carregar detalhes do grupo");
+                          console.error(error);
+                        }
                       } else {
                         // Para ambiente individual, usar o objeto atual
                         setDialogEditarAmbientes({
@@ -353,9 +426,9 @@ function SortableAmbienteCard({
 
                 {/* Lista de Itens */}
                 {loading ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
                 ) : ambiente.itens && ambiente.itens.length > 0 ? (
                   <div className="space-y-3">
                     {ambiente.itens.map((item) =>
@@ -431,6 +504,19 @@ export default function GerenciarAmbientes() {
     tiposUso: [] as TipoUso[],
     tiposImovel: [] as TipoImovel[],
   });
+  const [tiposImovelPorUso, setTiposImovelPorUso] = useState<
+    Record<string, string[]>
+  >({});
+  const [tiposModalOpen, setTiposModalOpen] = useState(false);
+  const [tiposModalData, setTiposModalData] = useState<
+    { id: string; nome: string; tipoUso: string }[]
+  >([]);
+  const [tiposModalTotal, setTiposModalTotal] = useState(0);
+  const [tiposModalOffset, setTiposModalOffset] = useState(0);
+  const [tiposModalLimit] = useState(10);
+  const [tipoUsoFiltro, setTipoUsoFiltro] = useState<string>("");
+  const [novoTipoNome, setNovoTipoNome] = useState("");
+  const [novoTipoUso, setNovoTipoUso] = useState<string>("Residencial");
 
   // Estados do prompt padrão
   const [defaultPrompt, setDefaultPrompt] = useState("");
@@ -452,7 +538,14 @@ export default function GerenciarAmbientes() {
 
   useEffect(() => {
     carregarAmbientes();
+    carregarTiposImovelDisponiveis();
   }, []);
+
+  useEffect(() => {
+    if (tiposModalOpen) {
+      carregarTiposModal(0, tipoUsoFiltro || undefined);
+    }
+  }, [tiposModalOpen, tipoUsoFiltro]);
 
   // Carregar prompt padrão quando expandir a seção
   useEffect(() => {
@@ -474,6 +567,37 @@ export default function GerenciarAmbientes() {
     }
   };
 
+  const carregarTiposImovelDisponiveis = async () => {
+    try {
+      const mapa = await ambientesService.listarTiposImovelPorUso();
+      setTiposImovelPorUso(mapa || {});
+    } catch (error) {
+      console.error("Erro ao carregar tipos de imóvel:", error);
+      setTiposImovelPorUso({
+        Residencial: ["Studio", "Flat"],
+        Comercial: ["Salão", "Loja", "Casa Comercial", "Sala Comercial", "Conjunto Comercial"],
+        Industrial: ["Galpão"],
+      });
+    }
+  };
+
+  const carregarTiposModal = async (offsetParam = 0, tipoUso?: string) => {
+    const response = await ambientesService.listarTiposImovelPaginado(
+      tiposModalLimit,
+      offsetParam,
+      tipoUso
+    );
+    setTiposModalData(
+      response.data.map((item) => ({
+        id: item.id,
+        nome: item.nome,
+        tipoUso: item.tipoUso,
+      }))
+    );
+    setTiposModalTotal(response.total);
+    setTiposModalOffset(offsetParam);
+  };
+
   const salvarDefaultPrompt = async () => {
     try {
       setDefaultPromptSaving(true);
@@ -484,6 +608,52 @@ export default function GerenciarAmbientes() {
       toast.error("Erro ao salvar prompt padrão");
     } finally {
       setDefaultPromptSaving(false);
+    }
+  };
+
+  const criarTipoImovel = async () => {
+    if (!novoTipoNome.trim()) return;
+    try {
+      await ambientesService.criarTipoImovel({
+        nome: novoTipoNome.trim(),
+        tipoUso: novoTipoUso,
+      });
+      setNovoTipoNome("");
+      await carregarTiposModal(0, tipoUsoFiltro || undefined);
+      await carregarTiposImovelDisponiveis();
+      toast.success("Tipo de imóvel criado");
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao criar tipo de imóvel");
+    }
+  };
+
+  const editarTipoImovel = async (
+    id: string,
+    nome: string,
+    tipoUso: string
+  ) => {
+    try {
+      await ambientesService.atualizarTipoImovel(id, { nome, tipoUso });
+      await carregarTiposModal(tiposModalOffset, tipoUsoFiltro || undefined);
+      await carregarTiposImovelDisponiveis();
+      toast.success("Tipo de imóvel atualizado");
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao atualizar tipo de imóvel");
+    }
+  };
+
+  const excluirTipoImovel = async (id: string) => {
+    try {
+      await ambientesService.excluirTipoImovel(id);
+      const novoOffset =
+        tiposModalData.length === 1
+          ? Math.max(0, tiposModalOffset - tiposModalLimit)
+          : tiposModalOffset;
+      await carregarTiposModal(novoOffset, tipoUsoFiltro || undefined);
+      await carregarTiposImovelDisponiveis();
+      toast.success("Tipo de imóvel excluído");
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao excluir tipo de imóvel");
     }
   };
 
@@ -517,7 +687,9 @@ export default function GerenciarAmbientes() {
         0
       );
       // Forçar tipo correto - API retorna strings mas são enums válidos
-      const dataWithoutItems = (response.data as unknown as Ambiente[]).map(a => ({...a, itens: undefined}));
+      const dataWithoutItems = (response.data as unknown as Ambiente[]).map(
+        (a) => ({ ...a, itens: undefined })
+      );
       setAmbientes(dataWithoutItems);
       setHasMore(response.hasMore);
       setOffset(limit);
@@ -542,12 +714,14 @@ export default function GerenciarAmbientes() {
       );
       setAmbientes((prev) => [
         ...prev,
-        ...((response.data as unknown as Ambiente[]).map(a => ({...a, itens: undefined}))),
+        ...(response.data as unknown as Ambiente[]).map((a) => ({
+          ...a,
+          itens: undefined,
+        })),
       ]);
       setHasMore(response.hasMore);
       setOffset((prev) => prev + limit);
       // Não expandir novos ambientes automaticamente
-
     } catch (error) {
       toast.error("Erro ao carregar mais ambientes");
       console.error("Erro ao carregar mais ambientes:", error);
@@ -584,7 +758,7 @@ export default function GerenciarAmbientes() {
 
   const toggleAmbiente = async (id: string) => {
     const isExpanding = !expandedAmbientes.has(id);
-    
+
     setExpandedAmbientes((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -597,36 +771,42 @@ export default function GerenciarAmbientes() {
 
     // Se estiver expandindo e não tiver itens, buscar da API
     if (isExpanding) {
-        const ambiente = ambientes.find(a => a.id === id);
-        // Se já tiver itens carregados, não precisa buscar de novo
-        if (ambiente && (!ambiente.itens || ambiente.itens.length === 0)) {
-            // Verificar se é grupo para buscar itens do ambiente principal do grupo ou do próprio
-             const ambienteIdBusca =
-               ambiente.isGrupo && ambiente.ambientes && ambiente.ambientes.length > 0
-                 ? ambiente.ambientes[0].id
-                 : ambiente.id;
+      const ambiente = ambientes.find((a) => a.id === id);
+      // Se já tiver itens carregados, não precisa buscar de novo
+      if (ambiente && (!ambiente.itens || ambiente.itens.length === 0)) {
+        // Verificar se é grupo para buscar itens do ambiente principal do grupo ou do próprio
+        const ambienteIdBusca =
+          ambiente.isGrupo &&
+          ambiente.ambientes &&
+          ambiente.ambientes.length > 0
+            ? ambiente.ambientes[0].id
+            : ambiente.id;
 
-            try {
-                setLoadingItems(prev => new Set(prev).add(id));
-                const itens = await ambientesService.listarItensAmbiente(ambienteIdBusca);
-                
-                setAmbientes(prev => prev.map(a => {
-                    if (a.id === id) {
-                        return { ...a, itens };
-                    }
-                    return a;
-                }));
-            } catch (error) {
-                console.error("Erro ao carregar itens do ambiente:", error);
-                toast.error("Erro ao carregar itens");
-            } finally {
-                setLoadingItems(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(id);
-                    return newSet;
-                });
-            }
+        try {
+          setLoadingItems((prev) => new Set(prev).add(id));
+          const itens = await ambientesService.listarItensAmbiente(
+            ambienteIdBusca
+          );
+
+          setAmbientes((prev) =>
+            prev.map((a) => {
+              if (a.id === id) {
+                return { ...a, itens };
+              }
+              return a;
+            })
+          );
+        } catch (error) {
+          console.error("Erro ao carregar itens do ambiente:", error);
+          toast.error("Erro ao carregar itens");
+        } finally {
+          setLoadingItems((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
         }
+      }
     }
   };
 
@@ -737,8 +917,8 @@ export default function GerenciarAmbientes() {
                 : undefined,
           };
           const novoAmbiente = await ambientesService.criarAmbiente(data);
-          
-          setAmbientes(prev => [...prev, novoAmbiente]);
+
+          setAmbientes((prev) => [...prev, novoAmbiente]);
           toast.success("Ambiente criado com sucesso!");
         } else if (dialog.mode === "edit" && dialog.data) {
           const data: UpdateAmbienteDto = {
@@ -748,42 +928,67 @@ export default function GerenciarAmbientes() {
             tiposUso: formData.tiposUso,
             tiposImovel: formData.tiposImovel,
           };
-          const ambienteAtualizado = await ambientesService.atualizarAmbiente(dialog.data.id, data);
-          
-          setAmbientes(prev => {
+          const ambienteAtualizado = await ambientesService.atualizarAmbiente(
+            dialog.data.id,
+            data
+          );
+
+          setAmbientes((prev) => {
             // 1. Atualizar se estiver na raiz
-            let newAmbientes = prev.map(a => a.id === ambienteAtualizado.id ? {...a, ...ambienteAtualizado, itens: a.itens} : a);
-            
+            let newAmbientes = prev.map((a) =>
+              a.id === ambienteAtualizado.id
+                ? { ...a, ...ambienteAtualizado, itens: a.itens }
+                : a
+            );
+
             // 2. Atualizar se estiver dentro de um grupo (atualização manual para feedback imediato)
-            newAmbientes = newAmbientes.map(a => {
+            newAmbientes = newAmbientes.map((a) => {
               if (a.isGrupo && a.ambientes) {
-                const subIndex = a.ambientes.findIndex(sub => sub.id === ambienteAtualizado.id);
+                const subIndex = a.ambientes.findIndex(
+                  (sub) => sub.id === ambienteAtualizado.id
+                );
                 if (subIndex >= 0) {
                   const newSubs = [...a.ambientes];
-                  newSubs[subIndex] = { ...newSubs[subIndex], ...ambienteAtualizado };
-                  
+                  newSubs[subIndex] = {
+                    ...newSubs[subIndex],
+                    ...ambienteAtualizado,
+                  };
+
                   // OPTIMISTIC UPDATE: Recalcular nome do grupo se for apenas concatenação
                   // Isso garante feedback imediato no CARD do grupo (ex: "Varanda + SACADA" -> "Varanda + SLA")
-                  const novoNomeGrupo = newSubs.map(s => s.nome).join(" + ");
-                  
+                  const novoNomeGrupo = newSubs.map((s) => s.nome).join(" + ");
+
                   return { ...a, nome: novoNomeGrupo, ambientes: newSubs };
                 }
               }
               return a;
             });
-            
+
             return newAmbientes;
           });
 
           // 3. Se fizer parte de um grupo, buscar o grupo atualizado do servidor
           // (Importante caso o backend renomeie o grupo automaticamente baseado nos filhos)
-          const parentGroup = ambientes.find(a => a.isGrupo && a.ambientes?.some(sub => sub.id === ambienteAtualizado.id));
+          const parentGroup = ambientes.find(
+            (a) =>
+              a.isGrupo &&
+              a.ambientes?.some((sub) => sub.id === ambienteAtualizado.id)
+          );
           if (parentGroup) {
-             ambientesService.buscarAmbiente(parentGroup.id)
-               .then(freshGroup => {
-                 setAmbientes(prev => prev.map(a => a.id === freshGroup.id ? {...freshGroup, itens: a.itens} : a));
-               })
-               .catch(err => console.error("Erro ao atualizar grupo pai:", err));
+            ambientesService
+              .buscarAmbiente(parentGroup.id)
+              .then((freshGroup) => {
+                setAmbientes((prev) =>
+                  prev.map((a) =>
+                    a.id === freshGroup.id
+                      ? { ...freshGroup, itens: a.itens }
+                      : a
+                  )
+                );
+              })
+              .catch((err) =>
+                console.error("Erro ao atualizar grupo pai:", err)
+              );
           }
 
           toast.success("Ambiente atualizado com sucesso!");
@@ -825,67 +1030,73 @@ export default function GerenciarAmbientes() {
         try {
           // Precisamos encontrar qual CARD na tela corresponde ao ambienteId onde o item foi salvo.
           // O 'dialog.ambienteId' pode ser o ID de um ambiente dentro de um grupo.
-          
-          setAmbientes((prev) => 
+
+          setAmbientes((prev) =>
             prev.map((ambienteCard) => {
-               // Verifica se o dialog.ambienteId é o ID deste card OU o ID do primeiro ambiente deste grupo
-               const isTarget = 
-                 ambienteCard.id === dialog.ambienteId || 
-                 (ambienteCard.isGrupo && ambienteCard.ambientes?.[0]?.id === dialog.ambienteId);
-               
-               if (isTarget) {
-                 // Se temos o novo item retornado pela API, adicionamos diretamente (mais rápido)
-                 if (novoItem) {
-                    // Se for subitem, é mais complexo atualizar a árvore manualmente, 
-                    // então buscamos a lista atualizada para garantir consistência.
-                    // Se for item raiz, adicionamos direto.
-                    if (novoItem.parentId) {
-                        // Marcamos para buscar atualização completa abaixo
-                        return ambienteCard; 
-                    } else {
-                        return {
-                            ...ambienteCard,
-                            itens: [...(ambienteCard.itens || []), novoItem]
-                        };
-                    }
-                 }
-                 
-                 // Se foi edição
-                 if (itemAtualizado) {
-                     // Edição simples de item raiz pode ser manual
-                     if (!itemAtualizado.parentId) {
-                         return {
-                             ...ambienteCard,
-                             itens: (ambienteCard.itens || []).map(i => i.id === itemAtualizado!.id ? itemAtualizado! : i)
-                         };
-                     }
-                 }
-                 
-                 return ambienteCard;
-               }
-               return ambienteCard;
+              // Verifica se o dialog.ambienteId é o ID deste card OU o ID do primeiro ambiente deste grupo
+              const isTarget =
+                ambienteCard.id === dialog.ambienteId ||
+                (ambienteCard.isGrupo &&
+                  ambienteCard.ambientes?.[0]?.id === dialog.ambienteId);
+
+              if (isTarget) {
+                // Se temos o novo item retornado pela API, adicionamos diretamente (mais rápido)
+                if (novoItem) {
+                  // Se for subitem, é mais complexo atualizar a árvore manualmente,
+                  // então buscamos a lista atualizada para garantir consistência.
+                  // Se for item raiz, adicionamos direto.
+                  if (novoItem.parentId) {
+                    // Marcamos para buscar atualização completa abaixo
+                    return ambienteCard;
+                  } else {
+                    return {
+                      ...ambienteCard,
+                      itens: [...(ambienteCard.itens || []), novoItem],
+                    };
+                  }
+                }
+
+                // Se foi edição
+                if (itemAtualizado) {
+                  // Edição simples de item raiz pode ser manual
+                  if (!itemAtualizado.parentId) {
+                    return {
+                      ...ambienteCard,
+                      itens: (ambienteCard.itens || []).map((i) =>
+                        i.id === itemAtualizado!.id ? itemAtualizado! : i
+                      ),
+                    };
+                  }
+                }
+
+                return ambienteCard;
+              }
+              return ambienteCard;
             })
           );
-          
+
           // ESTRATÉGIA HÍBRIDA:
           // Mesmo tentando atualizar manualmente acima, vamos buscar a lista atualizada do servidor
           // para garantir que sub-itens e ordenação fiquem 100% corretos.
           // O ambienteIdParaBuscar deve ser o ID que usamos para queries de itens (o real).
-          const ambienteIdParaBuscar = dialog.ambienteId; 
+          const ambienteIdParaBuscar = dialog.ambienteId;
 
-          const itensAtualizados = await ambientesService.listarItensAmbiente(ambienteIdParaBuscar);
-          
-          setAmbientes(prev => prev.map(a => {
-             const isTarget = 
-                 a.id === ambienteIdParaBuscar || 
-                 (a.isGrupo && a.ambientes?.[0]?.id === ambienteIdParaBuscar);
+          const itensAtualizados = await ambientesService.listarItensAmbiente(
+            ambienteIdParaBuscar
+          );
 
-            if (isTarget) {
-              return { ...a, itens: itensAtualizados };
-            }
-            return a;
-          }));
+          setAmbientes((prev) =>
+            prev.map((a) => {
+              const isTarget =
+                a.id === ambienteIdParaBuscar ||
+                (a.isGrupo && a.ambientes?.[0]?.id === ambienteIdParaBuscar);
 
+              if (isTarget) {
+                return { ...a, itens: itensAtualizados };
+              }
+              return a;
+            })
+          );
         } catch (err) {
           console.error("Erro ao atualizar lista de itens localmente:", err);
           // Não falhamos o fluxo principal se o refresh visual falhar, pois o item foi criado.
@@ -949,10 +1160,12 @@ export default function GerenciarAmbientes() {
         // Se for grupo, remove todos. Se for único, remove único.
         const ambiente = ambientes.find((a) => a.id === id);
         if (ambiente?.isGrupo && ambiente.ambientes) {
-             const idsParaRemover = ambiente.ambientes.map(a => a.id).concat(id);
-             setAmbientes(prev => prev.filter(a => !idsParaRemover.includes(a.id)));
+          const idsParaRemover = ambiente.ambientes.map((a) => a.id).concat(id);
+          setAmbientes((prev) =>
+            prev.filter((a) => !idsParaRemover.includes(a.id))
+          );
         } else {
-             setAmbientes(prev => prev.filter(a => a.id !== id));
+          setAmbientes((prev) => prev.filter((a) => a.id !== id));
         }
 
         const ambienteAlvo = ambientes.find((a) => a.id === id);
@@ -971,26 +1184,31 @@ export default function GerenciarAmbientes() {
         // Fechar dialog de edição somente se sucesso (ou manter fechado já que removemos da tela)
         setDialogEditarAmbientes({ open: false, ambientes: [] });
         toast.success("Ambiente deletado!");
-
       } else if (type === "item" && ambienteId) {
-         // Remover do estado local imediatamente
-         setAmbientes(prev => prev.map(a => {
+        // Remover do estado local imediatamente
+        setAmbientes((prev) =>
+          prev.map((a) => {
             if (a.id === ambienteId && a.itens) {
-                // Função recursiva para remover item da árvore
-                const removerRecursivo = (itens: ItemAmbiente[]): ItemAmbiente[] => {
-                    return itens.filter(i => i.id !== id).map(i => ({
-                        ...i,
-                        filhos: i.filhos ? removerRecursivo(i.filhos) : []
-                    }));
-                };
-                return { ...a, itens: removerRecursivo(a.itens) };
+              // Função recursiva para remover item da árvore
+              const removerRecursivo = (
+                itens: ItemAmbiente[]
+              ): ItemAmbiente[] => {
+                return itens
+                  .filter((i) => i.id !== id)
+                  .map((i) => ({
+                    ...i,
+                    filhos: i.filhos ? removerRecursivo(i.filhos) : [],
+                  }));
+              };
+              return { ...a, itens: removerRecursivo(a.itens) };
             }
             return a;
-         }));
+          })
+        );
 
         const ambiente = previousAmbientes.find((a) => a.id === ambienteId);
         let ambienteIdReal = ambienteId;
-        
+
         if (
           ambiente?.isGrupo &&
           ambiente.ambientes &&
@@ -1008,8 +1226,10 @@ export default function GerenciarAmbientes() {
       console.error("Erro ao deletar:", error);
       // ROLLBACK: Restaura o estado anterior em caso de erro
       setAmbientes(previousAmbientes);
-      
-      const msg = error?.response?.data?.message || "Erro ao deletar. Alterações desfeitas.";
+
+      const msg =
+        error?.response?.data?.message ||
+        "Erro ao deletar. Alterações desfeitas.";
       toast.error(msg);
     }
   };
@@ -1020,25 +1240,26 @@ export default function GerenciarAmbientes() {
   const handleToggleTipoUso = async (ambienteId: string, tipo: TipoUso) => {
     // 1. Snapshot do estado anterior
     const previousAmbientes = [...ambientes];
-    
+
     // Encontrar o ambiente e verificar ação
     const ambiente = ambientes.find((a) => a.id === ambienteId);
     if (!ambiente) return;
-    
+
     const tiposAtuais = ambiente.tiposUso || [];
     const estaRemovendo = tiposAtuais.includes(tipo);
 
     // 2. Atualização Otimista Imediata
-    setAmbientes((prev) =>
-      prev.map((a) => {
-        if (a.id === ambienteId) {
-            const novosTipos = estaRemovendo 
-                ? (a.tiposUso || []).filter(t => t !== tipo)
-                : [...(a.tiposUso || []), tipo];
+    setAmbientes(
+      (prev) =>
+        prev.map((a) => {
+          if (a.id === ambienteId) {
+            const novosTipos = estaRemovendo
+              ? (a.tiposUso || []).filter((t) => t !== tipo)
+              : [...(a.tiposUso || []), tipo];
             return { ...a, tiposUso: novosTipos };
-        }
-        return a;
-      }) as unknown as Ambiente[]
+          }
+          return a;
+        }) as unknown as Ambiente[]
     );
 
     try {
@@ -1077,17 +1298,18 @@ export default function GerenciarAmbientes() {
     const estaRemovendo = tiposAtuais.includes(tipo);
 
     // 2. Atualização Otimista Imediata
-    setAmbientes((prev) =>
+    setAmbientes(
+      (prev) =>
         prev.map((a) => {
           if (a.id === ambienteId) {
-              const novosTipos = estaRemovendo 
-                  ? (a.tiposImovel || []).filter(t => t !== tipo)
-                  : [...(a.tiposImovel || []), tipo];
-              return { ...a, tiposImovel: novosTipos };
+            const novosTipos = estaRemovendo
+              ? (a.tiposImovel || []).filter((t) => t !== tipo)
+              : [...(a.tiposImovel || []), tipo];
+            return { ...a, tiposImovel: novosTipos };
           }
           return a;
         }) as unknown as Ambiente[]
-      );
+    );
 
     try {
       // 3. Chamada à API
@@ -1096,11 +1318,11 @@ export default function GerenciarAmbientes() {
           ? ambiente.ambientes[0].id
           : ambienteId;
 
-        await (estaRemovendo
+      await (estaRemovendo
         ? ambientesService.removerTipoImovel(ambienteIdReal, tipo)
         : ambientesService.adicionarTipoImovel(ambienteIdReal, tipo));
 
-        // Sucesso
+      // Sucesso
     } catch (error: any) {
       // 4. Rollback em caso de erro
       console.error("Erro ao atualizar tipo de imóvel:", error);
@@ -1123,7 +1345,9 @@ export default function GerenciarAmbientes() {
       >
         <div
           className={`bg-[var(--bg-secondary)] border-2 transition-all duration-300 ${
-            nivel === 0 ? "border-[var(--border-color)]" : "border-[var(--border-color)] opacity-90"
+            nivel === 0
+              ? "border-[var(--border-color)]"
+              : "border-[var(--border-color)] opacity-90"
           } rounded-lg p-4 shadow-sm`}
         >
           <div className="flex items-start gap-3">
@@ -1149,11 +1373,13 @@ export default function GerenciarAmbientes() {
                 <p className="text-xs font-bold text-[var(--text-secondary)] opacity-60 mb-1">
                   PROMPT:
                 </p>
-                <p className="text-sm text-[var(--text-primary)] font-mono break-words">{item.prompt}</p>
+                <p className="text-sm text-[var(--text-primary)] font-mono break-words">
+                  {item.prompt}
+                </p>
               </div>
 
               <div className="flex gap-2">
-                 <button
+                <button
                   onClick={() =>
                     abrirDialog(
                       "subitem",
@@ -1222,13 +1448,22 @@ export default function GerenciarAmbientes() {
               <span>Arraste os blocos para reorganizar</span>
             </div>
           </div>
-          <Button
-            variant="primary"
-            className="w-full sm:w-auto"
-            onClick={() => abrirDialog("ambiente", "create")}
-          >
-            ➕ Novo Ambiente
-          </Button>
+          <div className="flex w-full sm:w-auto gap-2">
+            <Button
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={() => setTiposModalOpen(true)}
+            >
+              🏷️ Tipos de Imóvel
+            </Button>
+            <Button
+              variant="primary"
+              className="w-full sm:w-auto"
+              onClick={() => abrirDialog("ambiente", "create")}
+            >
+              ➕ Novo Ambiente
+            </Button>
+          </div>
         </div>
 
         {/* Seção do Prompt Padrão - Minimizável */}
@@ -1255,8 +1490,23 @@ export default function GerenciarAmbientes() {
                 </p>
               </div>
             </div>
-            <div className={`p-2 rounded-full hover:bg-primary/10 transition-all ${defaultPromptExpanded ? "rotate-180 text-primary" : "text-[var(--text-secondary)]"}`}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <div
+              className={`p-2 rounded-full hover:bg-primary/10 transition-all ${
+                defaultPromptExpanded
+                  ? "rotate-180 text-primary"
+                  : "text-[var(--text-secondary)]"
+              }`}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
@@ -1293,7 +1543,13 @@ export default function GerenciarAmbientes() {
                           maxLength={1000}
                         />
                         <div className="absolute bottom-3 right-3 text-sm text-[var(--text-secondary)]">
-                          <span className={defaultPrompt.length >= 900 ? "text-orange-500" : ""}>
+                          <span
+                            className={
+                              defaultPrompt.length >= 900
+                                ? "text-orange-500"
+                                : ""
+                            }
+                          >
                             {defaultPrompt.length}
                           </span>
                           <span className="opacity-50">/1000</span>
@@ -1302,7 +1558,8 @@ export default function GerenciarAmbientes() {
 
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-[var(--text-secondary)] opacity-70">
-                          💡 Exemplo: "Analise a imagem fornecida de forma técnica e detalhada, identificando..."
+                          💡 Exemplo: "Analise a imagem fornecida de forma
+                          técnica e detalhada, identificando..."
                         </p>
                         <Button
                           variant="primary"
@@ -1332,7 +1589,9 @@ export default function GerenciarAmbientes() {
         {loading ? (
           <div className="text-center py-24 transition-colors">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <p className="mt-4 text-[var(--text-secondary)] font-medium">Carregando ambientes...</p>
+            <p className="mt-4 text-[var(--text-secondary)] font-medium">
+              Carregando ambientes...
+            </p>
           </div>
         ) : ambientes.length === 0 ? (
           <div className="bg-blue-500/10 border-2 border-blue-500/20 rounded-xl p-8 text-center transition-colors">
@@ -1367,6 +1626,7 @@ export default function GerenciarAmbientes() {
                     setDialogEditarAmbientes={setDialogEditarAmbientes}
                     ambientes={ambientes}
                     loading={loadingItems.has(ambiente.id)}
+                    tiposImovelPorUso={tiposImovelPorUso}
                   />
                 ))}
               </div>
@@ -1376,7 +1636,9 @@ export default function GerenciarAmbientes() {
             {loadingMore && (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="mt-2 text-[var(--text-secondary)]">Carregando mais...</p>
+                <p className="mt-2 text-[var(--text-secondary)]">
+                  Carregando mais...
+                </p>
               </div>
             )}
 
@@ -1392,6 +1654,142 @@ export default function GerenciarAmbientes() {
           </DndContext>
         )}
       </div>
+
+      {tiposModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                Tipos de Imóvel
+              </h3>
+              <button
+                onClick={() => setTiposModalOpen(false)}
+                className="text-[var(--text-secondary)]"
+              >
+                ✖
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={tipoUsoFiltro}
+                onChange={(e) => setTipoUsoFiltro(e.target.value)}
+                className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+              >
+                <option value="">Todos os usos</option>
+                <option value="Residencial">Residencial</option>
+                <option value="Comercial">Comercial</option>
+                <option value="Industrial">Industrial</option>
+              </select>
+              <input
+                value={novoTipoNome}
+                onChange={(e) => setNovoTipoNome(e.target.value)}
+                placeholder="Novo tipo"
+                className="flex-1 px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+              />
+              <select
+                value={novoTipoUso}
+                onChange={(e) => setNovoTipoUso(e.target.value)}
+                className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+              >
+                <option value="Residencial">Residencial</option>
+                <option value="Comercial">Comercial</option>
+                <option value="Industrial">Industrial</option>
+              </select>
+              <Button variant="primary" onClick={criarTipoImovel}>
+                Adicionar
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-[50vh] overflow-auto">
+              {tiposModalData.map((item) => (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[1fr_180px_180px] gap-2 items-center"
+                >
+                  <input
+                    value={item.nome}
+                    onChange={(e) =>
+                      setTiposModalData((prev) =>
+                        prev.map((p) =>
+                          p.id === item.id ? { ...p, nome: e.target.value } : p
+                        )
+                      )
+                    }
+                    className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+                  />
+                  <select
+                    value={item.tipoUso}
+                    onChange={(e) =>
+                      setTiposModalData((prev) =>
+                        prev.map((p) =>
+                          p.id === item.id
+                            ? { ...p, tipoUso: e.target.value }
+                            : p
+                        )
+                      )
+                    }
+                    className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+                  >
+                    <option value="Residencial">Residencial</option>
+                    <option value="Comercial">Comercial</option>
+                    <option value="Industrial">Industrial</option>
+                  </select>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        editarTipoImovel(item.id, item.nome, item.tipoUso)
+                      }
+                    >
+                      Salvar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-red-500 border-red-500/30"
+                      onClick={() => excluirTipoImovel(item.id)}
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
+              <span>Total: {tiposModalTotal}</span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={tiposModalOffset === 0}
+                  onClick={() =>
+                    carregarTiposModal(
+                      Math.max(0, tiposModalOffset - tiposModalLimit),
+                      tipoUsoFiltro || undefined
+                    )
+                  }
+                >
+                  Anterior
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={
+                    tiposModalOffset + tiposModalLimit >= tiposModalTotal
+                  }
+                  onClick={() =>
+                    carregarTiposModal(
+                      tiposModalOffset + tiposModalLimit,
+                      tipoUsoFiltro || undefined
+                    )
+                  }
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dialog de Criação/Edição */}
       <AnimatePresence>
@@ -1413,7 +1811,7 @@ export default function GerenciarAmbientes() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-             <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)] transition-all">
+              <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)] transition-all">
                 {/* Header */}
                 <div className="p-6 border-b border-[var(--border-color)]">
                   <h3 className="text-2xl font-bold text-[var(--text-primary)]">
@@ -1427,7 +1825,7 @@ export default function GerenciarAmbientes() {
                 </div>
 
                 {/* Formulário */}
-                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
                   <div>
                     <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
                       Nome *
@@ -1447,7 +1845,7 @@ export default function GerenciarAmbientes() {
 
                   {dialog.type === "ambiente" && (
                     <>
-                       <div>
+                      <div>
                         <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
                           Descrição
                         </label>
@@ -1478,7 +1876,10 @@ export default function GerenciarAmbientes() {
                           <textarea
                             value={formData.descricao}
                             onChange={(e) =>
-                              setFormData({ ...formData, descricao: e.target.value })
+                              setFormData({
+                                ...formData,
+                                descricao: e.target.value,
+                              })
                             }
                             className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none resize-none transition-all placeholder:opacity-50"
                             rows={2}
@@ -1491,28 +1892,29 @@ export default function GerenciarAmbientes() {
                       )}
 
                       {/* Campo Prompt - SEMPRE obrigatório */}
-                     <div>
-                      <label className="block text-sm font-bold text-amber-600 dark:text-amber-500 mb-2">
-                        🤖 Prompt de IA (uso interno) *
-                      </label>
-                      <textarea
-                        value={formData.prompt}
-                        onChange={(e) =>
-                          setFormData({ ...formData, prompt: e.target.value })
-                        }
-                        className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-amber-500/20 text-[var(--text-primary)] rounded-lg focus:border-amber-500 outline-none resize-none font-mono text-sm transition-all placeholder:opacity-50"
-                        rows={5}
-                        required
-                        placeholder="Digite o prompt para análise deste item..."
-                      />
-                      <p className="text-xs text-amber-600/80 dark:text-amber-500/80 font-semibold mt-1">
-                        ⚠️ Este campo NÃO é exibido ao usuário - apenas para uso interno da IA
-                      </p>
-                    </div>
+                      <div>
+                        <label className="block text-sm font-bold text-amber-600 dark:text-amber-500 mb-2">
+                          🤖 Prompt de IA (uso interno) *
+                        </label>
+                        <textarea
+                          value={formData.prompt}
+                          onChange={(e) =>
+                            setFormData({ ...formData, prompt: e.target.value })
+                          }
+                          className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-amber-500/20 text-[var(--text-primary)] rounded-lg focus:border-amber-500 outline-none resize-none font-mono text-sm transition-all placeholder:opacity-50"
+                          rows={5}
+                          required
+                          placeholder="Digite o prompt para análise deste item..."
+                        />
+                        <p className="text-xs text-amber-600/80 dark:text-amber-500/80 font-semibold mt-1">
+                          ⚠️ Este campo NÃO é exibido ao usuário - apenas para
+                          uso interno da IA
+                        </p>
+                      </div>
                     </>
                   )}
 
-                   <div className="flex items-center gap-3 p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg transition-colors">
+                  <div className="flex items-center gap-3 p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg transition-colors">
                     <input
                       type="checkbox"
                       id="ativo"
@@ -1532,14 +1934,14 @@ export default function GerenciarAmbientes() {
 
                   {/* Botões */}
                   <div className="flex gap-3 pt-4">
-                     <button
+                    <button
                       type="button"
                       onClick={fecharDialog}
                       className="flex-1 px-6 py-3 text-[var(--text-primary)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg font-bold transition-all"
                     >
                       Cancelar
                     </button>
-                     <button
+                    <button
                       type="submit"
                       disabled={
                         !formData.nome ||
@@ -1582,7 +1984,7 @@ export default function GerenciarAmbientes() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-               <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-md w-full border border-[var(--border-color)] transition-all overflow-hidden">
+              <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-md w-full border border-[var(--border-color)] transition-all overflow-hidden">
                 {/* Header */}
                 <div className="p-6 border-b border-[var(--border-color)] bg-gradient-to-r from-primary/10 to-primary/20">
                   <h3 className="text-2xl font-bold text-primary">
@@ -1595,7 +1997,7 @@ export default function GerenciarAmbientes() {
                 </div>
 
                 {/* Conteúdo */}
-                 <div className="p-6">
+                <div className="p-6">
                   <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                     <p className="text-sm text-blue-500">
                       💡 <strong>Como funciona:</strong> Digite o nome de um
@@ -1605,11 +2007,11 @@ export default function GerenciarAmbientes() {
                   </div>
 
                   <div className="space-y-4">
-                     <div>
+                    <div>
                       <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2">
                         Nome do ambiente:
                       </label>
-                       <input
+                      <input
                         type="text"
                         value={dialogGrupo.inputAmbiente || ""}
                         onChange={(e) =>
@@ -1658,7 +2060,7 @@ export default function GerenciarAmbientes() {
                                 );
                             })
                             .map((ambiente) => (
-                               <button
+                              <button
                                 key={ambiente.id}
                                 onClick={() =>
                                   setDialogGrupo({
@@ -1728,7 +2130,7 @@ export default function GerenciarAmbientes() {
                   </div>
 
                   {/* Botões */}
-                   <div className="flex gap-3 mt-6">
+                  <div className="flex gap-3 mt-6">
                     <button
                       onClick={() =>
                         setDialogGrupo({
@@ -1777,7 +2179,7 @@ export default function GerenciarAmbientes() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
             >
-               <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)] transition-all">
+              <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)] transition-all">
                 {/* Header */}
                 <div className="p-6 border-b border-[var(--border-color)] bg-primary transition-colors">
                   <h3 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -1790,7 +2192,7 @@ export default function GerenciarAmbientes() {
 
                 {/* Lista de Ambientes */}
                 <div className="p-6 space-y-3">
-                   {dialogEditarAmbientes.ambientes.length === 0 ? (
+                  {dialogEditarAmbientes.ambientes.length === 0 ? (
                     <div className="text-center py-12 text-[var(--text-secondary)] opacity-50">
                       <p className="text-lg">📭 Nenhum ambiente para editar</p>
                     </div>
@@ -1837,7 +2239,7 @@ export default function GerenciarAmbientes() {
                           </div>
 
                           {/* Botões de Ação */}
-                           <div className="flex gap-2">
+                          <div className="flex gap-2">
                             <button
                               onClick={() => {
                                 setDialogEditarAmbientes({
@@ -1927,7 +2329,7 @@ export default function GerenciarAmbientes() {
                   </p>
                 </div>
 
-                 {/* Botões */}
+                {/* Botões */}
                 <div className="p-6 bg-[var(--bg-primary)] border-t border-[var(--border-color)] flex gap-3 transition-colors">
                   <button
                     onClick={() =>

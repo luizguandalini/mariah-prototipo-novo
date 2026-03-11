@@ -10,6 +10,12 @@ import {
   TipoImovel,
 } from "../types/ambiente";
 
+export interface TipoImovelPaginadoResponse {
+  data: { id: string; nome: string; tipoUso: string; ordem: number; ativo: boolean }[];
+  total: number;
+  hasMore: boolean;
+}
+
 export const ambientesService = {
   // ========== AMBIENTES ==========
 
@@ -135,6 +141,37 @@ export const ambientesService = {
    */
   async deletarAmbiente(id: string): Promise<void> {
     await api.delete(`/ambientes/${id}`, true);
+  },
+
+  async listarTiposImovelPaginado(
+    limit = 10,
+    offset = 0,
+    tipoUso?: string
+  ): Promise<TipoImovelPaginadoResponse> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (tipoUso) {
+      query.set("tipoUso", tipoUso);
+    }
+    return await api.get(`/config/tipos-imovel?${query.toString()}`, true);
+  },
+
+  async listarTiposImovelPorUso(): Promise<Record<string, string[]>> {
+    return await api.get(`/config/tipos-imovel/por-uso`, true);
+  },
+
+  async criarTipoImovel(data: { nome: string; tipoUso: string }) {
+    return await api.post(`/config/tipos-imovel`, data, true);
+  },
+
+  async atualizarTipoImovel(id: string, data: { nome: string; tipoUso: string }) {
+    return await api.put(`/config/tipos-imovel/${id}`, data, true);
+  },
+
+  async excluirTipoImovel(id: string) {
+    return await api.delete(`/config/tipos-imovel/${id}`, true);
   },
 
   /**

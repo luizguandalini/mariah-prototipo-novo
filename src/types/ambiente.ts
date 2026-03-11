@@ -4,11 +4,7 @@ export enum TipoUso {
   INDUSTRIAL = "Industrial",
 }
 
-export enum TipoImovel {
-  CASA = "Casa",
-  APARTAMENTO = "Apartamento",
-  ESTUDIO = "Estudio",
-}
+export type TipoImovel = string;
 
 export interface Ambiente {
   id: string;
