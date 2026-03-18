@@ -215,7 +215,7 @@ function SortableAmbienteCard({
             </div>
 
             {/* Seção de Configurações: Uso e Imóvel */}
-            <div className="px-4 pb-4 lg:p-0 lg:flex lg:items-center overflow-hidden">
+            <div className="px-4 pb-4 lg:p-0 lg:flex lg:items-center overflow-hidden lg:flex-[1.5] lg:min-w-0">
               <div className="bg-[var(--bg-primary)]/40 dark:bg-black/20 rounded-xl p-3 lg:bg-transparent lg:p-0 border lg:border-0 border-[var(--border-color)] lg:mr-4 w-full lg:w-auto">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
                   {/* Tipos de Uso */}
@@ -1669,11 +1669,11 @@ export default function GerenciarAmbientes() {
                 ✖
               </button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <select
                 value={tipoUsoFiltro}
                 onChange={(e) => setTipoUsoFiltro(e.target.value)}
-                className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+                className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded sm:w-auto w-full"
               >
                 <option value="">Todos os usos</option>
                 <option value="Residencial">Residencial</option>
@@ -1684,58 +1684,65 @@ export default function GerenciarAmbientes() {
                 value={novoTipoNome}
                 onChange={(e) => setNovoTipoNome(e.target.value)}
                 placeholder="Novo tipo"
-                className="flex-1 px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+                className="flex-1 px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded w-full"
               />
               <select
                 value={novoTipoUso}
                 onChange={(e) => setNovoTipoUso(e.target.value)}
-                className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
+                className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded sm:w-auto w-full"
               >
                 <option value="Residencial">Residencial</option>
                 <option value="Comercial">Comercial</option>
                 <option value="Industrial">Industrial</option>
               </select>
-              <Button variant="primary" onClick={criarTipoImovel}>
+              <Button variant="primary" onClick={criarTipoImovel} className="w-full sm:w-auto mt-2 sm:mt-0">
                 Adicionar
               </Button>
             </div>
-            <div className="space-y-2 max-h-[50vh] overflow-auto">
+            <div className="space-y-4 sm:space-y-2 max-h-[50vh] overflow-auto pb-2">
               {tiposModalData.map((item) => (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[1fr_180px_180px] gap-2 items-center"
+                  className="flex flex-col sm:grid sm:grid-cols-[1fr_150px_150px] md:grid-cols-[1fr_180px_180px] gap-2 sm:items-center bg-[var(--bg-primary)] sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none border sm:border-0 border-[var(--border-color)]"
                 >
-                  <input
-                    value={item.nome}
-                    onChange={(e) =>
-                      setTiposModalData((prev) =>
-                        prev.map((p) =>
-                          p.id === item.id ? { ...p, nome: e.target.value } : p
+                  <div className="flex flex-col gap-1 sm:block">
+                    <label className="text-xs font-bold text-[var(--text-secondary)] sm:hidden">Nome do Tipo</label>
+                    <input
+                      value={item.nome}
+                      onChange={(e) =>
+                        setTiposModalData((prev) =>
+                          prev.map((p) =>
+                            p.id === item.id ? { ...p, nome: e.target.value } : p
+                          )
                         )
-                      )
-                    }
-                    className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
-                  />
-                  <select
-                    value={item.tipoUso}
-                    onChange={(e) =>
-                      setTiposModalData((prev) =>
-                        prev.map((p) =>
-                          p.id === item.id
-                            ? { ...p, tipoUso: e.target.value }
-                            : p
+                      }
+                      className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded w-full"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 sm:block">
+                    <label className="text-xs font-bold text-[var(--text-secondary)] sm:hidden">Categoria</label>
+                    <select
+                      value={item.tipoUso}
+                      onChange={(e) =>
+                        setTiposModalData((prev) =>
+                          prev.map((p) =>
+                            p.id === item.id
+                              ? { ...p, tipoUso: e.target.value }
+                              : p
+                          )
                         )
-                      )
-                    }
-                    className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded"
-                  >
-                    <option value="Residencial">Residencial</option>
-                    <option value="Comercial">Comercial</option>
-                    <option value="Industrial">Industrial</option>
-                  </select>
-                  <div className="flex gap-2 justify-end">
+                      }
+                      className="px-3 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded w-full"
+                    >
+                      <option value="Residencial">Residencial</option>
+                      <option value="Comercial">Comercial</option>
+                      <option value="Industrial">Industrial</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2 justify-end mt-2 sm:mt-0">
                     <Button
                       size="sm"
+                      className="flex-1 sm:flex-none justify-center"
                       onClick={() =>
                         editarTipoImovel(item.id, item.nome, item.tipoUso)
                       }
@@ -1745,7 +1752,7 @@ export default function GerenciarAmbientes() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="text-red-500 border-red-500/30"
+                      className="flex-1 sm:flex-none justify-center text-red-500 border-red-500/30"
                       onClick={() => excluirTipoImovel(item.id)}
                     >
                       Excluir
@@ -1754,12 +1761,13 @@ export default function GerenciarAmbientes() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
-              <span>Total: {tiposModalTotal}</span>
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-[var(--text-secondary)] gap-4 mt-2">
+              <span className="w-full sm:w-auto text-center sm:text-left font-semibold">Total: {tiposModalTotal}</span>
+              <div className="flex gap-2 w-full sm:w-auto">
                 <Button
                   size="sm"
                   variant="secondary"
+                  className="flex-1 sm:flex-none justify-center"
                   disabled={tiposModalOffset === 0}
                   onClick={() =>
                     carregarTiposModal(
@@ -1773,6 +1781,7 @@ export default function GerenciarAmbientes() {
                 <Button
                   size="sm"
                   variant="secondary"
+                  className="flex-1 sm:flex-none justify-center"
                   disabled={
                     tiposModalOffset + tiposModalLimit >= tiposModalTotal
                   }
