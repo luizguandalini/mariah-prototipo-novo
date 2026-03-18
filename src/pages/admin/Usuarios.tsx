@@ -5,8 +5,10 @@ import { usersService } from "../../services/users";
 import { User } from "../../types/auth";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function Usuarios() {
+  const { user: currentUser } = useAuth();
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -104,6 +106,28 @@ export default function Usuarios() {
     } catch (error) {
       console.error("Erro ao adicionar imagens:", error);
       toast.error("Erro ao adicionar imagens");
+    }
+  };
+
+  const handleDeletarUsuario = async (userId: string, nome: string) => {
+    if (
+      !window.confirm(
+        `Tem certeza que deseja deletar o usuário ${nome}? Esta ação não pode ser desfeita.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await usersService.deletarUsuario(userId);
+      toast.success("Usuário deletado com sucesso!");
+      await carregarUsuarios();
+    } catch (error: any) {
+      console.error("Erro ao deletar usuário:", error);
+      toast.error(error.response?.data?.message || "Erro ao deletar usuário");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -327,9 +351,22 @@ export default function Usuarios() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => abrirModalEditarImagens(user)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="transition-opacity"
                               >
                                 📊 Imagens
+                              </Button>
+                            )}
+
+                            {currentUser?.role === "DEV" && user.role !== "DEV" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleDeletarUsuario(user.id, user.nome)
+                                }
+                                className="transition-opacity border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                              >
+                                🗑️ Deletar
                               </Button>
                             )}
                           </div>
@@ -396,6 +433,17 @@ export default function Usuarios() {
                           className="py-1 px-3 text-xs"
                         >
                           📊 Créditos
+                        </Button>
+                      )}
+
+                      {currentUser?.role === "DEV" && user.role !== "DEV" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeletarUsuario(user.id, user.nome)}
+                          className="py-1 px-3 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                        >
+                          🗑️ Deletar
                         </Button>
                       )}
                     </div>
