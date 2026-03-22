@@ -22,6 +22,9 @@ export interface Ambiente {
   grupoId?: string;
   ambientes?: { id: string; nome: string }[];
   nomes?: string[];
+  totalItensPai?: number;
+  totalItensSemPrompt?: number;
+  totalItensValidosApp?: number;
 }
 
 export interface ItemAmbiente {

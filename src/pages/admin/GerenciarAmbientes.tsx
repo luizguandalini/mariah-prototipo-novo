@@ -119,6 +119,21 @@ function SortableAmbienteCard({
         )
       )
     : [];
+  const itensCarregados = Array.isArray(ambiente.itens) ? ambiente.itens : null;
+  const totalItensPai =
+    itensCarregados !== null
+      ? itensCarregados.length
+      : ambiente.totalItensPai ?? 0;
+  const totalItensSemPrompt =
+    itensCarregados !== null
+      ? itensCarregados.filter(
+          (item) => (item.prompt || "").trim().length === 0
+        ).length
+      : ambiente.totalItensSemPrompt ?? 0;
+  const totalItensValidosApp =
+    ambiente.totalItensValidosApp ??
+    Math.max(totalItensPai - totalItensSemPrompt, 0);
+  const ambienteSemReflexoNoApp = totalItensValidosApp === 0;
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -208,8 +223,13 @@ function SortableAmbienteCard({
                     {ambiente.ativo ? "Ativo" : "Inativo"}
                   </span>
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 rounded-full lg:hidden">
-                    {ambiente.itens?.length || 0} itens
+                    {totalItensPai} itens
                   </span>
+                  {ambienteSemReflexoNoApp && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 rounded-full lg:hidden">
+                      Não reflete no app
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -286,8 +306,13 @@ function SortableAmbienteCard({
                 {ambiente.ativo ? "Ativo" : "Inativo"}
               </span>
               <span className="px-3 py-1 text-xs font-bold bg-primary/10 text-primary border border-primary/20 rounded-full">
-                {ambiente.itens?.length || 0} itens
+                {totalItensPai} itens
               </span>
+              {ambienteSemReflexoNoApp && (
+                <span className="px-3 py-1 text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20 rounded-full">
+                  Não reflete no app
+                </span>
+              )}
               <button
                 onClick={() => toggleAmbiente(ambiente.id)}
                 className={`p-2 rounded-full hover:bg-primary/10 transition-all ${
@@ -355,6 +380,18 @@ function SortableAmbienteCard({
               transition={{ duration: 0.2 }}
             >
               <div className="p-5">
+                {ambienteSemReflexoNoApp && (
+                  <div className="mb-4 p-3 rounded-lg border border-red-500/20 bg-red-500/5 text-red-500 text-sm font-medium">
+                    ⚠️ Este ambiente está sem itens válidos para o app e não vai
+                    refletir no app.
+                  </div>
+                )}
+                {!ambienteSemReflexoNoApp && totalItensSemPrompt > 0 && (
+                  <div className="mb-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-500 text-sm font-medium">
+                    ⚠️ {totalItensSemPrompt} item(ns) sem prompt não vão
+                    refletir no app.
+                  </div>
+                )}
                 {/* Botões de Ação do Ambiente */}
                 <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-[var(--border-color)]">
                   <Button
@@ -444,7 +481,8 @@ function SortableAmbienteCard({
                   <div className="text-center py-8 text-[var(--text-secondary)] bg-[var(--bg-primary)] rounded-lg border-2 border-dashed border-[var(--border-color)] transition-colors">
                     <p>📋 Nenhum item cadastrado neste ambiente</p>
                     <p className="text-sm mt-1 opacity-70">
-                      Clique em "Adicionar Item" para começar
+                      Este ambiente não vai refletir no app até ter item com
+                      prompt
                     </p>
                   </div>
                 )}
@@ -575,7 +613,13 @@ export default function GerenciarAmbientes() {
       console.error("Erro ao carregar tipos de imóvel:", error);
       setTiposImovelPorUso({
         Residencial: ["Studio", "Flat"],
-        Comercial: ["Salão", "Loja", "Casa Comercial", "Sala Comercial", "Conjunto Comercial"],
+        Comercial: [
+          "Salão",
+          "Loja",
+          "Casa Comercial",
+          "Sala Comercial",
+          "Conjunto Comercial",
+        ],
         Industrial: ["Galpão"],
       });
     }
@@ -1336,6 +1380,7 @@ export default function GerenciarAmbientes() {
     ambienteId: string,
     nivel: number = 0
   ): JSX.Element => {
+    const promptValido = (item.prompt || "").trim().length > 0;
     return (
       <motion.div
         key={item.id}
@@ -1367,6 +1412,11 @@ export default function GerenciarAmbientes() {
                 >
                   {item.ativo ? "Ativo" : "Inativo"}
                 </span>
+                {!promptValido && (
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded border bg-red-500/10 text-red-500 border-red-500/20">
+                    Sem prompt
+                  </span>
+                )}
               </div>
 
               <div className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded p-3 mb-3 transition-colors">
@@ -1374,9 +1424,14 @@ export default function GerenciarAmbientes() {
                   PROMPT:
                 </p>
                 <p className="text-sm text-[var(--text-primary)] font-mono break-words">
-                  {item.prompt}
+                  {promptValido ? item.prompt : "Item sem prompt"}
                 </p>
               </div>
+              {!promptValido && (
+                <div className="mb-3 p-2 rounded border border-red-500/20 bg-red-500/5 text-red-500 text-xs font-medium">
+                  Este item não vai refletir no app enquanto estiver sem prompt.
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <button
@@ -1695,7 +1750,11 @@ export default function GerenciarAmbientes() {
                 <option value="Comercial">Comercial</option>
                 <option value="Industrial">Industrial</option>
               </select>
-              <Button variant="primary" onClick={criarTipoImovel} className="w-full sm:w-auto mt-2 sm:mt-0">
+              <Button
+                variant="primary"
+                onClick={criarTipoImovel}
+                className="w-full sm:w-auto mt-2 sm:mt-0"
+              >
                 Adicionar
               </Button>
             </div>
@@ -1706,13 +1765,17 @@ export default function GerenciarAmbientes() {
                   className="flex flex-col sm:grid sm:grid-cols-[1fr_150px_150px] md:grid-cols-[1fr_180px_180px] gap-2 sm:items-center bg-[var(--bg-primary)] sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none border sm:border-0 border-[var(--border-color)]"
                 >
                   <div className="flex flex-col gap-1 sm:block">
-                    <label className="text-xs font-bold text-[var(--text-secondary)] sm:hidden">Nome do Tipo</label>
+                    <label className="text-xs font-bold text-[var(--text-secondary)] sm:hidden">
+                      Nome do Tipo
+                    </label>
                     <input
                       value={item.nome}
                       onChange={(e) =>
                         setTiposModalData((prev) =>
                           prev.map((p) =>
-                            p.id === item.id ? { ...p, nome: e.target.value } : p
+                            p.id === item.id
+                              ? { ...p, nome: e.target.value }
+                              : p
                           )
                         )
                       }
@@ -1720,7 +1783,9 @@ export default function GerenciarAmbientes() {
                     />
                   </div>
                   <div className="flex flex-col gap-1 sm:block">
-                    <label className="text-xs font-bold text-[var(--text-secondary)] sm:hidden">Categoria</label>
+                    <label className="text-xs font-bold text-[var(--text-secondary)] sm:hidden">
+                      Categoria
+                    </label>
                     <select
                       value={item.tipoUso}
                       onChange={(e) =>
@@ -1762,7 +1827,9 @@ export default function GerenciarAmbientes() {
               ))}
             </div>
             <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-[var(--text-secondary)] gap-4 mt-2">
-              <span className="w-full sm:w-auto text-center sm:text-left font-semibold">Total: {tiposModalTotal}</span>
+              <span className="w-full sm:w-auto text-center sm:text-left font-semibold">
+                Total: {tiposModalTotal}
+              </span>
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button
                   size="sm"
