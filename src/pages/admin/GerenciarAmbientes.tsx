@@ -1055,10 +1055,13 @@ export default function GerenciarAmbientes() {
           novoItem = await ambientesService.criarItem(dialog.ambienteId, data);
           toast.success("Item criado com sucesso!");
         } else if (dialog.mode === "edit" && dialog.data) {
+          const itemEditando = dialog.data as ItemAmbiente;
+          const promptTecnicoBloqueado =
+            !!itemEditando.promptTecnicoAutomatizado;
           const data: UpdateItemAmbienteDto = {
             nome: formData.nome,
             descricao: formData.descricao || undefined,
-            prompt: formData.prompt,
+            ...(promptTecnicoBloqueado ? {} : { prompt: formData.prompt }),
             parentId: dialog.parentId,
             ativo: formData.ativo,
           };
@@ -1232,7 +1235,10 @@ export default function GerenciarAmbientes() {
         // Remover do estado local imediatamente
         setAmbientes((prev) =>
           prev.map((a) => {
-            if (a.id === ambienteId && a.itens) {
+            const isTarget =
+              a.id === ambienteId ||
+              (a.isGrupo && a.ambientes?.[0]?.id === ambienteId);
+            if (isTarget && a.itens) {
               // Função recursiva para remover item da árvore
               const removerRecursivo = (
                 itens: ItemAmbiente[]
@@ -1263,6 +1269,21 @@ export default function GerenciarAmbientes() {
         } else {
           await ambientesService.deletarItem(ambienteId, id);
         }
+
+        const itensAtualizados = await ambientesService.listarItensAmbiente(
+          ambienteIdReal
+        );
+        setAmbientes((prev) =>
+          prev.map((a) => {
+            const isTarget =
+              a.id === ambienteIdReal ||
+              (a.isGrupo && a.ambientes?.[0]?.id === ambienteIdReal);
+            if (isTarget) {
+              return { ...a, itens: itensAtualizados };
+            }
+            return a;
+          })
+        );
 
         toast.success("Item deletado!");
       }
@@ -1381,6 +1402,7 @@ export default function GerenciarAmbientes() {
     nivel: number = 0
   ): JSX.Element => {
     const promptValido = (item.prompt || "").trim().length > 0;
+    const promptTecnico = !!item.promptTecnicoAutomatizado;
     return (
       <motion.div
         key={item.id}
@@ -1417,6 +1439,11 @@ export default function GerenciarAmbientes() {
                     Sem prompt
                   </span>
                 )}
+                {promptTecnico && (
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded border bg-blue-500/10 text-blue-500 border-blue-500/20">
+                    Prompt técnico
+                  </span>
+                )}
               </div>
 
               <div className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded p-3 mb-3 transition-colors">
@@ -1430,6 +1457,12 @@ export default function GerenciarAmbientes() {
               {!promptValido && (
                 <div className="mb-3 p-2 rounded border border-red-500/20 bg-red-500/5 text-red-500 text-xs font-medium">
                   Este item não vai refletir no app enquanto estiver sem prompt.
+                </div>
+              )}
+              {promptTecnico && (
+                <div className="mb-3 p-2 rounded border border-blue-500/20 bg-blue-500/5 text-blue-500 text-xs">
+                  Prompt técnico de uso do sistema, gerado automaticamente com
+                  base nos sub-itens.
                 </div>
               )}
 
@@ -1488,6 +1521,15 @@ export default function GerenciarAmbientes() {
       </motion.div>
     );
   };
+
+  const itemDialogAtual =
+    (dialog.type === "item" || dialog.type === "subitem") &&
+    dialog.data &&
+    "prompt" in dialog.data
+      ? (dialog.data as ItemAmbiente)
+      : null;
+  const promptTecnicoSomenteLeitura =
+    dialog.mode === "edit" && !!itemDialogAtual?.promptTecnicoAutomatizado;
 
   return (
     <DashboardLayout>
@@ -1977,15 +2019,27 @@ export default function GerenciarAmbientes() {
                           onChange={(e) =>
                             setFormData({ ...formData, prompt: e.target.value })
                           }
+                          disabled={promptTecnicoSomenteLeitura}
                           className="w-full px-4 py-2 bg-[var(--bg-primary)] border-2 border-amber-500/20 text-[var(--text-primary)] rounded-lg focus:border-amber-500 outline-none resize-none font-mono text-sm transition-all placeholder:opacity-50"
                           rows={5}
                           required
-                          placeholder="Digite o prompt para análise deste item..."
+                          placeholder={
+                            promptTecnicoSomenteLeitura
+                              ? "Prompt técnico gerado automaticamente pelo sistema"
+                              : "Digite o prompt para análise deste item..."
+                          }
                         />
-                        <p className="text-xs text-amber-600/80 dark:text-amber-500/80 font-semibold mt-1">
-                          ⚠️ Este campo NÃO é exibido ao usuário - apenas para
-                          uso interno da IA
-                        </p>
+                        {promptTecnicoSomenteLeitura ? (
+                          <p className="text-xs text-blue-500/80 font-semibold mt-1">
+                            Prompt técnico do sistema: visível, porém não
+                            editável.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-600/80 dark:text-amber-500/80 font-semibold mt-1">
+                            ⚠️ Este campo NÃO é exibido ao usuário - apenas para
+                            uso interno da IA
+                          </p>
+                        )}
                       </div>
                     </>
                   )}

@@ -34,6 +34,7 @@ export interface ItemAmbiente {
   nome: string;
   descricao?: string;
   prompt: string;
+  promptTecnicoAutomatizado?: boolean;
   ordem: number;
   ativo: boolean;
   createdAt: string;
