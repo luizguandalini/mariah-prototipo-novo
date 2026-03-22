@@ -18,6 +18,8 @@ export default function TodosLaudos() {
   const [error, setError] = useState<string | null>(null);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 15;
+  const [totalPaginas, setTotalPaginas] = useState(0);
+  const [totalLaudos, setTotalLaudos] = useState(0);
   const [laudoEditando, setLaudoEditando] = useState<Laudo | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{
     isOpen: boolean;
@@ -59,15 +61,17 @@ export default function TodosLaudos() {
   }, [statusMap]);
 
   useEffect(() => {
-    fetchAllLaudos();
-  }, []);
+    fetchAllLaudos(paginaAtual);
+  }, [paginaAtual]);
 
-  const fetchAllLaudos = async () => {
+  const fetchAllLaudos = async (page: number) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await laudosService.getAllLaudos();
-      setLaudos(data);
+      const response = await laudosService.getAllLaudos(page, itensPorPagina);
+      setLaudos(response.data);
+      setTotalPaginas(response.lastPage);
+      setTotalLaudos(response.total);
     } catch (err) {
       setError("Erro ao carregar laudos");
       console.error(err);
@@ -79,7 +83,10 @@ export default function TodosLaudos() {
   const handleDeleteLaudo = async (id: string) => {
     try {
       await laudosService.deleteLaudo(id);
-      setLaudos((prevLaudos) => prevLaudos.filter((l) => l.id !== id));
+      const proximaPagina =
+        laudos.length === 1 && paginaAtual > 1 ? paginaAtual - 1 : paginaAtual;
+      setPaginaAtual(proximaPagina);
+      await fetchAllLaudos(proximaPagina);
       toast.success("Laudo deletado com sucesso!");
     } catch (err: any) {
       toast.error(err.message || "Erro ao deletar laudo");
@@ -179,11 +186,8 @@ export default function TodosLaudos() {
     );
   };
 
-  // Paginação
-  const totalPaginas = Math.ceil(laudos.length / itensPorPagina);
-  const indexInicio = (paginaAtual - 1) * itensPorPagina;
-  const indexFim = indexInicio + itensPorPagina;
-  const laudosPaginados = laudos.slice(indexInicio, indexFim);
+  const indexInicio = totalLaudos === 0 ? 0 : (paginaAtual - 1) * itensPorPagina;
+  const indexFim = indexInicio + laudos.length;
 
   return (
     <DashboardLayout>
@@ -197,7 +201,7 @@ export default function TodosLaudos() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
             <p className="text-red-800 mb-4">{error}</p>
             <button
-              onClick={fetchAllLaudos}
+              onClick={() => fetchAllLaudos(paginaAtual)}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               Tentar Novamente
@@ -211,7 +215,7 @@ export default function TodosLaudos() {
           <>
             {/* Grid de Cards */}
             <div className="grid grid-cols-1 gap-4">
-                {laudosPaginados.map((laudo) => (
+                {laudos.map((laudo) => (
                 <div
                   key={laudo.id}
                   className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 sm:p-6 hover:shadow-md transition-all duration-300"
@@ -406,7 +410,7 @@ export default function TodosLaudos() {
               <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 mt-6 transition-colors">
                 <div className="text-sm text-[var(--text-secondary)]">
                   Mostrando {indexInicio + 1} a{" "}
-                  {Math.min(indexFim, laudos.length)} de {laudos.length} laudos
+                  {indexFim} de {totalLaudos} laudos
                 </div>
                 <div className="flex gap-2">
                   <button

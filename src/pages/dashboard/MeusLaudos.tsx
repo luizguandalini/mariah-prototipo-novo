@@ -23,6 +23,8 @@ export default function MeusLaudos() {
   const [error, setError] = useState<string | null>(null);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10;
+  const [totalPaginas, setTotalPaginas] = useState(0);
+  const [totalLaudos, setTotalLaudos] = useState(0);
   const [laudoEditando, setLaudoEditando] = useState<Laudo | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{
     isOpen: boolean;
@@ -69,15 +71,20 @@ export default function MeusLaudos() {
   }, [statusMap]);
 
   useEffect(() => {
-    fetchLaudos();
-  }, []);
+    fetchLaudos(paginaAtual, filtroStatus);
+  }, [paginaAtual, filtroStatus]);
 
-  const fetchLaudos = async () => {
+  const fetchLaudos = async (page: number, statusFiltro: string) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await laudosService.getMyLaudos();
-      setLaudos(data);
+
+      const status = statusFiltro === "todos" ? undefined : statusFiltro;
+      const response = await laudosService.getMyLaudos(page, itensPorPagina, status);
+
+      setLaudos(response.data);
+      setTotalPaginas(response.lastPage);
+      setTotalLaudos(response.total);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar laudos");
       console.error("Erro ao buscar laudos:", err);
@@ -95,8 +102,10 @@ export default function MeusLaudos() {
         await refreshUser();
       }
 
-      // Atualiza a lista removendo o laudo deletado
-      setLaudos((prevLaudos) => prevLaudos.filter((l) => l.id !== id));
+      const proximaPagina =
+        laudos.length === 1 && paginaAtual > 1 ? paginaAtual - 1 : paginaAtual;
+      setPaginaAtual(proximaPagina);
+      await fetchLaudos(proximaPagina, filtroStatus);
       toast.success("Laudo deletado com sucesso!");
     } catch (err: any) {
       toast.error(err.message || "Erro ao deletar laudo");
@@ -196,32 +205,12 @@ export default function MeusLaudos() {
     );
   };
 
-  const laudosFiltrados =
-    filtroStatus === "todos"
-      ? laudos
-      : laudos.filter((l) => mapStatus(l.status) === filtroStatus);
-
-  // Paginação
-  const totalPaginas = Math.ceil(laudosFiltrados.length / itensPorPagina);
-  const indexInicio = (paginaAtual - 1) * itensPorPagina;
-  const indexFim = indexInicio + itensPorPagina;
-  const laudosPaginados = laudosFiltrados.slice(indexInicio, indexFim);
-
-  // Reset página ao mudar filtro
   useEffect(() => {
     setPaginaAtual(1);
   }, [filtroStatus]);
 
-  const statusCounts = {
-    todos: laudos.length,
-    concluido: laudos.filter((l) => mapStatus(l.status) === "concluido").length,
-    processando: laudos.filter((l) => mapStatus(l.status) === "processando")
-      .length,
-    nao_iniciado: laudos.filter((l) => mapStatus(l.status) === "nao_iniciado")
-      .length,
-    paralisado: laudos.filter((l) => mapStatus(l.status) === "paralisado")
-      .length,
-  };
+  const indexInicio = totalLaudos === 0 ? 0 : (paginaAtual - 1) * itensPorPagina;
+  const indexFim = indexInicio + laudos.length;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -261,23 +250,11 @@ export default function MeusLaudos() {
         >
           <div className="flex flex-wrap gap-2">
             {[
-              { key: "todos", label: `Todos (${statusCounts.todos})` },
-              {
-                key: "concluido",
-                label: `Concluídos (${statusCounts.concluido})`,
-              },
-              {
-                key: "processando",
-                label: `Processando (${statusCounts.processando})`,
-              },
-              {
-                key: "nao_iniciado",
-                label: `Não Iniciados (${statusCounts.nao_iniciado})`,
-              },
-              {
-                key: "paralisado",
-                label: `Paralisados (${statusCounts.paralisado})`,
-              },
+              { key: "todos", label: "Todos" },
+              { key: "concluido", label: "Concluídos" },
+              { key: "processando", label: "Processando" },
+              { key: "nao_iniciado", label: "Não Iniciados" },
+              { key: "paralisado", label: "Paralisados" },
             ].map((filtro) => (
               <button
                 key={filtro.key}
@@ -305,11 +282,11 @@ export default function MeusLaudos() {
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
             <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={fetchLaudos} variant="outline">
+            <Button onClick={() => fetchLaudos(paginaAtual, filtroStatus)} variant="outline">
               Tentar Novamente
             </Button>
           </div>
-        ) : laudosFiltrados.length === 0 ? (
+        ) : laudos.length === 0 ? (
           <div className="bg-[var(--bg-secondary)] rounded-xl p-12 text-center border border-[var(--border-color)] transition-all">
             <p className="text-[var(--text-secondary)] mb-4">
               {filtroStatus === "todos"
@@ -321,7 +298,7 @@ export default function MeusLaudos() {
         ) : (
           <>
             <div className="grid grid-cols-1 gap-4">
-              {laudosPaginados.map((laudo, index) => {
+              {laudos.map((laudo, index) => {
                 const status = mapStatus(laudo.status);
                 return (
                   <motion.div
@@ -516,8 +493,7 @@ export default function MeusLaudos() {
               <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 mt-6 transition-all">
                 <div className="text-sm text-[var(--text-secondary)]">
                   Mostrando {indexInicio + 1} a{" "}
-                  {Math.min(indexFim, laudosFiltrados.length)} de{" "}
-                  {laudosFiltrados.length} laudos
+                  {indexFim} de {totalLaudos} laudos
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -528,8 +504,20 @@ export default function MeusLaudos() {
                     ← Anterior
                   </button>
                   <div className="flex gap-1">
-                    {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(
-                      (pagina) => (
+                    {Array.from(
+                      { length: Math.min(totalPaginas, 10) },
+                      (_, i) => {
+                        let pagina: number;
+                        if (totalPaginas <= 10) {
+                          pagina = i + 1;
+                        } else if (paginaAtual <= 5) {
+                          pagina = i + 1;
+                        } else if (paginaAtual >= totalPaginas - 4) {
+                          pagina = totalPaginas - 9 + i;
+                        } else {
+                          pagina = paginaAtual - 4 + i;
+                        }
+                        return (
                         <button
                           key={pagina}
                           onClick={() => setPaginaAtual(pagina)}
@@ -541,7 +529,8 @@ export default function MeusLaudos() {
                         >
                           {pagina}
                         </button>
-                      )
+                      );
+                      }
                     )}
                   </div>
                   <button

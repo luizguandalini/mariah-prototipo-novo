@@ -70,6 +70,8 @@ export interface PaginatedResponse<T> {
   lastPage: number;
 }
 
+export type PaginatedLaudosResponse = PaginatedResponse<Laudo>;
+
 export interface Laudo {
   id: string;
   usuarioNome?: string;
@@ -115,7 +117,7 @@ export interface Laudo {
   revestimentos?: Revestimentos;
   mobilias?: Mobilias;
   dadosExtra?: object;
-  
+
   locadorNome?: string;
   locadorAssinatura?: string;
   locatarioNome?: string;
@@ -126,7 +128,6 @@ export interface Laudo {
   testemunha2Rg?: string;
   dataVistoria?: string;
   dataRelatorio?: string;
-
 
   createdAt: string;
   updatedAt: string;
@@ -157,15 +158,47 @@ class LaudosService {
   /**
    * Obtém todos os laudos do usuário logado
    */
-  async getMyLaudos(): Promise<Laudo[]> {
-    return api.get<Laudo[]>("/laudos/me", true);
+  async getMyLaudos(
+    page: number = 1,
+    limit: number = 10,
+    status?: string
+  ): Promise<PaginatedLaudosResponse> {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (status) {
+      query.set("status", status);
+    }
+
+    return api.get<PaginatedLaudosResponse>(
+      `/laudos/me?${query.toString()}`,
+      true
+    );
   }
 
   /**
    * Obtém todos os laudos do sistema (Admin/Dev)
    */
-  async getAllLaudos(): Promise<Laudo[]> {
-    return api.get<Laudo[]>("/laudos", true);
+  async getAllLaudos(
+    page: number = 1,
+    limit: number = 15,
+    status?: string
+  ): Promise<PaginatedLaudosResponse> {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (status) {
+      query.set("status", status);
+    }
+
+    return api.get<PaginatedLaudosResponse>(
+      `/laudos?${query.toString()}`,
+      true
+    );
   }
 
   /**
@@ -192,30 +225,36 @@ class LaudosService {
   /**
    * Atualiza apenas os detalhes do questionário de um laudo
    */
-  async updateLaudoDetalhes(id: string, detalhes: {
-    atestado?: string;
-    analisesHidraulicas?: Partial<AnalisesHidraulicas>;
-    analisesEletricas?: Partial<AnalisesEletricas>;
-    sistemaAr?: Partial<SistemaAr>;
-    mecanismosAbertura?: Partial<MecanismosAbertura>;
-    revestimentos?: Partial<Revestimentos>;
-    mobilias?: Partial<Mobilias>;
-  }): Promise<Laudo> {
+  async updateLaudoDetalhes(
+    id: string,
+    detalhes: {
+      atestado?: string;
+      analisesHidraulicas?: Partial<AnalisesHidraulicas>;
+      analisesEletricas?: Partial<AnalisesEletricas>;
+      sistemaAr?: Partial<SistemaAr>;
+      mecanismosAbertura?: Partial<MecanismosAbertura>;
+      revestimentos?: Partial<Revestimentos>;
+      mobilias?: Partial<Mobilias>;
+    }
+  ): Promise<Laudo> {
     return api.patch<Laudo>(`/laudos/${id}/detalhes`, detalhes, true);
   }
 
   /**
    * Atualiza apenas o endereço de um laudo
    */
-  async updateLaudoEndereco(id: string, endereco: {
-    cep?: string;
-    rua?: string;
-    numero?: string;
-    complemento?: string;
-    bairro?: string;
-    cidade?: string;
-    estado?: string;
-  }): Promise<Laudo> {
+  async updateLaudoEndereco(
+    id: string,
+    endereco: {
+      cep?: string;
+      rua?: string;
+      numero?: string;
+      complemento?: string;
+      bairro?: string;
+      cidade?: string;
+      estado?: string;
+    }
+  ): Promise<Laudo> {
     return api.patch<Laudo>(`/laudos/${id}/endereco`, endereco, true);
   }
 
@@ -269,7 +308,9 @@ class LaudosService {
     limit: number = 20
   ): Promise<PaginatedResponse<ImagemLaudo>> {
     return api.get(
-      `/uploads/laudo/${laudoId}/ambiente/${encodeURIComponent(ambiente)}/imagens?page=${page}&limit=${limit}`,
+      `/uploads/laudo/${laudoId}/ambiente/${encodeURIComponent(
+        ambiente
+      )}/imagens?page=${page}&limit=${limit}`,
       true
     );
   }
