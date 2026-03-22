@@ -31,43 +31,49 @@ export default function MeusLaudos() {
     id: string;
     endereco: string;
   }>({ isOpen: false, id: "", endereco: "" });
-  const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(null);
-  
+  const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(
+    null
+  );
+
   // WebSocket Hook
   const { progressMap, statusMap, joinLaudo, leaveLaudo } = useQueueSocket();
 
   // Entrar nas salas dos laudos ao carregar e quando a lista mudar
   useEffect(() => {
-    laudos.forEach(laudo => {
-       // Join logic: join all to listen for starts, or just active ones?
-       // Joining all lets us know when any laudo starts processing.
-       joinLaudo(laudo.id);
+    laudos.forEach((laudo) => {
+      // Join logic: join all to listen for starts, or just active ones?
+      // Joining all lets us know when any laudo starts processing.
+      joinLaudo(laudo.id);
     });
-    
+
     return () => {
-        laudos.forEach(laudo => leaveLaudo(laudo.id));
+      laudos.forEach((laudo) => leaveLaudo(laudo.id));
     };
   }, [laudos, joinLaudo, leaveLaudo]);
 
   // Atualizar status localmente quando receber via WS
   useEffect(() => {
-     if (Object.keys(statusMap).length > 0) {
-         setLaudos(prev => prev.map(l => {
-             if (statusMap[l.id]) {
-                 // Map WS status (processing, completed, error) to Frontend status
-                 // WS sends lowercase: processing, completed
-                 const wsStatus = statusMap[l.id].toUpperCase();
-                 
-                 // Se completou, vamos garantir que o status seja CONCLUIDO para liberar o botão PDF
-                 if (wsStatus === 'COMPLETED') return { ...l, status: 'CONCLUIDO' as any };
-                 if (wsStatus === 'PROCESSING') return { ...l, status: 'EM_ANDAMENTO' as any };
-                 if (wsStatus === 'ERROR') return { ...l, status: 'ERROR' as any }; // ou lidar com erro
-                 
-                 return { ...l, status: wsStatus as any };
-             }
-             return l;
-         }));
-     }
+    if (Object.keys(statusMap).length > 0) {
+      setLaudos((prev) =>
+        prev.map((l) => {
+          if (statusMap[l.id]) {
+            // Map WS status (processing, completed, error) to Frontend status
+            // WS sends lowercase: processing, completed
+            const wsStatus = statusMap[l.id].toUpperCase();
+
+            // Se completou, vamos garantir que o status seja CONCLUIDO para liberar o botão PDF
+            if (wsStatus === "COMPLETED")
+              return { ...l, status: "CONCLUIDO" as any };
+            if (wsStatus === "PROCESSING")
+              return { ...l, status: "EM_ANDAMENTO" as any };
+            if (wsStatus === "ERROR") return { ...l, status: "ERROR" as any }; // ou lidar com erro
+
+            return { ...l, status: wsStatus as any };
+          }
+          return l;
+        })
+      );
+    }
   }, [statusMap]);
 
   useEffect(() => {
@@ -80,7 +86,11 @@ export default function MeusLaudos() {
       setError(null);
 
       const status = statusFiltro === "todos" ? undefined : statusFiltro;
-      const response = await laudosService.getMyLaudos(page, itensPorPagina, status);
+      const response = await laudosService.getMyLaudos(
+        page,
+        itensPorPagina,
+        status
+      );
 
       setLaudos(response.data);
       setTotalPaginas(response.lastPage);
@@ -96,7 +106,7 @@ export default function MeusLaudos() {
   const handleDeleteLaudo = async (id: string) => {
     try {
       await laudosService.deleteLaudo(id);
-      
+
       // Atualizar créditos do usuário (novo fluxo)
       if (refreshUser) {
         await refreshUser();
@@ -132,7 +142,10 @@ export default function MeusLaudos() {
         )
       );
     } catch (err: any) {
-      if (err.message && err.message.includes("já possui todas as imagens analisadas")) {
+      if (
+        err.message &&
+        err.message.includes("já possui todas as imagens analisadas")
+      ) {
         toast.success("Este laudo já foi totalmente analisado!");
         // Atualizar status do laudo localmente para refletir a realidade
         setLaudos((prevLaudos) =>
@@ -209,7 +222,8 @@ export default function MeusLaudos() {
     setPaginaAtual(1);
   }, [filtroStatus]);
 
-  const indexInicio = totalLaudos === 0 ? 0 : (paginaAtual - 1) * itensPorPagina;
+  const indexInicio =
+    totalLaudos === 0 ? 0 : (paginaAtual - 1) * itensPorPagina;
   const indexFim = indexInicio + laudos.length;
 
   const formatDate = (dateString: string) => {
@@ -238,7 +252,6 @@ export default function MeusLaudos() {
               Gerencie todos os seus laudos imobiliários
             </p>
           </div>
-
         </motion.div>
 
         {/* Filtros */}
@@ -276,13 +289,18 @@ export default function MeusLaudos() {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-[var(--text-secondary)]">Carregando laudos...</p>
+              <p className="text-[var(--text-secondary)]">
+                Carregando laudos...
+              </p>
             </div>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
             <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={() => fetchLaudos(paginaAtual, filtroStatus)} variant="outline">
+            <Button
+              onClick={() => fetchLaudos(paginaAtual, filtroStatus)}
+              variant="outline"
+            >
               Tentar Novamente
             </Button>
           </div>
@@ -293,7 +311,6 @@ export default function MeusLaudos() {
                 ? "Nenhum laudo encontrado. Comece criando seu primeiro laudo!"
                 : "Nenhum laudo encontrado com este status."}
             </p>
-
           </div>
         ) : (
           <>
@@ -312,27 +329,36 @@ export default function MeusLaudos() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           {getStatusBadge(status)}
-                          
+
                           {/* Progress Bar for Processing Status */}
-                          {(status === "processando" || progressMap[laudo.id]) && status !== "concluido" && (
-                            <div className="mt-2 w-full max-w-xs">
+                          {(status === "processando" ||
+                            progressMap[laudo.id]) &&
+                            status !== "concluido" && (
+                              <div className="mt-2 w-full max-w-xs">
                                 <div className="flex justify-between text-xs mb-1 text-[var(--text-secondary)]">
-                                    <span>Analisando imagens...</span>
-                                    <span>
-                                        {progressMap[laudo.id]?.percentage || 0}% 
-                                        ({progressMap[laudo.id]?.processedImages || 0}/{progressMap[laudo.id]?.totalImages || '?'})
-                                    </span>
+                                  <span>Analisando imagens...</span>
+                                  <span>
+                                    {progressMap[laudo.id]?.percentage || 0}% (
+                                    {progressMap[laudo.id]?.processedImages ||
+                                      0}
+                                    /{progressMap[laudo.id]?.totalImages || "?"}
+                                    )
+                                  </span>
                                 </div>
                                 <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <motion.div 
-                                        className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${progressMap[laudo.id]?.percentage || 0}%` }}
-                                        transition={{ duration: 0.5 }}
-                                    />
+                                  <motion.div
+                                    className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                                    initial={{ width: 0 }}
+                                    animate={{
+                                      width: `${
+                                        progressMap[laudo.id]?.percentage || 0
+                                      }%`,
+                                    }}
+                                    transition={{ duration: 0.5 }}
+                                  />
                                 </div>
-                            </div>
-                          )}
+                              </div>
+                            )}
                         </div>
 
                         <div className="mb-3">
@@ -418,14 +444,17 @@ export default function MeusLaudos() {
                         </Link>
 
                         {/* Ver PDF - Always Visible */}
-                        <Link to={`/dashboard/laudos/${laudo.id}/pdf`} state={{ from: location.pathname }}>
+                        <Link
+                          to={`/dashboard/laudos/${laudo.id}/pdf`}
+                          state={{ from: location.pathname }}
+                        >
                           <Button
                             variant="secondary"
                             size="sm"
                             className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
                           >
                             <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                            Ver PDF
+                            Preview
                           </Button>
                         </Link>
 
@@ -492,8 +521,8 @@ export default function MeusLaudos() {
             {totalPaginas > 1 && (
               <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 mt-6 transition-all">
                 <div className="text-sm text-[var(--text-secondary)]">
-                  Mostrando {indexInicio + 1} a{" "}
-                  {indexFim} de {totalLaudos} laudos
+                  Mostrando {indexInicio + 1} a {indexFim} de {totalLaudos}{" "}
+                  laudos
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -518,18 +547,18 @@ export default function MeusLaudos() {
                           pagina = paginaAtual - 4 + i;
                         }
                         return (
-                        <button
-                          key={pagina}
-                          onClick={() => setPaginaAtual(pagina)}
-                          className={`px-3 py-2 rounded-lg transition-colors ${
-                            paginaAtual === pagina
-                              ? "bg-primary text-white"
-                              : "border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-primary)]"
-                          }`}
-                        >
-                          {pagina}
-                        </button>
-                      );
+                          <button
+                            key={pagina}
+                            onClick={() => setPaginaAtual(pagina)}
+                            className={`px-3 py-2 rounded-lg transition-colors ${
+                              paginaAtual === pagina
+                                ? "bg-primary text-white"
+                                : "border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-primary)]"
+                            }`}
+                          >
+                            {pagina}
+                          </button>
+                        );
                       }
                     )}
                   </div>
@@ -559,9 +588,7 @@ export default function MeusLaudos() {
 
         <ConfirmModal
           isOpen={confirmDelete.isOpen}
-          onClose={() =>
-            setConfirmDelete({ ...confirmDelete, isOpen: false })
-          }
+          onClose={() => setConfirmDelete({ ...confirmDelete, isOpen: false })}
           onConfirm={() => handleDeleteLaudo(confirmDelete.id)}
           title="Deletar Laudo"
           message={`Tem certeza que deseja deletar o laudo de "${confirmDelete.endereco}"? Esta ação não pode ser desfeita.`}

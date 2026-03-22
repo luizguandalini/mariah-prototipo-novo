@@ -26,38 +26,44 @@ export default function TodosLaudos() {
     id: string;
     endereco: string;
   }>({ isOpen: false, id: "", endereco: "" });
-  const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(null);
+  const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(
+    null
+  );
 
   // WebSocket Hook
   const { progressMap, statusMap, joinLaudo, leaveLaudo } = useQueueSocket();
 
   // Entrar nas salas dos laudos ao carregar e quando a lista mudar
   useEffect(() => {
-    laudos.forEach(laudo => {
-       joinLaudo(laudo.id);
+    laudos.forEach((laudo) => {
+      joinLaudo(laudo.id);
     });
-    
+
     return () => {
-        laudos.forEach(laudo => leaveLaudo(laudo.id));
+      laudos.forEach((laudo) => leaveLaudo(laudo.id));
     };
   }, [laudos, joinLaudo, leaveLaudo]);
 
   // Atualizar status localmente quando receber via WS
   useEffect(() => {
-     if (Object.keys(statusMap).length > 0) {
-         setLaudos(prev => prev.map(l => {
-             if (statusMap[l.id]) {
-                 const wsStatus = statusMap[l.id].toUpperCase();
-                 
-                 if (wsStatus === 'COMPLETED') return { ...l, status: 'CONCLUIDO' as any };
-                 if (wsStatus === 'PROCESSING') return { ...l, status: 'EM_ANDAMENTO' as any };
-                 if (wsStatus === 'ERROR') return { ...l, status: 'ERROR' as any };
-                 
-                 return { ...l, status: wsStatus as any };
-             }
-             return l;
-         }));
-     }
+    if (Object.keys(statusMap).length > 0) {
+      setLaudos((prev) =>
+        prev.map((l) => {
+          if (statusMap[l.id]) {
+            const wsStatus = statusMap[l.id].toUpperCase();
+
+            if (wsStatus === "COMPLETED")
+              return { ...l, status: "CONCLUIDO" as any };
+            if (wsStatus === "PROCESSING")
+              return { ...l, status: "EM_ANDAMENTO" as any };
+            if (wsStatus === "ERROR") return { ...l, status: "ERROR" as any };
+
+            return { ...l, status: wsStatus as any };
+          }
+          return l;
+        })
+      );
+    }
   }, [statusMap]);
 
   useEffect(() => {
@@ -101,17 +107,20 @@ export default function TodosLaudos() {
     );
   };
 
-  const handleIniciarAnalise = async (laudoId: string, force: boolean = false) => {
+  const handleIniciarAnalise = async (
+    laudoId: string,
+    force: boolean = false
+  ) => {
     try {
       setAnalisandoLaudoId(laudoId);
       await queueService.addToQueue(laudoId, force);
-      
+
       if (force) {
-          toast.success("Reanálise iniciada com sucesso!");
+        toast.success("Reanálise iniciada com sucesso!");
       } else {
-          toast.success("Laudo adicionado à fila de análise!");
+        toast.success("Laudo adicionado à fila de análise!");
       }
-      
+
       // Atualizar status do laudo na lista
       setLaudos((prevLaudos) =>
         prevLaudos.map((l) =>
@@ -119,7 +128,11 @@ export default function TodosLaudos() {
         )
       );
     } catch (err: any) {
-      if (err.message && err.message.includes("já possui todas as imagens analisadas") && !force) {
+      if (
+        err.message &&
+        err.message.includes("já possui todas as imagens analisadas") &&
+        !force
+      ) {
         toast.success("Este laudo já foi totalmente analisado!");
         setLaudos((prevLaudos) =>
           prevLaudos.map((l) =>
@@ -180,19 +193,25 @@ export default function TodosLaudos() {
       <span
         className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm flex items-center gap-1.5 ${bg} ${text}`}
       >
-        <span className={`w-1.5 h-1.5 rounded-full ${status === 'processando' ? 'animate-pulse bg-yellow-400' : ''} ${status === 'concluido' ? 'bg-green-400' : ''} ${status === 'paralisado' ? 'bg-red-400' : ''} ${status === 'nao_iniciado' ? 'bg-gray-400' : ''}`}></span>
+        <span
+          className={`w-1.5 h-1.5 rounded-full ${
+            status === "processando" ? "animate-pulse bg-yellow-400" : ""
+          } ${status === "concluido" ? "bg-green-400" : ""} ${
+            status === "paralisado" ? "bg-red-400" : ""
+          } ${status === "nao_iniciado" ? "bg-gray-400" : ""}`}
+        ></span>
         {label}
       </span>
     );
   };
 
-  const indexInicio = totalLaudos === 0 ? 0 : (paginaAtual - 1) * itensPorPagina;
+  const indexInicio =
+    totalLaudos === 0 ? 0 : (paginaAtual - 1) * itensPorPagina;
   const indexFim = indexInicio + laudos.length;
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -209,13 +228,15 @@ export default function TodosLaudos() {
           </div>
         ) : laudos.length === 0 ? (
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl p-12 text-center transition-colors">
-            <p className="text-[var(--text-secondary)] text-lg">Nenhum laudo encontrado</p>
+            <p className="text-[var(--text-secondary)] text-lg">
+              Nenhum laudo encontrado
+            </p>
           </div>
         ) : (
           <>
             {/* Grid de Cards */}
             <div className="grid grid-cols-1 gap-4">
-                {laudos.map((laudo) => (
+              {laudos.map((laudo) => (
                 <div
                   key={laudo.id}
                   className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 sm:p-6 hover:shadow-md transition-all duration-300"
@@ -225,32 +246,56 @@ export default function TodosLaudos() {
                       <div className="flex flex-wrap items-center gap-3 mb-3">
                         {getStatusBadge(mapStatus(laudo.status))}
                         <span className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          <svg
+                            className="w-3.5 h-3.5 opacity-60"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
                           </svg>
-                          {laudo.usuarioNome || 'Usuário'}
+                          {laudo.usuarioNome || "Usuário"}
                           {laudo.usuarioEmail && (
-                            <span className="opacity-50">({laudo.usuarioEmail})</span>
+                            <span className="opacity-50">
+                              ({laudo.usuarioEmail})
+                            </span>
                           )}
                         </span>
-                        
+
                         {/* Progress Bar for Processing Status */}
-                        {(mapStatus(laudo.status) === "processando" || progressMap[laudo.id]) && mapStatus(laudo.status) !== "concluido" && (
-                          <div className="flex-1 min-w-[200px] max-w-xs sm:ml-4">
+                        {(mapStatus(laudo.status) === "processando" ||
+                          progressMap[laudo.id]) &&
+                          mapStatus(laudo.status) !== "concluido" && (
+                            <div className="flex-1 min-w-[200px] max-w-xs sm:ml-4">
                               <div className="flex justify-between text-xs mb-1 text-[var(--text-secondary)]">
-                                  <span>Analisando... ({progressMap[laudo.id]?.processedImages || 0}/{progressMap[laudo.id]?.totalImages || '?'})</span>
-                                  <span>{progressMap[laudo.id]?.percentage || 0}%</span>
+                                <span>
+                                  Analisando... (
+                                  {progressMap[laudo.id]?.processedImages || 0}/
+                                  {progressMap[laudo.id]?.totalImages || "?"})
+                                </span>
+                                <span>
+                                  {progressMap[laudo.id]?.percentage || 0}%
+                                </span>
                               </div>
                               <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                  <motion.div 
-                                      className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
-                                      initial={{ width: 0 }}
-                                      animate={{ width: `${progressMap[laudo.id]?.percentage || 0}%` }}
-                                      transition={{ duration: 0.5 }}
-                                  />
+                                <motion.div
+                                  className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                                  initial={{ width: 0 }}
+                                  animate={{
+                                    width: `${
+                                      progressMap[laudo.id]?.percentage || 0
+                                    }%`,
+                                  }}
+                                  transition={{ duration: 0.5 }}
+                                />
                               </div>
-                          </div>
-                        )}
+                            </div>
+                          )}
                       </div>
 
                       <div className="mb-3">
@@ -262,26 +307,34 @@ export default function TodosLaudos() {
                           {laudo.complemento && <div>{laudo.complemento}</div>}
                           {laudo.bairro && (
                             <div>
-                              <span className="text-[var(--text-secondary)] opacity-60">Bairro:</span>{" "}
+                              <span className="text-[var(--text-secondary)] opacity-60">
+                                Bairro:
+                              </span>{" "}
                               {laudo.bairro}
                             </div>
                           )}
                           <div className="flex flex-wrap gap-4">
                             {laudo.cidade && (
                               <span>
-                                <span className="text-[var(--text-secondary)] opacity-60">Cidade:</span>{" "}
+                                <span className="text-[var(--text-secondary)] opacity-60">
+                                  Cidade:
+                                </span>{" "}
                                 {laudo.cidade}
                               </span>
                             )}
                             {laudo.estado && (
                               <span>
-                                <span className="text-[var(--text-secondary)] opacity-60">Estado:</span>{" "}
+                                <span className="text-[var(--text-secondary)] opacity-60">
+                                  Estado:
+                                </span>{" "}
                                 {laudo.estado}
                               </span>
                             )}
                             {laudo.cep && (
                               <span>
-                                <span className="text-[var(--text-secondary)] opacity-60">CEP:</span>{" "}
+                                <span className="text-[var(--text-secondary)] opacity-60">
+                                  CEP:
+                                </span>{" "}
                                 {laudo.cep}
                               </span>
                             )}
@@ -291,27 +344,35 @@ export default function TodosLaudos() {
 
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-[var(--text-secondary)]">
                         <div>
-                          <span className="text-[var(--text-secondary)] opacity-60">Ambientes:</span>{" "}
+                          <span className="text-[var(--text-secondary)] opacity-60">
+                            Ambientes:
+                          </span>{" "}
                           <span className="font-medium text-[var(--text-primary)]">
                             {laudo.totalAmbientes}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[var(--text-secondary)] opacity-60">Fotos:</span>{" "}
+                          <span className="text-[var(--text-secondary)] opacity-60">
+                            Fotos:
+                          </span>{" "}
                           <span className="font-medium text-[var(--text-primary)]">
                             {laudo.totalFotos}
                           </span>
                         </div>
                         {laudo.tamanho && (
                           <div>
-                            <span className="text-[var(--text-secondary)] opacity-60">Tamanho:</span>{" "}
+                            <span className="text-[var(--text-secondary)] opacity-60">
+                              Tamanho:
+                            </span>{" "}
                             <span className="font-medium text-[var(--text-primary)]">
                               {laudo.tamanho}
                             </span>
                           </div>
                         )}
                         <div>
-                          <span className="text-[var(--text-secondary)] opacity-60">Data:</span>{" "}
+                          <span className="text-[var(--text-secondary)] opacity-60">
+                            Data:
+                          </span>{" "}
                           <span className="font-medium text-[var(--text-primary)]">
                             {formatDate(laudo.createdAt)}
                           </span>
@@ -321,24 +382,24 @@ export default function TodosLaudos() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
-                       {/* Ver Fotos - Always Visible */}
-                       <Link
-                         to={`/dashboard/laudos/${laudo.id}/galeria`}
-                         state={{ from: location.pathname }}
-                         className="w-full sm:w-auto px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm flex items-center justify-center gap-2 group"
-                       >
-                         <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                         Ver Fotos
-                       </Link>
-                       {/* Ver PDF - Always Visible */}
-                       <Link
-                         to={`/dashboard/laudos/${laudo.id}/pdf`}
-                         state={{ from: location.pathname }}
-                         className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm flex items-center justify-center gap-2 group"
-                       >
-                         <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                         Ver PDF
-                       </Link>
+                      {/* Ver Fotos - Always Visible */}
+                      <Link
+                        to={`/dashboard/laudos/${laudo.id}/galeria`}
+                        state={{ from: location.pathname }}
+                        className="w-full sm:w-auto px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm flex items-center justify-center gap-2 group"
+                      >
+                        <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        Ver Fotos
+                      </Link>
+                      {/* Ver PDF - Always Visible */}
+                      <Link
+                        to={`/dashboard/laudos/${laudo.id}/pdf`}
+                        state={{ from: location.pathname }}
+                        className="w-full sm:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm flex items-center justify-center gap-2 group"
+                      >
+                        <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        Preview
+                      </Link>
                       <button
                         onClick={() => setLaudoEditando(laudo)}
                         className="w-full sm:w-auto px-4 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] text-sm font-medium whitespace-nowrap transition-all shadow-sm"
@@ -357,25 +418,34 @@ export default function TodosLaudos() {
                       >
                         🗑️ Deletar
                       </button>
-                      
-                       {/* Iniciar Análise / Reanalisar */}
-                       {(mapStatus(laudo.status) === "nao_iniciado" || 
-                         mapStatus(laudo.status) === "concluido" || 
-                         mapStatus(laudo.status) === "paralisado" ||
-                         mapStatus(laudo.status) === "error") && (
+
+                      {/* Iniciar Análise / Reanalisar */}
+                      {(mapStatus(laudo.status) === "nao_iniciado" ||
+                        mapStatus(laudo.status) === "concluido" ||
+                        mapStatus(laudo.status) === "paralisado" ||
+                        mapStatus(laudo.status) === "error") && (
                         <button
-                          onClick={() => handleIniciarAnalise(laudo.id, mapStatus(laudo.status) !== "nao_iniciado")}
+                          onClick={() =>
+                            handleIniciarAnalise(
+                              laudo.id,
+                              mapStatus(laudo.status) !== "nao_iniciado"
+                            )
+                          }
                           disabled={analisandoLaudoId === laudo.id}
                           className={`w-full sm:w-auto px-4 py-2 text-white rounded-lg text-sm font-medium whitespace-nowrap transition-all shadow-sm flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed
-                            ${mapStatus(laudo.status) === "nao_iniciado" 
-                              ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                              : "bg-blue-600 hover:bg-blue-700"}
+                            ${
+                              mapStatus(laudo.status) === "nao_iniciado"
+                                ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                                : "bg-blue-600 hover:bg-blue-700"
+                            }
                           `}
                         >
                           {analisandoLaudoId === laudo.id ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              {mapStatus(laudo.status) === "nao_iniciado" ? "Iniciando..." : "Reiniciando..."}
+                              {mapStatus(laudo.status) === "nao_iniciado"
+                                ? "Iniciando..."
+                                : "Reiniciando..."}
                             </>
                           ) : (
                             <>
@@ -386,8 +456,18 @@ export default function TodosLaudos() {
                                 </>
                               ) : (
                                 <>
-                                  <svg className="w-4 h-4 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  <svg
+                                    className="w-4 h-4 group-hover:rotate-180 transition-transform"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
                                   </svg>
                                   Reanalisar
                                 </>
@@ -409,8 +489,8 @@ export default function TodosLaudos() {
             {totalPaginas > 1 && (
               <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-4 mt-6 transition-colors">
                 <div className="text-sm text-[var(--text-secondary)]">
-                  Mostrando {indexInicio + 1} a{" "}
-                  {indexFim} de {totalLaudos} laudos
+                  Mostrando {indexInicio + 1} a {indexFim} de {totalLaudos}{" "}
+                  laudos
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -476,9 +556,7 @@ export default function TodosLaudos() {
 
         <ConfirmModal
           isOpen={confirmDelete.isOpen}
-          onClose={() =>
-            setConfirmDelete({ ...confirmDelete, isOpen: false })
-          }
+          onClose={() => setConfirmDelete({ ...confirmDelete, isOpen: false })}
           onConfirm={() => handleDeleteLaudo(confirmDelete.id)}
           title="Deletar Laudo"
           message={`Tem certeza que deseja deletar o laudo de "${confirmDelete.endereco}"? Esta ação não pode ser desfeita.`}
