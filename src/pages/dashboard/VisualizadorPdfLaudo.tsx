@@ -229,6 +229,7 @@ export default function VisualizadorPdfLaudo() {
   const [ambientes, setAmbientes] = useState<any[]>([]);
   const [detalhes, setDetalhes] = useState<any>(null); // Armazena o objeto completo com availableSections
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [paginaInput, setPaginaInput] = useState("1");
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalImagens, setTotalImagens] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -293,6 +294,31 @@ export default function VisualizadorPdfLaudo() {
       carregarImagens();
     }
   }, [id, paginaAtual, laudo?.id]);
+
+  useEffect(() => {
+    setPaginaInput(String(paginaAtual));
+  }, [paginaAtual]);
+
+  const irParaPagina = useCallback(
+    (pagina: number) => {
+      if (totalPaginas <= 0) return;
+      const paginaNormalizada = Math.min(
+        totalPaginas,
+        Math.max(1, Math.floor(pagina))
+      );
+      setPaginaAtual(paginaNormalizada);
+    },
+    [totalPaginas]
+  );
+
+  const handleIrParaPaginaInput = () => {
+    const pagina = Number(paginaInput.trim());
+    if (!Number.isFinite(pagina) || pagina <= 0) {
+      setPaginaInput(String(paginaAtual));
+      return;
+    }
+    irParaPagina(pagina);
+  };
 
   const carregarAmbientes = async () => {
     if (!id) return;
@@ -1820,10 +1846,18 @@ export default function VisualizadorPdfLaudo() {
             total
           </div>
 
-          <div className="flex items-center justify-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
             <button
-              onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
-              disabled={paginaAtual === 1 || loading}
+              onClick={() => irParaPagina(1)}
+              disabled={paginaAtual === 1 || loading || totalPaginas === 0}
+              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              « Primeira
+            </button>
+
+            <button
+              onClick={() => irParaPagina(paginaAtual - 1)}
+              disabled={paginaAtual === 1 || loading || totalPaginas === 0}
               className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex-1 sm:flex-none justify-center"
             >
               ← Anterior
@@ -1833,14 +1867,48 @@ export default function VisualizadorPdfLaudo() {
               {paginaAtual} / {totalPaginas}
             </span>
 
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={Math.max(totalPaginas, 1)}
+                value={paginaInput}
+                onChange={(e) => setPaginaInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleIrParaPaginaInput();
+                  }
+                }}
+                disabled={loading || totalPaginas === 0}
+                className="w-20 px-2 py-2 rounded-lg border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <button
+                onClick={handleIrParaPaginaInput}
+                disabled={loading || totalPaginas === 0}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Ir
+              </button>
+            </div>
+
             <button
-              onClick={() =>
-                setPaginaAtual((p) => Math.min(totalPaginas, p + 1))
+              onClick={() => irParaPagina(paginaAtual + 1)}
+              disabled={
+                paginaAtual === totalPaginas || loading || totalPaginas === 0
               }
-              disabled={paginaAtual === totalPaginas || loading}
               className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex-1 sm:flex-none justify-center"
             >
               Próxima →
+            </button>
+
+            <button
+              onClick={() => irParaPagina(totalPaginas)}
+              disabled={
+                paginaAtual === totalPaginas || loading || totalPaginas === 0
+              }
+              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Última »
             </button>
           </div>
         </div>
