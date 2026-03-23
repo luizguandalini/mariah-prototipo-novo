@@ -561,6 +561,11 @@ export default function GerenciarAmbientes() {
   const [defaultPromptExpanded, setDefaultPromptExpanded] = useState(false);
   const [defaultPromptLoading, setDefaultPromptLoading] = useState(false);
   const [defaultPromptSaving, setDefaultPromptSaving] = useState(false);
+  const [avariaPrompt, setAvariaPrompt] = useState("");
+  const [avariaPromptDraft, setAvariaPromptDraft] = useState("");
+  const [avariaPromptModalOpen, setAvariaPromptModalOpen] = useState(false);
+  const [avariaPromptLoading, setAvariaPromptLoading] = useState(false);
+  const [avariaPromptSaving, setAvariaPromptSaving] = useState(false);
 
   // Configurar sensores para drag and drop
   const sensors = useSensors(
@@ -592,6 +597,12 @@ export default function GerenciarAmbientes() {
     }
   }, [defaultPromptExpanded]);
 
+  useEffect(() => {
+    if (avariaPromptModalOpen) {
+      carregarAvariaPrompt();
+    }
+  }, [avariaPromptModalOpen]);
+
   const carregarDefaultPrompt = async () => {
     try {
       setDefaultPromptLoading(true);
@@ -602,6 +613,21 @@ export default function GerenciarAmbientes() {
       toast.error("Erro ao carregar prompt padrão");
     } finally {
       setDefaultPromptLoading(false);
+    }
+  };
+
+  const carregarAvariaPrompt = async () => {
+    try {
+      setAvariaPromptLoading(true);
+      const response = await configService.getAvariaPrompt();
+      const value = response.value || "";
+      setAvariaPrompt(value);
+      setAvariaPromptDraft(value);
+    } catch (error) {
+      console.error("Erro ao carregar prompt de avaria:", error);
+      toast.error("Erro ao carregar prompt de avaria");
+    } finally {
+      setAvariaPromptLoading(false);
     }
   };
 
@@ -652,6 +678,29 @@ export default function GerenciarAmbientes() {
       toast.error("Erro ao salvar prompt padrão");
     } finally {
       setDefaultPromptSaving(false);
+    }
+  };
+
+  const salvarAvariaPrompt = async () => {
+    const novoPrompt = avariaPromptDraft.trim();
+
+    if (novoPrompt.length < 25) {
+      toast.error("O prompt de avaria deve ter no mínimo 25 caracteres");
+      return;
+    }
+
+    try {
+      setAvariaPromptSaving(true);
+      await configService.setAvariaPrompt(novoPrompt);
+      setAvariaPrompt(novoPrompt);
+      setAvariaPromptDraft(novoPrompt);
+      setAvariaPromptModalOpen(false);
+      toast.success("Prompt de avaria salvo com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar prompt de avaria:", error);
+      toast.error("Erro ao salvar prompt de avaria");
+    } finally {
+      setAvariaPromptSaving(false);
     }
   };
 
@@ -1682,6 +1731,34 @@ export default function GerenciarAmbientes() {
           </AnimatePresence>
         </motion.div>
 
+        <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-color)] p-4 sm:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-10 h-10 flex items-center justify-center bg-red-500/10 rounded-lg text-red-500 shrink-0">
+                <span className="text-xl">🚨</span>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-[var(--text-primary)] text-sm sm:text-base">
+                  Prompt de Avaria
+                </h3>
+                <p className="text-xs sm:text-sm text-[var(--text-secondary)] opacity-70">
+                  Usado apenas para fotos com avaria: Prompt Base + Prompt de Avaria
+                </p>
+                <p className="text-xs text-[var(--text-secondary)] opacity-70 mt-1">
+                  Atual: {avariaPrompt.trim().length > 0 ? `${avariaPrompt.length} caracteres` : "não configurado"}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={() => setAvariaPromptModalOpen(true)}
+            >
+              📝 Configurar Prompt de Avaria
+            </Button>
+          </div>
+        </div>
+
         {/* Lista de Ambientes */}
         {loading ? (
           <div className="text-center py-24 transition-colors">
@@ -1908,6 +1985,113 @@ export default function GerenciarAmbientes() {
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {avariaPromptModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAvariaPromptModalOpen(false)}
+              className="fixed inset-0 bg-black/60 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            >
+              <div className="w-full sm:max-w-2xl bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[92vh] overflow-hidden">
+                <div className="px-4 py-4 sm:px-6 sm:py-5 border-b border-[var(--border-color)] flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-[var(--text-primary)]">
+                      Prompt de Avaria
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] opacity-80 mt-1">
+                      Aplicado somente em fotos de avaria. Mínimo 25 e máximo 1000 caracteres.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setAvariaPromptModalOpen(false)}
+                    className="w-9 h-9 rounded-lg border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(92vh-76px)]">
+                  {avariaPromptLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <textarea
+                          value={avariaPromptDraft}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value.length <= 1000) {
+                              setAvariaPromptDraft(value);
+                            }
+                          }}
+                          className="w-full h-44 sm:h-52 p-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] placeholder:opacity-50 resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                          placeholder="Descreva como a IA deve analisar exclusivamente as imagens de avaria..."
+                          maxLength={1000}
+                        />
+                        <div className="absolute bottom-3 right-3 text-sm text-[var(--text-secondary)]">
+                          <span
+                            className={
+                              avariaPromptDraft.length >= 900
+                                ? "text-orange-500"
+                                : avariaPromptDraft.trim().length > 0 &&
+                                  avariaPromptDraft.trim().length < 25
+                                ? "text-red-500"
+                                : ""
+                            }
+                          >
+                            {avariaPromptDraft.length}
+                          </span>
+                          <span className="opacity-50">/1000</span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs sm:text-sm text-[var(--text-secondary)] space-y-1">
+                        <p>
+                          Prompt final usado pela IA para avaria: Prompt Base + Prompt de Avaria.
+                        </p>
+                        <p className={avariaPromptDraft.trim().length < 25 ? "text-red-500 font-semibold" : ""}>
+                          O novo prompt precisa ter no mínimo 25 caracteres para salvar.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          className="w-full sm:w-auto"
+                          onClick={() => setAvariaPromptModalOpen(false)}
+                          disabled={avariaPromptSaving}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          variant="primary"
+                          className="w-full sm:w-auto"
+                          onClick={salvarAvariaPrompt}
+                          disabled={avariaPromptSaving || avariaPromptDraft.trim().length < 25}
+                        >
+                          {avariaPromptSaving ? "Salvando..." : "💾 Salvar Prompt de Avaria"}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Dialog de Criação/Edição */}
       <AnimatePresence>
