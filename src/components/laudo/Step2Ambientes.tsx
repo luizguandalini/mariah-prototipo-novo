@@ -40,7 +40,7 @@ export default function Step2Ambientes({ onNext, onBack, initialData = [], visto
 
   const searchInputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Carregar tipos ao abrir seletor
   const loadTipos = useCallback(async (search: string, newOffset: number, append = false) => {
@@ -74,7 +74,7 @@ export default function Step2Ambientes({ onNext, onBack, initialData = [], visto
     setShowSelector(true)
     setSearchTerm('')
     setOffset(0)
-    loadTipos('', 0)
+    // A fetch é delegada ao useEffect que reage a showSelector e searchTerm para evitar dupla-chamada
     setTimeout(() => searchInputRef.current?.focus(), 100)
   }
 
@@ -88,7 +88,7 @@ export default function Step2Ambientes({ onNext, onBack, initialData = [], visto
 
     searchTimeoutRef.current = setTimeout(() => {
       loadTipos(searchTerm, 0)
-    }, 300)
+    }, 800)
 
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)

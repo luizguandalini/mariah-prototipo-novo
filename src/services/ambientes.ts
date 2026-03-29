@@ -169,6 +169,13 @@ export const ambientesService = {
   },
 
   /**
+   * Listar apenas os nomes dos tipos de imóvel vinculados a um Tipo de Uso específico
+   */
+  async listarNomesTiposImovelPorUso(tipoUso: string): Promise<string[]> {
+    return await api.get(`/config/tipos-imovel/nomes/${encodeURIComponent(tipoUso)}`, true);
+  },
+
+  /**
    * Listar nomes de ambientes com paginação e pesquisa inteligente (para web)
    */
   async listarNomesPaginado(

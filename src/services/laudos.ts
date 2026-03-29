@@ -460,7 +460,7 @@ class LaudosService {
         s3Key,
         tipoAmbiente
       }, true);
-      return response.data;
+      return response;
     } catch (error: any) {
       console.error('Erro na classificação IA:', error);
       return { 

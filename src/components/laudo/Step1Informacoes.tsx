@@ -49,8 +49,7 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
   const loadTiposImovel = async (tipoUso: string) => {
     try {
       setLoadingTiposImovel(true)
-      const result = await ambientesService.listarTiposImovelPorUso()
-      const tipos = result[tipoUso] || []
+      const tipos = await ambientesService.listarNomesTiposImovelPorUso(tipoUso)
       setTiposImovel(tipos)
       // Reset tipoImovel se o atual não está na nova lista
       if (formData.tipoImovel && !tipos.includes(formData.tipoImovel)) {
