@@ -14,6 +14,7 @@ export interface User {
   nome: string;
   role: UserRole;
   quantidadeImagens: number;
+  quantidadeClassificacoesWeb: number;
   ativo?: boolean;
 }
 

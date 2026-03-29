@@ -9,6 +9,7 @@ export interface DashboardStats {
   emProcessamento: number;
   concluidos: number;
   imagensRestantes: number;
+  classificacoesWebRestantes: number;
 }
 
 // Interfaces para os questionários
@@ -62,6 +63,13 @@ export interface AmbienteInfo {
   ambiente: string;
   totalImagens: number;
   ordem: number;
+}
+
+export interface AmbienteWebInfo {
+  nomeAmbiente: string;
+  tipoAmbiente: string;
+  ordem: number;
+  totalImagens: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -286,7 +294,7 @@ class LaudosService {
   }
 
   /**
-   * Obtém os ambientes de um laudo com contagem de imagens (paginado)
+   * Obtém os ambientes de um laudo com contagem de imagens (paginado - legado)
    */
   async getAmbientes(
     laudoId: string,
@@ -297,6 +305,38 @@ class LaudosService {
       `/uploads/laudo/${laudoId}/ambientes?page=${page}&limit=${limit}`,
       true
     );
+  }
+
+  /**
+   * Obtém ambientes web do laudo (do JSON + contagem de imagens)
+   */
+  async getAmbientesWeb(laudoId: string): Promise<{
+    ambientes: AmbienteWebInfo[];
+    tipoUso?: string;
+    tipoImovel?: string;
+  }> {
+    return api.get(`/laudos/${laudoId}/ambientes-web`, true);
+  }
+
+  /**
+   * Adiciona um ambiente web ao laudo
+   */
+  async addAmbienteWeb(
+    laudoId: string,
+    nomeAmbiente: string,
+    tipoAmbiente: string
+  ): Promise<AmbienteWebInfo[]> {
+    return api.post(`/laudos/${laudoId}/ambientes-web`, { nomeAmbiente, tipoAmbiente }, true);
+  }
+
+  /**
+   * Remove um ambiente web do laudo
+   */
+  async removeAmbienteWeb(
+    laudoId: string,
+    nomeAmbiente: string
+  ): Promise<AmbienteWebInfo[]> {
+    return api.delete(`/laudos/${laudoId}/ambientes-web/${encodeURIComponent(nomeAmbiente)}`, true);
   }
 
   /**
