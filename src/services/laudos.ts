@@ -349,6 +349,18 @@ class LaudosService {
     );
   }
 
+  async renomearAmbienteWeb(
+    laudoId: string,
+    nomeAtual: string,
+    novoNome: string,
+  ): Promise<AmbienteWebInfo[]> {
+    return api.patch(
+      `/laudos/${laudoId}/ambientes-web/renomear`,
+      { nomeAtual, novoNome },
+      true,
+    );
+  }
+
   /**
    * Remove um ambiente web do laudo
    */

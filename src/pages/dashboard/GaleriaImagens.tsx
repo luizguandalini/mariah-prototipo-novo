@@ -37,6 +37,7 @@ import {
   Sparkles,
   Wallet,
   GripVertical,
+  Pencil,
 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
@@ -56,6 +57,7 @@ const MAX_FILE_SIZE_MB = 15;
 const MAX_UPLOAD_ATTEMPTS = 2;
 const CONCURRENT_UPLOADS = 3;
 const BATCH_DELAY_MS = 200;
+const MAX_AMBIENTE_NOME_LENGTH = 100;
 
 type UploadPreviewStatus = "pending" | "uploading" | "done" | "error";
 
@@ -110,6 +112,7 @@ interface SortableAmbienteCardProps {
   index: number;
   onSelect: (amb: AmbienteWebInfo) => void;
   onDelete: (amb: AmbienteWebInfo) => void;
+  onRename: (amb: AmbienteWebInfo) => void;
   getAmbienteNome: (nomeAmbiente: string) => string;
 }
 
@@ -118,6 +121,7 @@ function SortableAmbienteCard({
   index,
   onSelect,
   onDelete,
+  onRename,
   getAmbienteNome,
 }: SortableAmbienteCardProps) {
   const {
@@ -189,16 +193,28 @@ function SortableAmbienteCard({
         </div>
         <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(amb);
-        }}
-        className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all z-10"
-        title="Remover ambiente"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRename(amb);
+          }}
+          className="p-1.5 bg-primary/80 hover:bg-primary text-white rounded-lg transition-all"
+          title="Renomear ambiente"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(amb);
+          }}
+          className="p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg transition-all"
+          title="Remover ambiente"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -277,6 +293,12 @@ export default function GaleriaImagens() {
     isOpen: boolean;
     nomeAmbiente: string;
   }>({ isOpen: false, nomeAmbiente: "" });
+  const [renameAmbienteModal, setRenameAmbienteModal] = useState<{
+    isOpen: boolean;
+    nomeAtual: string;
+    novoNome: string;
+  }>({ isOpen: false, nomeAtual: "", novoNome: "" });
+  const [renamingAmbiente, setRenamingAmbiente] = useState(false);
 
   // === Estado para edição de item ===
   const [opcoesItensCache, setOpcoesItensCache] = useState<
@@ -518,6 +540,68 @@ export default function GaleriaImagens() {
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover ambiente");
+    }
+  };
+
+  const handleOpenRenameAmbiente = (ambiente: AmbienteWebInfo) => {
+    setRenameAmbienteModal({
+      isOpen: true,
+      nomeAtual: ambiente.nomeAmbiente,
+      novoNome: getAmbienteNome(ambiente.nomeAmbiente),
+    });
+  };
+
+  const handleCloseRenameAmbiente = () => {
+    if (renamingAmbiente) return;
+    setRenameAmbienteModal({ isOpen: false, nomeAtual: "", novoNome: "" });
+  };
+
+  const handleRenameAmbiente = async () => {
+    if (!id || !renameAmbienteModal.nomeAtual) return;
+    const novoNome = renameAmbienteModal.novoNome.trim();
+    if (!novoNome) {
+      toast.error("Informe o novo nome do ambiente.");
+      return;
+    }
+    if (novoNome.length > MAX_AMBIENTE_NOME_LENGTH) {
+      toast.error(
+        `O nome do ambiente deve ter no máximo ${MAX_AMBIENTE_NOME_LENGTH} caracteres.`,
+      );
+      return;
+    }
+    if (novoNome === renameAmbienteModal.nomeAtual) {
+      handleCloseRenameAmbiente();
+      return;
+    }
+
+    try {
+      setRenamingAmbiente(true);
+      const ambientesAtualizados = await laudosService.renomearAmbienteWeb(
+        id,
+        renameAmbienteModal.nomeAtual,
+        novoNome,
+      );
+      const ambientesOrdenados = [...ambientesAtualizados].sort(
+        (a, b) => a.ordem - b.ordem,
+      );
+      setAmbientes(ambientesOrdenados);
+
+      if (ambienteSelecionado?.nomeAmbiente === renameAmbienteModal.nomeAtual) {
+        const ambienteRenomeado = ambientesOrdenados.find(
+          (amb) => amb.nomeAmbiente === novoNome,
+        );
+        if (ambienteRenomeado) {
+          setAmbienteSelecionado(ambienteRenomeado);
+        }
+      }
+
+      toast.success("Nome do ambiente atualizado.");
+      setRenameAmbienteModal({ isOpen: false, nomeAtual: "", novoNome: "" });
+      fetchAmbientes();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao renomear ambiente");
+    } finally {
+      setRenamingAmbiente(false);
     }
   };
 
@@ -1524,6 +1608,7 @@ export default function GaleriaImagens() {
                           amb={amb}
                           index={index}
                           onSelect={handleSelectAmbiente}
+                          onRename={handleOpenRenameAmbiente}
                           onDelete={(ambiente) =>
                             setConfirmDeleteAmbiente({
                               isOpen: true,
@@ -1824,6 +1909,71 @@ export default function GaleriaImagens() {
           cancelLabel="Cancelar"
           variant="danger"
         />
+
+        {renameAmbienteModal.isOpen && (
+          <div className="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center p-4">
+            <div className="w-full max-w-lg rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] p-5">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                Renomear ambiente
+              </h3>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                Atualize o nome do ambiente (máximo de{" "}
+                {MAX_AMBIENTE_NOME_LENGTH} caracteres).
+              </p>
+              <div className="mt-4 space-y-2">
+                <label
+                  htmlFor="novo-nome-ambiente"
+                  className="block text-sm font-medium text-[var(--text-secondary)]"
+                >
+                  Novo nome
+                </label>
+                <input
+                  id="novo-nome-ambiente"
+                  type="text"
+                  maxLength={MAX_AMBIENTE_NOME_LENGTH}
+                  value={renameAmbienteModal.novoNome}
+                  onChange={(e) =>
+                    setRenameAmbienteModal((prev) => ({
+                      ...prev,
+                      novoNome: e.target.value,
+                    }))
+                  }
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    (e.preventDefault(), handleRenameAmbiente())
+                  }
+                  className="w-full px-4 py-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
+                  placeholder="Digite o novo nome do ambiente"
+                  autoFocus
+                />
+                <div className="text-right text-xs text-[var(--text-secondary)]">
+                  {renameAmbienteModal.novoNome.length}/
+                  {MAX_AMBIENTE_NOME_LENGTH}
+                </div>
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseRenameAmbiente}
+                  disabled={renamingAmbiente}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleRenameAmbiente}
+                  disabled={renamingAmbiente}
+                >
+                  {renamingAmbiente ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Salvar"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de confirmar exclusão de ambiente */}
         <ConfirmModal
