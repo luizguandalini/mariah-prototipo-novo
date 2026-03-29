@@ -6,6 +6,7 @@ import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import { laudosService, type ImagemLaudo, type AmbienteInfo } from "../../services/laudos";
+import { ambientesService } from "../../services/ambientes";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
@@ -42,6 +43,49 @@ export default function GaleriaImagens() {
     isOpen: boolean;
     imagemId: string;
   }>({ isOpen: false, imagemId: "" });
+
+  const [opcoesItensCache, setOpcoesItensCache] = useState<Record<string, string[]>>({});
+  const [loadingItemChange, setLoadingItemChange] = useState<string | null>(null);
+
+  // Carregar opções do select para edição rápida de tela
+  useEffect(() => {
+    const fetchOpcoes = async () => {
+      // Tenta achar o primeiro tipoAmbiente válido nas imagens renderizadas
+      const img = imagens.find(i => i.tipoAmbiente);
+      if (img?.tipoAmbiente && !opcoesItensCache[img.tipoAmbiente]) {
+        try {
+          const itensParentes = await ambientesService.getItensPorNomeEnv(img.tipoAmbiente);
+          if (itensParentes && Array.isArray(itensParentes)) {
+            setOpcoesItensCache(prev => ({
+              ...prev,
+              [img.tipoAmbiente!]: itensParentes.map((i: any) => i.nome)
+            }));
+          }
+        } catch (err) {
+          console.error("Erro ao puxar opções de itens", err);
+        }
+      }
+    };
+    if (imagens.length > 0) {
+      fetchOpcoes();
+    }
+  }, [imagens]);
+
+  const handleUpdateItem = async (imgId: string, novoItem: string) => {
+    if (!novoItem) return;
+    try {
+      setLoadingItemChange(imgId);
+      await laudosService.updateImagemMetadata(imgId, { tipo: novoItem });
+      // Update otimista
+      setImagens(prev => prev.map(img => img.id === imgId ? { ...img, tipo: novoItem } : img));
+      toast.success("Item classificado com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao atualizar o item da imagem.");
+      console.error(err);
+    } finally {
+      setLoadingItemChange(null);
+    }
+  };
 
   // Carregar ambientes ao iniciar
   useEffect(() => {
@@ -321,23 +365,50 @@ export default function GaleriaImagens() {
                       
                       {/* Badge de Confirmação IA */}
                       {img.imagemJaFoiAnalisadaPelaIa === "sim" && (
-                        <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1.5 shadow-lg">
+                        <div className="absolute top-10 right-2 bg-green-500 rounded-full p-1.5 shadow-lg z-20">
                           <CheckCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
                         </div>
                       )}
                       
+                      {/* Dropdown de Edição de Itens via IA */}
+                      <div className="absolute top-0 left-0 right-0 bg-black/60 p-2 z-10 flex items-center justify-between pointer-events-auto shadow-sm">
+                        {loadingItemChange === img.id ? (
+                          <div className="flex items-center gap-2 text-white text-xs w-full justify-center">
+                            <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Atualizando...
+                          </div>
+                        ) : (
+                          <div className="relative w-full">
+                            <select 
+                              className="w-full bg-transparent text-white text-xs font-semibold outline-none appearance-none cursor-pointer truncate pr-4 text-center"
+                              value={img.tipo || "Não identificado"}
+                              onChange={(e) => handleUpdateItem(img.id, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <option value="Não identificado" className="text-black">Não identificado</option>
+                              {img.tipoAmbiente && opcoesItensCache[img.tipoAmbiente]?.map(opt => (
+                                <option key={opt} value={opt} className="text-black">{opt}</option>
+                              ))}
+                              {img.tipo && img.tipo !== "Não identificado" && (!img.tipoAmbiente || !opcoesItensCache[img.tipoAmbiente]?.includes(img.tipo)) && (
+                                <option value={img.tipo} className="text-black">{img.tipo}</option>
+                              )}
+                            </select>
+                            <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-white/70 text-[10px]">▼</div>
+                          </div>
+                        )}
+                      </div>
+                      
                       {/* Overlay on Hover */}
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 flex flex-col justify-between text-white text-xs">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span className="text-sm">{formatDate(img.dataCaptura)}</span>
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs">
+                        <div className="flex flex-col items-center gap-1 text-center w-full">
+                          <Calendar className="w-5 h-5 text-gray-300" />
+                          <span className="text-sm font-medium">{formatDate(img.dataCaptura)}</span>
                         </div>
 
                         <button
                           onClick={() =>
                             setConfirmDelete({ isOpen: true, imagemId: img.id })
                           }
-                          className="w-full py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
+                          className="w-full mt-2 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                           <span>Excluir</span>

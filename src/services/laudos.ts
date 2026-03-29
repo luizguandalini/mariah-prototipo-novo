@@ -48,6 +48,7 @@ export interface ImagemLaudo {
   id: string;
   url: string;
   ambiente: string;
+  tipoAmbiente?: string;
   ambienteComentario?: string;
   tipo: string;
   categoria: string;

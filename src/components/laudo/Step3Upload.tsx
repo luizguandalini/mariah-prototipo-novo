@@ -194,7 +194,7 @@ export default function Step3Upload({ onNext, onBack, ambientes, laudoId }: Step
     if (uploaded > 0) {
       toast.success(`${uploaded} imagens enviadas com sucesso!`)
     }
-  }, [imagesByAmbiente, ambientes, laudoId, totalImages, totalUploaded])
+  }, [imagesByAmbiente, ambientes, laudoId, totalImages, totalUploaded, modoIA])
 
   const updateImageStatus = (
     ambienteId: string,

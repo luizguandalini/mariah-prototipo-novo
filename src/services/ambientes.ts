@@ -224,6 +224,10 @@ export const ambientesService = {
   },
 
   // ========== ITENS DE AMBIENTE ==========
+  async getItensPorNomeEnv(nome: string): Promise<any[]> {
+    return await api.get(`/ambientes/itens-por-nome/${encodeURIComponent(nome)}`, true);
+  },
+
 
   /**
    * Listar todos os itens de um ambiente em estrutura hierárquica
