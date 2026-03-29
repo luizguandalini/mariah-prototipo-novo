@@ -323,9 +323,16 @@ export default function VisualizadorPdfLaudo() {
   const carregarAmbientes = async () => {
     if (!id) return;
     try {
-      const response = await laudosService.getAmbientes(id, 1, 100);
+      const response = await laudosService.getAmbientesWeb(id);
+      const ambientesWeb = [...(response.ambientes || [])]
+        .sort((a, b) => a.ordem - b.ordem)
+        .map((ambiente) => ({
+          ambiente: ambiente.nomeAmbiente,
+          totalImagens: ambiente.totalImagens || 0,
+          ordem: ambiente.ordem,
+        }));
 
-      setAmbientes(response.data);
+      setAmbientes(ambientesWeb);
     } catch (error) {
       console.error("Erro ao carregar ambientes:", error);
     }
