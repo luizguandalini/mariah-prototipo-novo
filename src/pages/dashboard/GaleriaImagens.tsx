@@ -230,7 +230,9 @@ interface SortableImagemCardProps {
   tipoAmbiente?: string;
   opcoesItens: string[];
   loadingItemChange: string | null;
+  loadingCategoriaChange: string | null;
   onUpdateItem: (imgId: string, novoItem: string) => void;
+  onToggleAvaria: (imgId: string, marcarAvaria: boolean) => void;
   onDelete: (imgId: string) => void;
   formatDate: (dateString: string) => string;
   isDropTarget: boolean;
@@ -242,7 +244,9 @@ function SortableImagemCard({
   tipoAmbiente,
   opcoesItens,
   loadingItemChange,
+  loadingCategoriaChange,
   onUpdateItem,
+  onToggleAvaria,
   onDelete,
   formatDate,
   isDropTarget,
@@ -348,6 +352,32 @@ function SortableImagemCard({
             {formatDate(img.dataCaptura)}
           </span>
         </div>
+
+        <button
+          onClick={() =>
+            onToggleAvaria(
+              img.id,
+              (img.categoria || "").trim().toUpperCase() !== "AVARIA",
+            )
+          }
+          disabled={loadingCategoriaChange === img.id}
+          className={`w-full py-2 rounded flex items-center justify-center gap-2 transition-colors border ${
+            (img.categoria || "").trim().toUpperCase() === "AVARIA"
+              ? "bg-red-500/25 hover:bg-red-500/40 text-red-100 border-red-500/60"
+              : "bg-amber-500/20 hover:bg-amber-500/35 text-amber-100 border-amber-500/50"
+          } ${loadingCategoriaChange === img.id ? "opacity-70 cursor-not-allowed" : ""}`}
+        >
+          {loadingCategoriaChange === img.id ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <AlertCircle className="w-4 h-4" />
+          )}
+          <span>
+            {(img.categoria || "").trim().toUpperCase() === "AVARIA"
+              ? "Desmarcar avaria"
+              : "Marcar como avaria"}
+          </span>
+        </button>
 
         <button
           onClick={() => onDelete(img.id)}
@@ -459,6 +489,9 @@ export default function GaleriaImagens() {
   const [loadingItemChange, setLoadingItemChange] = useState<string | null>(
     null,
   );
+  const [loadingCategoriaChange, setLoadingCategoriaChange] = useState<
+    string | null
+  >(null);
 
   // === Estado para análise IA ===
   const [analisandoLaudo, setAnalisandoLaudo] = useState(false);
@@ -880,6 +913,36 @@ export default function GaleriaImagens() {
       toast.error("Erro ao atualizar o item da imagem.");
     } finally {
       setLoadingItemChange(null);
+    }
+  };
+
+  const handleToggleAvaria = async (imgId: string, marcarAvaria: boolean) => {
+    const novaCategoria = marcarAvaria ? "AVARIA" : "VISTORIA";
+    try {
+      setLoadingCategoriaChange(imgId);
+      await laudosService.updateImagemMetadata(imgId, {
+        categoria: novaCategoria,
+      });
+      setImagens((prev) =>
+        prev.map((img) =>
+          img.id === imgId
+            ? {
+                ...img,
+                categoria: novaCategoria,
+                imagemJaFoiAnalisadaPelaIa: "nao",
+              }
+            : img,
+        ),
+      );
+      toast.success(
+        marcarAvaria
+          ? "Imagem marcada como avaria. A IA usará o prompt de avaria."
+          : "Imagem marcada como vistoria.",
+      );
+    } catch (err) {
+      toast.error("Erro ao atualizar categoria da imagem.");
+    } finally {
+      setLoadingCategoriaChange(null);
     }
   };
 
@@ -2058,7 +2121,9 @@ export default function GaleriaImagens() {
                                 : []
                             }
                             loadingItemChange={loadingItemChange}
+                            loadingCategoriaChange={loadingCategoriaChange}
                             onUpdateItem={handleUpdateItem}
+                            onToggleAvaria={handleToggleAvaria}
                             onDelete={(imagemId) =>
                               setConfirmDelete({ isOpen: true, imagemId })
                             }
