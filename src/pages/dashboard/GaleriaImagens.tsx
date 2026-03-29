@@ -3,12 +3,15 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   KeyboardSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -135,8 +138,12 @@ function SortableAmbienteCard({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.65 : 1,
+    transition: transition ?? "transform 180ms cubic-bezier(0.2, 0, 0, 1)",
+    opacity: isDragging ? 0.45 : 1,
+    zIndex: isDragging ? 30 : undefined,
+    boxShadow: isDragging
+      ? "0 18px 40px rgba(0, 0, 0, 0.35)"
+      : "0 2px 8px rgba(0, 0, 0, 0.08)",
   };
 
   return (
@@ -228,6 +235,7 @@ interface SortableImagemCardProps {
   onUpdateItem: (imgId: string, novoItem: string) => void;
   onDelete: (imgId: string) => void;
   formatDate: (dateString: string) => string;
+  isDropTarget: boolean;
 }
 
 function SortableImagemCard({
@@ -239,6 +247,7 @@ function SortableImagemCard({
   onUpdateItem,
   onDelete,
   formatDate,
+  isDropTarget,
 }: SortableImagemCardProps) {
   const {
     attributes,
@@ -251,8 +260,8 @@ function SortableImagemCard({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.65 : 1,
+    transition: transition ?? "transform 180ms cubic-bezier(0.2, 0, 0, 1)",
+    opacity: isDragging ? 0.35 : 1,
   };
 
   return (
@@ -266,7 +275,7 @@ function SortableImagemCard({
         img.categoria === "AVARIA"
           ? "border-[3px] border-red-500"
           : "border border-[var(--border-color)]"
-      }`}
+      } ${isDragging ? "ring-2 ring-primary/80" : ""} ${isDropTarget ? "ring-2 ring-cyan-400 scale-[1.02]" : ""}`}
     >
       <img
         src={img.url}
@@ -350,6 +359,9 @@ function SortableImagemCard({
           <span>Excluir</span>
         </button>
       </div>
+      {isDropTarget && (
+        <div className="pointer-events-none absolute inset-0 z-30 rounded-lg border-2 border-dashed border-cyan-300/90 bg-cyan-400/15 animate-pulse" />
+      )}
     </motion.div>
   );
 }
@@ -406,6 +418,8 @@ export default function GaleriaImagens() {
   const [hasMoreImagens, setHasMoreImagens] = useState(false);
   const [loadingMaisImagens, setLoadingMaisImagens] = useState(false);
   const [reorderingImagens, setReorderingImagens] = useState(false);
+  const [activeImagemId, setActiveImagemId] = useState<string | null>(null);
+  const [overImagemId, setOverImagemId] = useState<string | null>(null);
   const imagensLoadMoreRef = useRef<HTMLDivElement | null>(null);
   const limit = 20;
   const [loadingImagens, setLoadingImagens] = useState(false);
@@ -1461,6 +1475,8 @@ export default function GaleriaImagens() {
 
   const handleDragEndImagens = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveImagemId(null);
+    setOverImagemId(null);
     if (
       !over ||
       active.id === over.id ||
@@ -1514,6 +1530,20 @@ export default function GaleriaImagens() {
       setReorderingImagens(false);
     }
   };
+
+  const handleDragStartImagens = (event: DragStartEvent) => {
+    setActiveImagemId(String(event.active.id));
+    setOverImagemId(String(event.active.id));
+  };
+
+  const handleDragOverImagens = (event: DragOverEvent) => {
+    if (!event.over) return;
+    setOverImagemId(String(event.over.id));
+  };
+
+  const imagemSendoArrastada = activeImagemId
+    ? imagens.find((img) => img.id === activeImagemId) || null
+    : null;
 
   // Total de imagens do laudo
   const totalImagensLaudo = ambientes.reduce(
@@ -2008,6 +2038,12 @@ export default function GaleriaImagens() {
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
+                    onDragStart={handleDragStartImagens}
+                    onDragOver={handleDragOverImagens}
+                    onDragCancel={() => {
+                      setActiveImagemId(null);
+                      setOverImagemId(null);
+                    }}
                     onDragEnd={handleDragEndImagens}
                   >
                     <SortableContext
@@ -2034,10 +2070,31 @@ export default function GaleriaImagens() {
                               setConfirmDelete({ isOpen: true, imagemId })
                             }
                             formatDate={formatDate}
+                            isDropTarget={
+                              !!activeImagemId &&
+                              activeImagemId !== img.id &&
+                              overImagemId === img.id
+                            }
                           />
                         ))}
                       </div>
                     </SortableContext>
+                    <DragOverlay>
+                      {imagemSendoArrastada ? (
+                        <div className="relative aspect-square w-[180px] md:w-[220px] lg:w-[240px] overflow-hidden rounded-lg border-2 border-primary/70 shadow-2xl">
+                          <img
+                            src={imagemSendoArrastada.url}
+                            alt={
+                              imagemSendoArrastada.tipo || "Imagem sendo movida"
+                            }
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-black/70 px-3 py-2 text-xs font-semibold text-white">
+                            Movendo imagem
+                          </div>
+                        </div>
+                      ) : null}
+                    </DragOverlay>
                   </DndContext>
                   {reorderingImagens && (
                     <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
