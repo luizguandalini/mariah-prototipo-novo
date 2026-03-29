@@ -48,6 +48,7 @@ export interface Mobilias {
 export interface ImagemLaudo {
   id: string;
   url: string;
+  s3Key?: string;
   ambiente: string;
   tipoAmbiente?: string;
   ambienteComentario?: string;
@@ -71,6 +72,8 @@ export interface AmbienteWebInfo {
   ordem: number;
   totalImagens: number;
 }
+
+export type EstrategiaConflitoAmbienteWeb = "erro" | "deslocar";
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -170,7 +173,7 @@ class LaudosService {
   async getMyLaudos(
     page: number = 1,
     limit: number = 10,
-    status?: string
+    status?: string,
   ): Promise<PaginatedLaudosResponse> {
     const query = new URLSearchParams({
       page: String(page),
@@ -183,7 +186,7 @@ class LaudosService {
 
     return api.get<PaginatedLaudosResponse>(
       `/laudos/me?${query.toString()}`,
-      true
+      true,
     );
   }
 
@@ -193,7 +196,7 @@ class LaudosService {
   async getAllLaudos(
     page: number = 1,
     limit: number = 15,
-    status?: string
+    status?: string,
   ): Promise<PaginatedLaudosResponse> {
     const query = new URLSearchParams({
       page: String(page),
@@ -206,7 +209,7 @@ class LaudosService {
 
     return api.get<PaginatedLaudosResponse>(
       `/laudos?${query.toString()}`,
-      true
+      true,
     );
   }
 
@@ -244,7 +247,7 @@ class LaudosService {
       mecanismosAbertura?: Partial<MecanismosAbertura>;
       revestimentos?: Partial<Revestimentos>;
       mobilias?: Partial<Mobilias>;
-    }
+    },
   ): Promise<Laudo> {
     return api.patch<Laudo>(`/laudos/${id}/detalhes`, detalhes, true);
   }
@@ -262,7 +265,7 @@ class LaudosService {
       bairro?: string;
       cidade?: string;
       estado?: string;
-    }
+    },
   ): Promise<Laudo> {
     return api.patch<Laudo>(`/laudos/${id}/endereco`, endereco, true);
   }
@@ -280,7 +283,7 @@ class LaudosService {
   async getImagens(
     laudoId: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<{
     data: ImagemLaudo[];
     total: number;
@@ -289,7 +292,7 @@ class LaudosService {
   }> {
     return api.get(
       `/uploads/laudo/${laudoId}/imagens?page=${page}&limit=${limit}`,
-      true
+      true,
     );
   }
 
@@ -299,11 +302,11 @@ class LaudosService {
   async getAmbientes(
     laudoId: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<PaginatedResponse<AmbienteInfo>> {
     return api.get(
       `/uploads/laudo/${laudoId}/ambientes?page=${page}&limit=${limit}`,
-      true
+      true,
     );
   }
 
@@ -324,9 +327,26 @@ class LaudosService {
   async addAmbienteWeb(
     laudoId: string,
     nomeAmbiente: string,
-    tipoAmbiente: string
+    tipoAmbiente: string,
+    numeroAmbiente: number,
+    estrategiaConflito: EstrategiaConflitoAmbienteWeb = "erro",
   ): Promise<AmbienteWebInfo[]> {
-    return api.post(`/laudos/${laudoId}/ambientes-web`, { nomeAmbiente, tipoAmbiente }, true);
+    return api.post(
+      `/laudos/${laudoId}/ambientes-web`,
+      { nomeAmbiente, tipoAmbiente, numeroAmbiente, estrategiaConflito },
+      true,
+    );
+  }
+
+  async reordenarAmbientesWeb(
+    laudoId: string,
+    nomesAmbientes: string[],
+  ): Promise<AmbienteWebInfo[]> {
+    return api.patch(
+      `/laudos/${laudoId}/ambientes-web/reordenar`,
+      { nomesAmbientes },
+      true,
+    );
   }
 
   /**
@@ -334,9 +354,12 @@ class LaudosService {
    */
   async removeAmbienteWeb(
     laudoId: string,
-    nomeAmbiente: string
+    nomeAmbiente: string,
   ): Promise<AmbienteWebInfo[]> {
-    return api.delete(`/laudos/${laudoId}/ambientes-web/${encodeURIComponent(nomeAmbiente)}`, true);
+    return api.delete(
+      `/laudos/${laudoId}/ambientes-web/${encodeURIComponent(nomeAmbiente)}`,
+      true,
+    );
   }
 
   /**
@@ -346,13 +369,13 @@ class LaudosService {
     laudoId: string,
     ambiente: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<PaginatedResponse<ImagemLaudo>> {
     return api.get(
       `/uploads/laudo/${laudoId}/ambiente/${encodeURIComponent(
-        ambiente
+        ambiente,
       )}/imagens?page=${page}&limit=${limit}`,
-      true
+      true,
     );
   }
 
@@ -369,7 +392,7 @@ class LaudosService {
   async getImagensPdf(
     laudoId: string,
     page: number = 1,
-    limit: number = 12
+    limit: number = 12,
   ): Promise<{
     data: any[];
     meta: {
@@ -381,7 +404,7 @@ class LaudosService {
   }> {
     return api.get(
       `/laudos/${laudoId}/imagens-pdf?page=${page}&limit=${limit}`,
-      true
+      true,
     );
   }
 
@@ -444,7 +467,10 @@ class LaudosService {
   /**
    * Gera URL pré-assinada para upload direto ao S3
    */
-  async getPresignedUrl(laudoId: string, filename: string): Promise<{
+  async getPresignedUrl(
+    laudoId: string,
+    filename: string,
+  ): Promise<{
     uploadUrl: string;
     s3Key: string;
   }> {
@@ -465,6 +491,8 @@ class LaudosService {
     descricao?: string;
     ordem?: number;
     ambienteComentario?: string;
+    uploadSessionId?: string;
+    clientFileId?: string;
   }): Promise<{ success: boolean; imagem: ImagemLaudo }> {
     return api.post(`/uploads/confirm-web`, data, true);
   }
@@ -472,16 +500,19 @@ class LaudosService {
   /**
    * Atualiza metadados de uma imagem (troca manual de item)
    */
-  async updateImagemMetadata(imagemId: string, metadata: {
-    ambiente?: string;
-    tipoAmbiente?: string;
-    tipo?: string;
-    categoria?: string;
-    avariaLocal?: string;
-    descricao?: string;
-    ordem?: number;
-    ambienteComentario?: string;
-  }): Promise<ImagemLaudo> {
+  async updateImagemMetadata(
+    imagemId: string,
+    metadata: {
+      ambiente?: string;
+      tipoAmbiente?: string;
+      tipo?: string;
+      categoria?: string;
+      avariaLocal?: string;
+      descricao?: string;
+      ordem?: number;
+      ambienteComentario?: string;
+    },
+  ): Promise<ImagemLaudo> {
     return api.patch(`/uploads/imagem/${imagemId}/metadata`, metadata, true);
   }
 
@@ -495,19 +526,31 @@ class LaudosService {
   /**
    * Solicita a classificação de um item via IA usando saldo web
    */
-  async classifyWebItem(s3Key: string, tipoAmbiente: string): Promise<{ item: string; success: boolean; message?: string; creditosRestantes?: number }> {
+  async classifyWebItem(
+    s3Key: string,
+    tipoAmbiente: string,
+  ): Promise<{
+    item: string;
+    success: boolean;
+    message?: string;
+    creditosRestantes?: number;
+  }> {
     try {
-      const response = await api.post('/uploads/classify-item', {
-        s3Key,
-        tipoAmbiente
-      }, true);
+      const response = await api.post(
+        "/uploads/classify-item",
+        {
+          s3Key,
+          tipoAmbiente,
+        },
+        true,
+      );
       return response;
     } catch (error: any) {
-      console.error('Erro na classificação IA:', error);
-      return { 
-        success: false, 
-        item: 'Não identificado', 
-        message: error.response?.data?.message || 'Erro de comunicação.' 
+      console.error("Erro na classificação IA:", error);
+      return {
+        success: false,
+        item: "Não identificado",
+        message: error.response?.data?.message || "Erro de comunicação.",
       };
     }
   }

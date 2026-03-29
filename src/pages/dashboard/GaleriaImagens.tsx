@@ -2,6 +2,23 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   ArrowLeft,
   Trash2,
   Calendar,
@@ -19,6 +36,7 @@ import {
   AlertCircle,
   Sparkles,
   Wallet,
+  GripVertical,
 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
@@ -36,6 +54,8 @@ import { toast } from "sonner";
 
 const MAX_FILE_SIZE_MB = 15;
 const MAX_UPLOAD_ATTEMPTS = 2;
+const CONCURRENT_UPLOADS = 3;
+const BATCH_DELAY_MS = 200;
 
 type UploadPreviewStatus = "pending" | "uploading" | "done" | "error";
 
@@ -85,6 +105,104 @@ const normalizeTipoValue = (value?: string | null) =>
     ? "Não identificado"
     : decodeMojibake(value) || "";
 
+interface SortableAmbienteCardProps {
+  amb: AmbienteWebInfo;
+  index: number;
+  onSelect: (amb: AmbienteWebInfo) => void;
+  onDelete: (amb: AmbienteWebInfo) => void;
+  getAmbienteNome: (nomeAmbiente: string) => string;
+}
+
+function SortableAmbienteCard({
+  amb,
+  index,
+  onSelect,
+  onDelete,
+  getAmbienteNome,
+}: SortableAmbienteCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: amb.nomeAmbiente });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.65 : 1,
+  };
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="group relative"
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelect(amb)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect(amb);
+          }
+        }}
+        className="w-full p-6 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-color)] hover:border-primary/50 hover:shadow-lg transition-all text-left"
+      >
+        <div className="flex items-start justify-between mb-4 gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className="p-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-primary transition-colors cursor-grab active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="w-4 h-4" />
+            </button>
+            <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+              <FolderOpen className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+          <span className="text-xs text-[var(--text-secondary)] bg-[var(--bg-primary)] px-2 py-1 rounded-full">
+            {amb.ordem + 1}
+          </span>
+        </div>
+        <h3 className="font-semibold text-[var(--text-primary)] mb-1 truncate">
+          {getAmbienteNome(amb.nomeAmbiente)}
+        </h3>
+        <div className="text-xs text-[var(--text-secondary)] mb-2 truncate opacity-70">
+          {amb.tipoAmbiente}
+        </div>
+        <div className="flex items-center gap-1 text-sm text-[var(--text-secondary)]">
+          <ImageIcon className="w-4 h-4" />
+          <span>
+            {amb.totalImagens} {amb.totalImagens === 1 ? "imagem" : "imagens"}
+          </span>
+        </div>
+        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(amb);
+        }}
+        className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all z-10"
+        title="Remover ambiente"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </motion.div>
+  );
+}
+
 export default function GaleriaImagens() {
   const { id } = useParams<{ id: string }>();
   const { refreshUser, user } = useAuth();
@@ -120,12 +238,16 @@ export default function GaleriaImagens() {
   const [totalTipos, setTotalTipos] = useState(0);
   const LIMIT = 20;
   const [selectedTipo, setSelectedTipo] = useState("");
-  const [nomeAmbiente, setNomeAmbiente] = useState("");
+  const [numeroAmbiente, setNumeroAmbiente] = useState("");
+  const [estrategiaConflito, setEstrategiaConflito] = useState<
+    "erro" | "deslocar"
+  >("erro");
   const [showNomeInput, setShowNomeInput] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [creatingAmbiente, setCreatingAmbiente] = useState(false);
+  const [reorderingAmbientes, setReorderingAmbientes] = useState(false);
 
   // === Estado para imagens (do ambiente selecionado) ===
   const [imagens, setImagens] = useState<ImagemLaudo[]>([]);
@@ -184,7 +306,7 @@ export default function GaleriaImagens() {
     try {
       setLoadingAmbientes(true);
       const res = await laudosService.getAmbientesWeb(id);
-      setAmbientes(res.ambientes);
+      setAmbientes([...res.ambientes].sort((a, b) => a.ordem - b.ordem));
       setLaudoInfo({ tipoUso: res.tipoUso, tipoImovel: res.tipoImovel });
     } catch (err: any) {
       console.error(err);
@@ -249,40 +371,132 @@ export default function GaleriaImagens() {
     setShowSelector(true);
     setSearchTerm("");
     setOffset(0);
+    setSelectedTipo("");
+    setNumeroAmbiente("");
+    setEstrategiaConflito("erro");
     setTimeout(() => searchInputRef.current?.focus(), 100);
   };
+
+  const numeroAmbienteSelecionado = Number(numeroAmbiente);
+  const numeroAmbienteValido =
+    Number.isInteger(numeroAmbienteSelecionado) &&
+    numeroAmbienteSelecionado >= 1;
+  const ambienteComMesmaPosicao = numeroAmbienteValido
+    ? ambientes.find((a) => a.ordem + 1 === numeroAmbienteSelecionado)
+    : null;
+  const proximoNumeroDisponivel = ambientes.length + 1;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const handleSelectTipo = (tipo: string) => {
     setSelectedTipo(tipo);
     setShowSelector(false);
     setShowNomeInput(true);
-    const count = ambientes.filter((a) => a.tipoAmbiente === tipo).length + 1;
-    setNomeAmbiente(`${count} - ${tipo}`);
+    setNumeroAmbiente(String(ambientes.length + 1));
+    setEstrategiaConflito("erro");
   };
 
   const handleConfirmAmbiente = async () => {
-    if (!nomeAmbiente.trim() || !id) {
-      toast.error("Informe um nome para o ambiente");
+    if (!id) {
+      toast.error("Laudo não encontrado");
       return;
     }
 
-    if (ambientes.some((a) => a.nomeAmbiente === nomeAmbiente.trim())) {
-      toast.error("Já existe um ambiente com este nome");
+    if (!selectedTipo.trim()) {
+      toast.error("Selecione um tipo de ambiente");
+      return;
+    }
+
+    if (!numeroAmbienteValido) {
+      toast.error("Informe um número de ambiente válido (mínimo 1)");
+      return;
+    }
+
+    if (
+      ambienteComMesmaPosicao &&
+      estrategiaConflito !== "deslocar" &&
+      numeroAmbienteSelecionado <= ambientes.length
+    ) {
+      toast.warning(
+        `A posição ${numeroAmbienteSelecionado} já existe. Altere o número ou selecione deslocar posição.`,
+      );
       return;
     }
 
     try {
       setCreatingAmbiente(true);
-      await laudosService.addAmbienteWeb(id, nomeAmbiente.trim(), selectedTipo);
-      toast.success(`Ambiente "${nomeAmbiente}" criado!`);
+      const nomeAmbienteNovo = `${numeroAmbienteSelecionado} - ${selectedTipo.trim()}`;
+      await laudosService.addAmbienteWeb(
+        id,
+        nomeAmbienteNovo,
+        selectedTipo.trim(),
+        numeroAmbienteSelecionado,
+        estrategiaConflito,
+      );
+      toast.success(`Ambiente "${nomeAmbienteNovo}" criado!`);
       setShowNomeInput(false);
       setSelectedTipo("");
-      setNomeAmbiente("");
+      setNumeroAmbiente("");
+      setEstrategiaConflito("erro");
       fetchAmbientes();
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar ambiente");
     } finally {
       setCreatingAmbiente(false);
+    }
+  };
+
+  const handleDragEndAmbientes = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!id || !over || active.id === over.id || reorderingAmbientes) {
+      return;
+    }
+
+    const oldIndex = ambientes.findIndex((a) => a.nomeAmbiente === active.id);
+    const newIndex = ambientes.findIndex((a) => a.nomeAmbiente === over.id);
+    if (oldIndex < 0 || newIndex < 0) {
+      return;
+    }
+
+    const ambientesAnteriores = ambientes;
+    const reordenados = arrayMove(ambientes, oldIndex, newIndex).map(
+      (amb, i) => ({
+        ...amb,
+        ordem: i,
+      }),
+    );
+
+    setAmbientes(reordenados);
+    setReorderingAmbientes(true);
+    try {
+      await laudosService.reordenarAmbientesWeb(
+        id,
+        reordenados.map((amb) => amb.nomeAmbiente),
+      );
+      if (
+        ambienteSelecionado &&
+        reordenados.some(
+          (a) => a.nomeAmbiente === ambienteSelecionado.nomeAmbiente,
+        )
+      ) {
+        const ambienteAtualizado = reordenados.find(
+          (a) => a.nomeAmbiente === ambienteSelecionado.nomeAmbiente,
+        );
+        if (ambienteAtualizado) {
+          setAmbienteSelecionado(ambienteAtualizado);
+        }
+      }
+      toast.success("Ordem dos ambientes atualizada");
+    } catch (err: any) {
+      setAmbientes(ambientesAnteriores);
+      toast.error(err.message || "Erro ao reordenar ambientes");
+    } finally {
+      setReorderingAmbientes(false);
     }
   };
 
@@ -486,13 +700,34 @@ export default function GaleriaImagens() {
     setUploading(true);
     setUploadProgress({ current: 0, total: validFiles.length });
     let uploadedCount = 0;
-
+    const confirmedUploads: ImagemLaudo[] = [];
+    const ordemUploadBase = Math.floor(Date.now() / 1000);
     const selectedAmbiente = ambienteSelecionado;
+    const uploadSessionId = `web-upload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const failedUploads: Array<{
+      index: number;
+      fileName: string;
+      error: string;
+    }> = [];
+    const sleep = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+    console.group(`[UPLOAD][START][${uploadSessionId}]`);
+    console.log("contexto", {
+      laudoId: id,
+      ambiente: selectedAmbiente.nomeAmbiente,
+      tipoAmbiente: selectedAmbiente.tipoAmbiente,
+      totalArquivosSelecionados: validFiles.length,
+      nomesArquivos: validFiles.map((f) => f.name),
+      tamanhoArquivos: validFiles.map((f) => ({ nome: f.name, bytes: f.size })),
+    });
+    console.groupEnd();
 
-    for (let i = 0; i < validFiles.length; i += 1) {
-      const file = validFiles[i];
-      const itemId = queuedItems[i]?.id;
-      if (!itemId) continue;
+    const uploadSingleFile = async (file: File, index: number) => {
+      const itemId = queuedItems[index]?.id;
+      if (!itemId) {
+        throw new Error("Item de upload inválido");
+      }
+
       updateUploadPreviewItem(itemId, {
         status: "uploading",
         progress: 0,
@@ -501,32 +736,105 @@ export default function GaleriaImagens() {
 
       let attempt = 0;
       let uploadedSuccessfully = false;
+      let lastError: string | null = null;
 
       while (attempt < MAX_UPLOAD_ATTEMPTS && !uploadedSuccessfully) {
         attempt += 1;
 
         try {
+          const uniqueFilename = `${Date.now()}-${index}-${attempt}-${file.name}`;
+          console.log(`[UPLOAD][PRESIGNED][${uploadSessionId}]`, {
+            fileIndex: index,
+            fileName: file.name,
+            attempt,
+            uniqueFilename,
+          });
           const { uploadUrl, s3Key } = await laudosService.getPresignedUrl(
             id,
-            file.name,
+            uniqueFilename,
           );
+          console.log(`[UPLOAD][S3_PUT_START][${uploadSessionId}]`, {
+            fileIndex: index,
+            fileName: file.name,
+            attempt,
+            s3Key,
+          });
 
           await uploadFileWithProgress(uploadUrl, file, (progress) => {
             updateUploadPreviewItem(itemId, { status: "uploading", progress });
           });
-
-          await laudosService.confirmWebUpload({
-            laudoId: id,
+          console.log(`[UPLOAD][S3_PUT_DONE][${uploadSessionId}]`, {
+            fileIndex: index,
+            fileName: file.name,
+            attempt,
             s3Key,
-            ambiente: selectedAmbiente.nomeAmbiente,
-            tipoAmbiente: selectedAmbiente.tipoAmbiente,
-            tipo: "Não identificado",
-            categoria: "VISTORIA",
-            ordem: Date.now() + i,
           });
 
+          let confirmado = false;
+          let confirmAttempt = 0;
+          let ultimoErroConfirmacao: any = null;
+
+          while (!confirmado && confirmAttempt < MAX_UPLOAD_ATTEMPTS) {
+            confirmAttempt += 1;
+            try {
+              console.log(`[UPLOAD][CONFIRM_START][${uploadSessionId}]`, {
+                fileIndex: index,
+                fileName: file.name,
+                attempt,
+                confirmAttempt,
+                s3Key,
+              });
+              const response = await laudosService.confirmWebUpload({
+                laudoId: id,
+                s3Key,
+                ambiente: selectedAmbiente.nomeAmbiente,
+                tipoAmbiente: selectedAmbiente.tipoAmbiente,
+                tipo: "Não identificado",
+                categoria: "VISTORIA",
+                ordem: ordemUploadBase + index,
+                uploadSessionId,
+                clientFileId: itemId,
+              });
+              if (!response?.imagem?.id || !response.imagem.url) {
+                throw new Error("Upload confirmado sem imagem retornada");
+              }
+              confirmedUploads.push({
+                ...response.imagem,
+                tipo: normalizeTipoValue(response.imagem.tipo),
+              });
+              console.log(`[UPLOAD][CONFIRM_DONE][${uploadSessionId}]`, {
+                fileIndex: index,
+                fileName: file.name,
+                attempt,
+                confirmAttempt,
+                s3Key,
+                imagemId: response.imagem.id,
+              });
+              confirmado = true;
+            } catch (confirmErr: any) {
+              ultimoErroConfirmacao = confirmErr;
+              lastError = confirmErr?.message || "Falha ao confirmar upload";
+              console.error(`[UPLOAD][CONFIRM_ERROR][${uploadSessionId}]`, {
+                fileIndex: index,
+                fileName: file.name,
+                attempt,
+                confirmAttempt,
+                s3Key,
+                erro: confirmErr,
+              });
+              if (confirmAttempt < MAX_UPLOAD_ATTEMPTS) {
+                await sleep(300);
+              }
+            }
+          }
+
+          if (!confirmado) {
+            throw (
+              ultimoErroConfirmacao || new Error("Falha ao confirmar upload")
+            );
+          }
+
           uploadedSuccessfully = true;
-          uploadedCount += 1;
           updateUploadPreviewItem(itemId, {
             status: "done",
             progress: 100,
@@ -534,6 +842,13 @@ export default function GaleriaImagens() {
             errorMessage: undefined,
           });
         } catch (err: any) {
+          lastError = err?.message || "Falha no upload";
+          console.error(`[UPLOAD][FILE_ERROR][${uploadSessionId}]`, {
+            fileIndex: index,
+            fileName: file.name,
+            attempt,
+            erro: err,
+          });
           if (attempt >= MAX_UPLOAD_ATTEMPTS) {
             updateUploadPreviewItem(itemId, {
               status: "error",
@@ -541,28 +856,249 @@ export default function GaleriaImagens() {
               errorMessage: err?.message || "Falha no upload",
             });
             toast.error(`Erro ao enviar "${file.name}"`);
-            console.error(`Erro ao upload imagem ${i}:`, err);
+            console.error(`Erro ao upload imagem ${index}:`, err);
           }
         }
       }
-
       setUploadProgress((prev) => ({ ...prev, current: prev.current + 1 }));
+      if (!uploadedSuccessfully) {
+        failedUploads.push({
+          index,
+          fileName: file.name,
+          error: lastError || `Falha definitiva no upload de "${file.name}"`,
+        });
+        throw new Error(`Falha definitiva no upload de "${file.name}"`);
+      }
+    };
+
+    for (
+      let batchStart = 0;
+      batchStart < validFiles.length;
+      batchStart += CONCURRENT_UPLOADS
+    ) {
+      const batchFiles = validFiles.slice(
+        batchStart,
+        batchStart + CONCURRENT_UPLOADS,
+      );
+      const results = await Promise.allSettled(
+        batchFiles.map((file, batchIndex) =>
+          uploadSingleFile(file, batchStart + batchIndex),
+        ),
+      );
+
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          uploadedCount += 1;
+        } else {
+          console.error(`[UPLOAD][BATCH_REJECTED][${uploadSessionId}]`, {
+            batchStart,
+            erro: result.reason,
+          });
+        }
+      });
+      console.log(`[UPLOAD][BATCH_SUMMARY][${uploadSessionId}]`, {
+        batchStart,
+        batchSize: batchFiles.length,
+        fulfilled: results.filter((r) => r.status === "fulfilled").length,
+        rejected: results.filter((r) => r.status === "rejected").length,
+      });
+
+      if (batchStart + CONCURRENT_UPLOADS < validFiles.length) {
+        await sleep(BATCH_DELAY_MS);
+      }
     }
 
     setUploading(false);
 
     if (fileInputRef.current) fileInputRef.current.value = "";
 
+    setUploadPreviewItems((prev) => {
+      prev.forEach((item) => URL.revokeObjectURL(item.preview));
+      return [];
+    });
+
     if (uploadedCount > 0) {
+      const totalImagensEsperado =
+        (selectedAmbiente.totalImagens || 0) + uploadedCount;
+      let totalImagensAmbienteAtual = totalImagensEsperado;
+
+      try {
+        const sincronizarAmbienteCompleto = async () => {
+          let requestedLimit = Math.max(totalImagensEsperado, limit, 50);
+          let res = await laudosService.getImagensByAmbiente(
+            id,
+            selectedAmbiente.nomeAmbiente,
+            1,
+            requestedLimit,
+          );
+          if (res.total > requestedLimit) {
+            requestedLimit = res.total;
+            res = await laudosService.getImagensByAmbiente(
+              id,
+              selectedAmbiente.nomeAmbiente,
+              1,
+              requestedLimit,
+            );
+          }
+          return res;
+        };
+
+        const syncRes = await sincronizarAmbienteCompleto();
+        const idsRetornados = new Set(syncRes.data.map((img) => img.id));
+        const imagensFaltantes = confirmedUploads.filter(
+          (img) => !idsRetornados.has(img.id),
+        );
+
+        if (imagensFaltantes.length > 0) {
+          console.warn(`[UPLOAD][REPAIR_START][${uploadSessionId}]`, {
+            faltantes: imagensFaltantes.map((img) => ({
+              id: img.id,
+              s3Key: img.s3Key,
+              ordem: img.ordem,
+            })),
+          });
+
+          const repairResults = await Promise.allSettled(
+            imagensFaltantes.map((img) =>
+              laudosService.updateImagemMetadata(img.id, {
+                ambiente: selectedAmbiente.nomeAmbiente,
+                tipoAmbiente: selectedAmbiente.tipoAmbiente,
+                tipo: "Não identificado",
+                categoria: "VISTORIA",
+                ordem: img.ordem,
+              }),
+            ),
+          );
+
+          console.log(`[UPLOAD][REPAIR_RESULT][${uploadSessionId}]`, {
+            total: repairResults.length,
+            fulfilled: repairResults.filter((r) => r.status === "fulfilled")
+              .length,
+            rejected: repairResults
+              .filter((r) => r.status === "rejected")
+              .map((r) =>
+                r.status === "rejected" ? String(r.reason) : undefined,
+              ),
+          });
+        }
+
+        const syncResFinal = imagensFaltantes.length
+          ? await sincronizarAmbienteCompleto()
+          : syncRes;
+        const idsFinais = new Set(syncResFinal.data.map((img) => img.id));
+        const faltantesAposRepair = confirmedUploads.filter(
+          (img) => !idsFinais.has(img.id),
+        );
+        setImagens(
+          syncResFinal.data.map((img) => ({
+            ...img,
+            tipo: normalizeTipoValue(img.tipo),
+          })),
+        );
+        setPaginaAtual(syncResFinal.page);
+        setTotalPaginas(syncResFinal.lastPage);
+        totalImagensAmbienteAtual = syncResFinal.total;
+        console.log(`[UPLOAD][SYNC_RESULT][${uploadSessionId}]`, {
+          totalEsperado: totalImagensEsperado,
+          totalRetornado: syncResFinal.total,
+          page: syncResFinal.page,
+          lastPage: syncResFinal.lastPage,
+          quantidadeNoPayloadAtual: syncResFinal.data.length,
+          imagensRetornadas: syncResFinal.data.map((img) => ({
+            id: img.id,
+            s3Key: img.s3Key,
+            ordem: img.ordem,
+            ambiente: img.ambiente,
+          })),
+          imagensConfirmadas: confirmedUploads.map((img) => ({
+            id: img.id,
+            s3Key: img.s3Key,
+            ordem: img.ordem,
+            ambiente: img.ambiente,
+          })),
+          faltantesAposRepair: faltantesAposRepair.map((img) => ({
+            id: img.id,
+            s3Key: img.s3Key,
+            ordem: img.ordem,
+          })),
+        });
+
+        if (faltantesAposRepair.length > 0) {
+          console.error(`[UPLOAD][INCONSISTENCIA][${uploadSessionId}]`, {
+            totalAntes: selectedAmbiente.totalImagens || 0,
+            uploadedCount,
+            totalEsperado: totalImagensEsperado,
+            totalAtual: totalImagensAmbienteAtual,
+            failedUploads,
+            confirmedUploads: confirmedUploads.map((img) => ({
+              id: img.id,
+              s3Key: img.s3Key,
+              ordem: img.ordem,
+              ambiente: img.ambiente,
+            })),
+            faltantesAposRepair: faltantesAposRepair.map((img) => ({
+              id: img.id,
+              s3Key: img.s3Key,
+              ordem: img.ordem,
+              ambiente: img.ambiente,
+            })),
+          });
+          toast.error(
+            `Inconsistência detectada: ${faltantesAposRepair.length} imagem(ns) confirmada(s) não apareceram no ambiente após reparo.`,
+          );
+        }
+      } catch (syncErr) {
+        console.error(`[UPLOAD][SYNC_ERROR][${uploadSessionId}]`, syncErr);
+        setImagens((prev) => {
+          const imagensMap = new Map(prev.map((img) => [img.id, img]));
+          confirmedUploads.forEach((img) => {
+            imagensMap.set(img.id, img);
+          });
+          return Array.from(imagensMap.values()).sort(
+            (a, b) => a.ordem - b.ordem,
+          );
+        });
+        setTotalPaginas(Math.max(1, Math.ceil(totalImagensEsperado / limit)));
+      }
+
+      setAmbientes((prev) =>
+        prev.map((amb) =>
+          amb.nomeAmbiente === selectedAmbiente.nomeAmbiente
+            ? {
+                ...amb,
+                totalImagens: totalImagensAmbienteAtual,
+              }
+            : amb,
+        ),
+      );
+      setAmbienteSelecionado((prev) =>
+        prev && prev.nomeAmbiente === selectedAmbiente.nomeAmbiente
+          ? {
+              ...prev,
+              totalImagens: totalImagensAmbienteAtual,
+            }
+          : prev,
+      );
       toast.success(
         `${uploadedCount} ${uploadedCount === 1 ? "imagem enviada" : "imagens enviadas"} com sucesso!`,
       );
-      await fetchImagensByAmbiente(1);
-      await fetchAmbientes();
       if (refreshUser) await refreshUser();
     }
 
     const failedCount = validFiles.length - uploadedCount;
+    console.log(`[UPLOAD][END][${uploadSessionId}]`, {
+      totalSelecionado: validFiles.length,
+      uploadedCount,
+      failedCount,
+      failedUploads,
+      confirmedUploadsCount: confirmedUploads.length,
+      confirmedUploads: confirmedUploads.map((img) => ({
+        id: img.id,
+        s3Key: img.s3Key,
+        ordem: img.ordem,
+        ambiente: img.ambiente,
+      })),
+    });
     if (failedCount > 0) {
       toast.warning(
         `${failedCount} ${failedCount === 1 ? "imagem falhou" : "imagens falharam"} no envio.`,
@@ -850,7 +1386,7 @@ export default function GaleriaImagens() {
               </div>
             )}
 
-            {/* Input para nomear o ambiente */}
+            {/* Configuração obrigatória de posição do ambiente */}
             {showNomeInput && (
               <div className="border-2 border-primary/30 rounded-xl p-4 bg-[var(--bg-primary)] animate-in fade-in">
                 <h4 className="text-sm font-bold text-[var(--text-secondary)] mb-1">
@@ -858,15 +1394,27 @@ export default function GaleriaImagens() {
                   <span className="text-primary">{selectedTipo}</span>
                 </h4>
                 <label className="block text-sm font-bold text-[var(--text-secondary)] mb-2 mt-3">
-                  Nome do Ambiente
+                  Número do Ambiente
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-start">
                   <input
-                    type="text"
-                    value={nomeAmbiente}
-                    onChange={(e) => setNomeAmbiente(e.target.value)}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={numeroAmbiente}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (!value) {
+                        setNumeroAmbiente("");
+                        return;
+                      }
+                      const parsed = Number(value);
+                      if (Number.isInteger(parsed) && parsed >= 1) {
+                        setNumeroAmbiente(String(parsed));
+                      }
+                    }}
                     className="flex-1 px-4 py-3 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] text-[var(--text-primary)] rounded-lg focus:border-primary outline-none transition-all"
-                    placeholder={`Ex: 1 - ${selectedTipo}`}
+                    placeholder={`Ex: ${proximoNumeroDisponivel}`}
                     autoFocus
                     onKeyDown={(e) =>
                       e.key === "Enter" &&
@@ -889,11 +1437,57 @@ export default function GaleriaImagens() {
                     onClick={() => {
                       setShowNomeInput(false);
                       setSelectedTipo("");
+                      setNumeroAmbiente("");
+                      setEstrategiaConflito("erro");
                     }}
                   >
                     Cancelar
                   </Button>
                 </div>
+                <div className="mt-3 text-sm text-[var(--text-secondary)]">
+                  Nome final:{" "}
+                  <span className="text-[var(--text-primary)] font-semibold">
+                    {numeroAmbienteValido
+                      ? `${numeroAmbienteSelecionado} - ${selectedTipo}`
+                      : `... - ${selectedTipo}`}
+                  </span>
+                </div>
+                {ambienteComMesmaPosicao && (
+                  <div className="mt-3 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10">
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      A posição {numeroAmbienteSelecionado} já está ocupada por{" "}
+                      <strong>
+                        {getAmbienteNome(ambienteComMesmaPosicao.nomeAmbiente)}
+                      </strong>
+                      .
+                    </p>
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      <Button
+                        variant={
+                          estrategiaConflito === "deslocar"
+                            ? "primary"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setEstrategiaConflito("deslocar")}
+                      >
+                        Inserir aqui e deslocar os próximos
+                      </Button>
+                      <Button
+                        variant={
+                          estrategiaConflito === "erro" ? "primary" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => {
+                          setEstrategiaConflito("erro");
+                          setNumeroAmbiente(String(proximoNumeroDisponivel));
+                        }}
+                      >
+                        Usar próxima posição ({proximoNumeroDisponivel})
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -910,58 +1504,44 @@ export default function GaleriaImagens() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {ambientes.map((amb, index) => (
-                  <motion.div
-                    key={amb.nomeAmbiente}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="group relative"
+              <div className="space-y-3">
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Arraste o ícone para reordenar os ambientes.
+                </p>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEndAmbientes}
+                >
+                  <SortableContext
+                    items={ambientes.map((amb) => amb.nomeAmbiente)}
+                    strategy={rectSortingStrategy}
                   >
-                    <button
-                      onClick={() => handleSelectAmbiente(amb)}
-                      className="w-full p-6 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-color)] hover:border-primary/50 hover:shadow-lg transition-all text-left"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                          <FolderOpen className="w-6 h-6 text-primary" />
-                        </div>
-                        <span className="text-xs text-[var(--text-secondary)] bg-[var(--bg-primary)] px-2 py-1 rounded-full">
-                          {amb.ordem + 1}
-                        </span>
-                      </div>
-                      <h3 className="font-semibold text-[var(--text-primary)] mb-1 truncate">
-                        {getAmbienteNome(amb.nomeAmbiente)}
-                      </h3>
-                      <div className="text-xs text-[var(--text-secondary)] mb-2 truncate opacity-70">
-                        {amb.tipoAmbiente}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-[var(--text-secondary)]">
-                        <ImageIcon className="w-4 h-4" />
-                        <span>
-                          {amb.totalImagens}{" "}
-                          {amb.totalImagens === 1 ? "imagem" : "imagens"}
-                        </span>
-                      </div>
-                      <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                    {/* Botão deletar que aparece no hover */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmDeleteAmbiente({
-                          isOpen: true,
-                          nomeAmbiente: amb.nomeAmbiente,
-                        });
-                      }}
-                      className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all z-10"
-                      title="Remover ambiente"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </motion.div>
-                ))}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {ambientes.map((amb, index) => (
+                        <SortableAmbienteCard
+                          key={amb.nomeAmbiente}
+                          amb={amb}
+                          index={index}
+                          onSelect={handleSelectAmbiente}
+                          onDelete={(ambiente) =>
+                            setConfirmDeleteAmbiente({
+                              isOpen: true,
+                              nomeAmbiente: ambiente.nomeAmbiente,
+                            })
+                          }
+                          getAmbienteNome={getAmbienteNome}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+                {reorderingAmbientes && (
+                  <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Salvando nova ordem...
+                  </div>
+                )}
               </div>
             )}
           </>
