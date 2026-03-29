@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/routing/ProtectedRoute";
 // Dashboard User
 import Dashboard from "./pages/dashboard/Dashboard";
 import MeusLaudos from "./pages/dashboard/MeusLaudos";
+import NovoLaudo from "./pages/dashboard/NovoLaudo";
 
 import LaudoPreview from "./pages/dashboard/LaudoPreview";
 import Perfil from "./pages/dashboard/Perfil";
@@ -44,6 +45,7 @@ function App() {
           {/* User Dashboard Routes - Protected */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/dashboard/laudos" element={<ProtectedRoute><MeusLaudos /></ProtectedRoute>} />
+          <Route path="/dashboard/novo-laudo" element={<ProtectedRoute><NovoLaudo /></ProtectedRoute>} />
           <Route
             path="/dashboard/laudos/:id/preview"
             element={<ProtectedRoute><LaudoPreview /></ProtectedRoute>}

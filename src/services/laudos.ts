@@ -385,6 +385,91 @@ class LaudosService {
   async requestPdfGeneration(laudoId: string): Promise<void> {
     return api.post(`/laudos/${laudoId}/pdf-request`, {}, true);
   }
+
+  // ========== UPLOAD WEB ==========
+
+  /**
+   * Verifica se o usuário pode fazer upload de N imagens
+   */
+  async checkUploadLimit(totalFotos: number): Promise<{
+    canUpload: boolean;
+    available: number;
+    required: number;
+    message: string | null;
+  }> {
+    return api.post(`/uploads/check-limit`, { totalFotos }, true);
+  }
+
+  /**
+   * Gera URL pré-assinada para upload direto ao S3
+   */
+  async getPresignedUrl(laudoId: string, filename: string): Promise<{
+    uploadUrl: string;
+    s3Key: string;
+  }> {
+    return api.post(`/uploads/presigned-url`, { laudoId, filename }, true);
+  }
+
+  /**
+   * Confirma upload via WEB com metadados (sem Lambda/EXIF)
+   */
+  async confirmWebUpload(data: {
+    laudoId: string;
+    s3Key: string;
+    ambiente: string;
+    tipoAmbiente: string;
+    tipo?: string;
+    categoria?: string;
+    avariaLocal?: string;
+    descricao?: string;
+    ordem?: number;
+    ambienteComentario?: string;
+  }): Promise<{ success: boolean; imagem: ImagemLaudo }> {
+    return api.post(`/uploads/confirm-web`, data, true);
+  }
+
+  /**
+   * Atualiza metadados de uma imagem (troca manual de item)
+   */
+  async updateImagemMetadata(imagemId: string, metadata: {
+    ambiente?: string;
+    tipoAmbiente?: string;
+    tipo?: string;
+    categoria?: string;
+    avariaLocal?: string;
+    descricao?: string;
+    ordem?: number;
+    ambienteComentario?: string;
+  }): Promise<ImagemLaudo> {
+    return api.patch(`/uploads/imagem/${imagemId}/metadata`, metadata, true);
+  }
+
+  /**
+   * Retorna quantidade de imagens restantes do usuário
+   */
+  async getImagensRestantes(): Promise<{ remaining: number }> {
+    return api.get(`/uploads/remaining`, true);
+  }
+
+  /**
+   * Solicita a classificação de um item via IA usando saldo web
+   */
+  async classifyWebItem(s3Key: string, tipoAmbiente: string): Promise<{ item: string; success: boolean; message?: string; creditosRestantes?: number }> {
+    try {
+      const response = await api.post('/uploads/classify-item', {
+        s3Key,
+        tipoAmbiente
+      }, true);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erro na classificação IA:', error);
+      return { 
+        success: false, 
+        item: 'Não identificado', 
+        message: error.response?.data?.message || 'Erro de comunicação.' 
+      };
+    }
+  }
 }
 
 export const laudosService = new LaudosService();

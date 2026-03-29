@@ -16,6 +16,12 @@ export interface TipoImovelPaginadoResponse {
   hasMore: boolean;
 }
 
+export interface AmbienteNomePaginadoResponse {
+  data: { nome: string; tiposUso: string[]; tiposImovel: string[] }[];
+  total: number;
+  hasMore: boolean;
+}
+
 export const ambientesService = {
   // ========== AMBIENTES ==========
 
@@ -160,6 +166,26 @@ export const ambientesService = {
 
   async listarTiposImovelPorUso(): Promise<Record<string, string[]>> {
     return await api.get(`/config/tipos-imovel/por-uso`, true);
+  },
+
+  /**
+   * Listar nomes de ambientes com paginação e pesquisa inteligente (para web)
+   */
+  async listarNomesPaginado(
+    limit = 20,
+    offset = 0,
+    search?: string,
+    tipoUso?: string,
+    tipoImovel?: string
+  ): Promise<AmbienteNomePaginadoResponse> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (search) query.set("search", search);
+    if (tipoUso) query.set("tipoUso", tipoUso);
+    if (tipoImovel) query.set("tipoImovel", tipoImovel);
+    return await api.get(`/ambientes/listar-nomes-paginado?${query.toString()}`, true);
   },
 
   async criarTipoImovel(data: { nome: string; tipoUso: string }) {

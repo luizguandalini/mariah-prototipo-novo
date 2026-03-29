@@ -11,7 +11,7 @@ import { queueService } from "../../services/queue";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
-import { FileText, Camera, Bot, Pencil, Trash2, Loader2 } from "lucide-react";
+import { FileText, Camera, Bot, Pencil, Trash2, Loader2, Plus } from "lucide-react";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
 
 export default function MeusLaudos() {
@@ -252,6 +252,15 @@ export default function MeusLaudos() {
               Gerencie todos os seus laudos imobiliários
             </p>
           </div>
+          <Link to="/dashboard/novo-laudo">
+            <Button
+              variant="primary"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg shadow-purple-500/30 border-0 transition-all duration-300 group"
+            >
+              <Plus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+              Novo Laudo
+            </Button>
+          </Link>
         </motion.div>
 
         {/* Filtros */}
