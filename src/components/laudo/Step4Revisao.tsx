@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Button from '../ui/Button'
 import { queueService } from '../../services/queue'
 import { toast } from 'sonner'
-import { CheckCircle, MapPin, FolderOpen, Image, Bot, Loader2, Rocket, AlertCircle } from 'lucide-react'
+import { CheckCircle, MapPin, FolderOpen, Image, Bot, Loader2, Rocket } from 'lucide-react'
 
 interface Step4Props {
   onSubmit: (data?: any) => void
@@ -20,16 +20,11 @@ export default function Step4Revisao({ onSubmit, onBack, laudoData }: Step4Props
 
   const info = laudoData.vistoriaInfo || {}
   const ambientes = laudoData.ambientes || []
-  const uploadedImages = laudoData.uploadedImages || {}
   const totalImagesUploaded = laudoData.totalImagesUploaded || 0
   const laudoId = laudoData.laudoId
 
-  const unidentifiedCount = Object.values(uploadedImages)
-    .flat()
-    .filter((img: any) => img.item === 'Não identificado' || !img.item).length
-
   const podeSubmeter = confirmacoes.dadosCorretos && confirmacoes.ambientesCorretos && confirmacoes.imagensCorretas
-  const canAnalyzeIA = podeSubmeter && unidentifiedCount === 0 && !iniciandoAnalise
+  const canAnalyzeIA = podeSubmeter && !iniciandoAnalise
 
   const handleIniciarAnalise = async () => {
     if (!laudoId) {
@@ -187,18 +182,10 @@ export default function Step4Revisao({ onSubmit, onBack, laudoData }: Step4Props
 
       {/* Aviso */}
       <div className="bg-yellow-500/10 border-2 border-yellow-500/20 rounded-lg p-4 mb-6">
-        {unidentifiedCount > 0 ? (
-          <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            Não é possível iniciar a análise por IA com itens "Não identificado". 
-            Volte para o passo anterior para nomeá-los, ou finalize sem análise.
-          </p>
-        ) : (
-          <p className="text-sm text-yellow-600 dark:text-yellow-500">
-            <strong>⏱️ Estimativa de processamento:</strong> Após finalizar, seu laudo entrará na fila de análise por IA.
-            O processamento leva em média 10-30 minutos, dependendo da quantidade de imagens.
-          </p>
-        )}
+        <p className="text-sm text-yellow-600 dark:text-yellow-500">
+          <strong>⏱️ Estimativa de processamento:</strong> Após finalizar, seu laudo entrará na fila de análise por IA.
+          A fila primeiro identifica os itens que estiverem como "Não identificado" e depois analisa as descrições das imagens.
+        </p>
       </div>
 
       {/* Buttons */}

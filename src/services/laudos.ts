@@ -536,7 +536,7 @@ class LaudosService {
   }
 
   /**
-   * Solicita a classificação de um item via IA usando saldo web
+   * Solicita a classificação de um item via IA no fluxo web
    */
   async classifyWebItem(
     s3Key: string,
@@ -556,7 +556,12 @@ class LaudosService {
         },
         true,
       );
-      return response;
+      return response as {
+        item: string;
+        success: boolean;
+        message?: string;
+        creditosRestantes?: number;
+      };
     } catch (error: any) {
       console.error("Erro na classificação IA:", error);
       return {

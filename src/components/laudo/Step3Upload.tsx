@@ -37,7 +37,6 @@ export default function Step3Upload({ onNext, onBack, ambientes, laudoId }: Step
   const [imagesByAmbiente, setImagesByAmbiente] = useState<Record<string, ImageFile[]>>({})
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 })
-  const [modoIA, setModoIA] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const currentAmbiente = ambientes[ambienteAtual]
@@ -153,17 +152,7 @@ export default function Step3Upload({ onNext, onBack, ambientes, laudoId }: Step
 
           updateImageStatus(ambiente.id, i, 'uploading', 80)
 
-          let itemName = 'Não identificado'
-          if (modoIA) {
-            try {
-              const aiResp = await laudosService.classifyWebItem(s3Key, ambiente.tipoAmbiente)
-              if (aiResp.success) {
-                itemName = aiResp.item
-              }
-            } catch (err) {
-              console.error('Erro na classificação IA:', err)
-            }
-          }
+          const itemName = 'Não identificado'
 
           updateImageStatus(ambiente.id, i, 'uploading', 90)
 
@@ -194,7 +183,7 @@ export default function Step3Upload({ onNext, onBack, ambientes, laudoId }: Step
     if (uploaded > 0) {
       toast.success(`${uploaded} imagens enviadas com sucesso!`)
     }
-  }, [imagesByAmbiente, ambientes, laudoId, totalImages, totalUploaded, modoIA])
+  }, [imagesByAmbiente, ambientes, laudoId, totalImages, totalUploaded])
 
   const updateImageStatus = (
     ambienteId: string,
@@ -286,22 +275,13 @@ export default function Step3Upload({ onNext, onBack, ambientes, laudoId }: Step
         })}
       </div>
 
-      {/* Switch IA/Manual */}
-      <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
-        <div>
-          <h4 className="font-semibold text-[var(--text-primary)] flex items-center gap-2">
-            🤖 Inteligência Artificial
-          </h4>
-          <p className="text-sm text-[var(--text-secondary)]">
-            Identificar automaticamente os itens das fotos (consome créditos web).
-          </p>
-        </div>
-        <button
-          onClick={() => setModoIA(!modoIA)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${modoIA ? 'bg-primary' : 'bg-gray-400'}`}
-        >
-          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${modoIA ? 'translate-x-6' : 'translate-x-1'}`} />
-        </button>
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
+        <h4 className="font-semibold text-[var(--text-primary)] flex items-center gap-2">
+          🤖 Inteligência Artificial
+        </h4>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Os itens serão identificados automaticamente quando você iniciar a análise IA do laudo.
+        </p>
       </div>
 
       {/* Upload Area */}

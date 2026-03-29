@@ -37,8 +37,6 @@ import {
   ChevronDown,
   Bot,
   AlertCircle,
-  Sparkles,
-  Wallet,
   GripVertical,
   Pencil,
 } from "lucide-react";
@@ -462,12 +460,6 @@ export default function GaleriaImagens() {
 
   // === Estado para análise IA ===
   const [analisandoLaudo, setAnalisandoLaudo] = useState(false);
-
-  // === Saldo de classificações ===
-  const classificacoesRestantes = user?.quantidadeClassificacoesWeb ?? 0;
-  const isAdminOrDev = [UserRole.ADMIN, UserRole.DEV].includes(
-    user?.role as UserRole,
-  );
 
   // === Contar imagens não identificadas ===
   const totalImagensSemItem = imagens.filter((img) =>
@@ -1601,17 +1593,6 @@ export default function GaleriaImagens() {
 
           {/* Info cards no header */}
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Saldo de classificações IA */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg text-sm">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-[var(--text-secondary)]">
-                Classificações IA:
-              </span>
-              <span className="font-bold text-purple-400">
-                {isAdminOrDev ? "∞" : classificacoesRestantes}
-              </span>
-            </div>
-
             {/* Total de imagens */}
             <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
               <ImageIcon className="w-4 h-4 text-blue-400" />

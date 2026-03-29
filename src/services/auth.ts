@@ -214,6 +214,7 @@ class AuthService {
       nome: String(payload.nome ?? ""),
       role,
       quantidadeImagens: Number(payload.quantidadeImagens ?? 0),
+      quantidadeClassificacoesWeb: Number(payload.quantidadeClassificacoesWeb ?? 0),
     };
 
     if (!user.id || !user.email || !user.nome || !user.role) {
