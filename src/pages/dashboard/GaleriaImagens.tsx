@@ -219,6 +219,141 @@ function SortableAmbienteCard({
   );
 }
 
+interface SortableImagemCardProps {
+  img: ImagemLaudo;
+  index: number;
+  tipoAmbiente?: string;
+  opcoesItens: string[];
+  loadingItemChange: string | null;
+  onUpdateItem: (imgId: string, novoItem: string) => void;
+  onDelete: (imgId: string) => void;
+  formatDate: (dateString: string) => string;
+}
+
+function SortableImagemCard({
+  img,
+  index,
+  tipoAmbiente,
+  opcoesItens,
+  loadingItemChange,
+  onUpdateItem,
+  onDelete,
+  formatDate,
+}: SortableImagemCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: img.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.65 : 1,
+  };
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: index * 0.05 }}
+      className={`group relative aspect-square bg-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all ${
+        img.categoria === "AVARIA"
+          ? "border-[3px] border-red-500"
+          : "border border-[var(--border-color)]"
+      }`}
+    >
+      <img
+        src={img.url}
+        alt={img.tipo || "Imagem do laudo"}
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+
+      {img.imagemJaFoiAnalisadaPelaIa === "sim" && (
+        <div className="absolute top-10 right-2 bg-green-500 rounded-full p-1.5 shadow-lg z-20">
+          <CheckCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
+        </div>
+      )}
+
+      <div className="absolute top-0 left-0 right-0 bg-black/60 p-2 z-10 flex items-center justify-between pointer-events-auto shadow-sm">
+        {loadingItemChange === img.id ? (
+          <div className="flex items-center gap-2 text-white text-xs w-full justify-center">
+            <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />{" "}
+            Atualizando...
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 w-full">
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1 rounded bg-white/10 hover:bg-white/20 border border-white/20 text-white cursor-grab active:cursor-grabbing flex-shrink-0"
+              {...attributes}
+              {...listeners}
+              title="Arraste para reordenar"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </button>
+            <div className="relative flex-1">
+              <select
+                className="w-full bg-transparent text-white text-xs font-semibold outline-none appearance-none cursor-pointer truncate pr-4 text-center"
+                value={formatTipoLabel(img.tipo)}
+                onChange={(e) => onUpdateItem(img.id, e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <option value="Não identificado" className="text-black">
+                  Não identificado
+                </option>
+                {tipoAmbiente &&
+                  opcoesItens.map((opt) => (
+                    <option
+                      key={opt}
+                      value={normalizeTipoValue(opt)}
+                      className="text-black"
+                    >
+                      {formatTipoLabel(opt)}
+                    </option>
+                  ))}
+                {img.tipo &&
+                  !isTipoNaoIdentificado(img.tipo) &&
+                  !opcoesItens.includes(img.tipo) && (
+                    <option value={img.tipo} className="text-black">
+                      {formatTipoLabel(img.tipo)}
+                    </option>
+                  )}
+              </select>
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-white/70 text-[10px]">
+                ▼
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs">
+        <div className="flex flex-col items-center gap-1 text-center w-full">
+          <Calendar className="w-5 h-5 text-gray-300" />
+          <span className="text-sm font-medium">
+            {formatDate(img.dataCaptura)}
+          </span>
+        </div>
+
+        <button
+          onClick={() => onDelete(img.id)}
+          className="w-full mt-2 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Excluir</span>
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function GaleriaImagens() {
   const { id } = useParams<{ id: string }>();
   const { refreshUser, user } = useAuth();
@@ -268,7 +403,10 @@ export default function GaleriaImagens() {
   // === Estado para imagens (do ambiente selecionado) ===
   const [imagens, setImagens] = useState<ImagemLaudo[]>([]);
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [hasMoreImagens, setHasMoreImagens] = useState(false);
+  const [loadingMaisImagens, setLoadingMaisImagens] = useState(false);
+  const [reorderingImagens, setReorderingImagens] = useState(false);
+  const imagensLoadMoreRef = useRef<HTMLDivElement | null>(null);
   const limit = 20;
   const [loadingImagens, setLoadingImagens] = useState(false);
 
@@ -606,37 +744,87 @@ export default function GaleriaImagens() {
   };
 
   // ========== CARREGAR IMAGENS DO AMBIENTE ==========
-  const fetchImagensByAmbiente = async (page: number) => {
+  const fetchImagensByAmbiente = async (page: number, append = false) => {
     if (!id || !ambienteSelecionado) return;
     try {
-      setLoadingImagens(true);
+      if (append) {
+        setLoadingMaisImagens(true);
+      } else {
+        setLoadingImagens(true);
+      }
       const res = await laudosService.getImagensByAmbiente(
         id,
         ambienteSelecionado.nomeAmbiente,
         page,
         limit,
       );
-      setImagens(
-        res.data.map((img) => ({
-          ...img,
-          tipo: normalizeTipoValue(img.tipo),
-        })),
-      );
-      setTotalPaginas(res.lastPage);
+      const imagensNormalizadas = res.data.map((img) => ({
+        ...img,
+        tipo: normalizeTipoValue(img.tipo),
+      }));
+      setImagens((prev) => {
+        if (!append) {
+          return imagensNormalizadas;
+        }
+        const imagensMap = new Map(prev.map((img) => [img.id, img]));
+        imagensNormalizadas.forEach((img) => imagensMap.set(img.id, img));
+        return Array.from(imagensMap.values()).sort(
+          (a, b) => a.ordem - b.ordem,
+        );
+      });
+      setHasMoreImagens(res.page < res.lastPage);
       setPaginaAtual(res.page);
     } catch (err: any) {
       console.error(err);
       toast.error("Não foi possível carregar as imagens.");
     } finally {
-      setLoadingImagens(false);
+      if (append) {
+        setLoadingMaisImagens(false);
+      } else {
+        setLoadingImagens(false);
+      }
     }
   };
 
   useEffect(() => {
     if (id && ambienteSelecionado) {
-      fetchImagensByAmbiente(1);
+      setHasMoreImagens(false);
+      fetchImagensByAmbiente(1, false);
     }
   }, [id, ambienteSelecionado]);
+
+  const handleLoadMoreImagens = useCallback(() => {
+    if (
+      !ambienteSelecionado ||
+      loadingImagens ||
+      loadingMaisImagens ||
+      !hasMoreImagens
+    ) {
+      return;
+    }
+    fetchImagensByAmbiente(paginaAtual + 1, true);
+  }, [
+    ambienteSelecionado,
+    loadingImagens,
+    loadingMaisImagens,
+    hasMoreImagens,
+    paginaAtual,
+  ]);
+
+  useEffect(() => {
+    const target = imagensLoadMoreRef.current;
+    if (!target || !ambienteSelecionado) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          handleLoadMoreImagens();
+        }
+      },
+      { rootMargin: "220px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [ambienteSelecionado, handleLoadMoreImagens]);
 
   // Carregar opções do select para edição rápida
   useEffect(() => {
@@ -1080,7 +1268,7 @@ export default function GaleriaImagens() {
           })),
         );
         setPaginaAtual(syncResFinal.page);
-        setTotalPaginas(syncResFinal.lastPage);
+        setHasMoreImagens(syncResFinal.page < syncResFinal.lastPage);
         totalImagensAmbienteAtual = syncResFinal.total;
         console.log(`[UPLOAD][SYNC_RESULT][${uploadSessionId}]`, {
           totalEsperado: totalImagensEsperado,
@@ -1142,7 +1330,7 @@ export default function GaleriaImagens() {
             (a, b) => a.ordem - b.ordem,
           );
         });
-        setTotalPaginas(Math.max(1, Math.ceil(totalImagensEsperado / limit)));
+        setHasMoreImagens(imagens.length < totalImagensEsperado);
       }
 
       setAmbientes((prev) =>
@@ -1260,18 +1448,70 @@ export default function GaleriaImagens() {
   const handleSelectAmbiente = (amb: AmbienteWebInfo) => {
     setAmbienteSelecionado(amb);
     setPaginaAtual(1);
+    setHasMoreImagens(false);
   };
 
   const handleVoltarParaAmbientes = () => {
     setAmbienteSelecionado(null);
     setImagens([]);
     setPaginaAtual(1);
+    setHasMoreImagens(false);
     fetchAmbientes();
   };
 
-  const handlePageChangeImagens = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPaginas) {
-      fetchImagensByAmbiente(newPage);
+  const handleDragEndImagens = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (
+      !over ||
+      active.id === over.id ||
+      reorderingImagens ||
+      !ambienteSelecionado
+    ) {
+      return;
+    }
+
+    const oldIndex = imagens.findIndex((img) => img.id === active.id);
+    const newIndex = imagens.findIndex((img) => img.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) {
+      return;
+    }
+
+    const imagensAnteriores = imagens;
+    const reordenadas = arrayMove(imagens, oldIndex, newIndex);
+    const ordensAtuais = imagens
+      .map((img) => img.ordem)
+      .filter((ordem) => Number.isFinite(ordem))
+      .sort((a, b) => a - b);
+    const ordensDestino =
+      ordensAtuais.length === reordenadas.length
+        ? ordensAtuais
+        : reordenadas.map((_, index) => index + 1);
+    const reordenadasComOrdem = reordenadas.map((img, index) => ({
+      ...img,
+      ordem: ordensDestino[index],
+    }));
+
+    setImagens(reordenadasComOrdem);
+    setReorderingImagens(true);
+
+    try {
+      const ordemOriginalPorId = new Map(
+        imagensAnteriores.map((img) => [img.id, img.ordem]),
+      );
+      const imagensAlteradas = reordenadasComOrdem.filter(
+        (img) => ordemOriginalPorId.get(img.id) !== img.ordem,
+      );
+      await Promise.all(
+        imagensAlteradas.map((img) =>
+          laudosService.updateImagemMetadata(img.id, { ordem: img.ordem }),
+        ),
+      );
+      toast.success("Ordem das imagens atualizada");
+    } catch (err: any) {
+      setImagens(imagensAnteriores);
+      toast.error(err.message || "Erro ao reordenar imagens");
+    } finally {
+      setReorderingImagens(false);
     }
   };
 
@@ -1755,144 +1995,83 @@ export default function GaleriaImagens() {
                     <span>
                       <strong>{totalImagensSemItem}</strong>{" "}
                       {totalImagensSemItem === 1 ? "imagem" : "imagens"} sem
-                      item identificado nesta página. Classifique manualmente
-                      pelo dropdown ou inicie a análise IA.
+                      item identificado. Classifique manualmente pelo dropdown
+                      ou inicie a análise IA.
                     </span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {imagens.map((img, index) => (
-                    <motion.div
-                      key={img.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`group relative aspect-square bg-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all ${
-                        img.categoria === "AVARIA"
-                          ? "border-[3px] border-red-500"
-                          : "border border-[var(--border-color)]"
-                      }`}
+                <div className="space-y-3">
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Arraste o ícone para reordenar as imagens.
+                  </p>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEndImagens}
+                  >
+                    <SortableContext
+                      items={imagens.map((img) => img.id)}
+                      strategy={rectSortingStrategy}
                     >
-                      <img
-                        src={img.url}
-                        alt={img.tipo || "Imagem do laudo"}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-
-                      {/* Badge de Confirmação IA */}
-                      {img.imagemJaFoiAnalisadaPelaIa === "sim" && (
-                        <div className="absolute top-10 right-2 bg-green-500 rounded-full p-1.5 shadow-lg z-20">
-                          <CheckCircle
-                            className="w-5 h-5 text-white"
-                            strokeWidth={2.5}
-                          />
-                        </div>
-                      )}
-
-                      {/* Dropdown de Edição de Itens */}
-                      <div className="absolute top-0 left-0 right-0 bg-black/60 p-2 z-10 flex items-center justify-between pointer-events-auto shadow-sm">
-                        {loadingItemChange === img.id ? (
-                          <div className="flex items-center gap-2 text-white text-xs w-full justify-center">
-                            <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />{" "}
-                            Atualizando...
-                          </div>
-                        ) : (
-                          <div className="relative w-full">
-                            <select
-                              className="w-full bg-transparent text-white text-xs font-semibold outline-none appearance-none cursor-pointer truncate pr-4 text-center"
-                              value={formatTipoLabel(img.tipo)}
-                              onChange={(e) =>
-                                handleUpdateItem(img.id, e.target.value)
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <option
-                                value="Não identificado"
-                                className="text-black"
-                              >
-                                Não identificado
-                              </option>
-                              {ambienteSelecionado?.tipoAmbiente &&
-                                opcoesItensCache[
-                                  ambienteSelecionado.tipoAmbiente
-                                ]?.map((opt) => (
-                                  <option
-                                    key={opt}
-                                    value={normalizeTipoValue(opt)}
-                                    className="text-black"
-                                  >
-                                    {formatTipoLabel(opt)}
-                                  </option>
-                                ))}
-                              {img.tipo &&
-                                !isTipoNaoIdentificado(img.tipo) &&
-                                (!ambienteSelecionado?.tipoAmbiente ||
-                                  !opcoesItensCache[
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {imagens.map((img, index) => (
+                          <SortableImagemCard
+                            key={img.id}
+                            img={img}
+                            index={index}
+                            tipoAmbiente={ambienteSelecionado?.tipoAmbiente}
+                            opcoesItens={
+                              ambienteSelecionado?.tipoAmbiente
+                                ? opcoesItensCache[
                                     ambienteSelecionado.tipoAmbiente
-                                  ]?.includes(img.tipo)) && (
-                                  <option
-                                    value={img.tipo}
-                                    className="text-black"
-                                  >
-                                    {formatTipoLabel(img.tipo)}
-                                  </option>
-                                )}
-                            </select>
-                            <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-white/70 text-[10px]">
-                              ▼
-                            </div>
-                          </div>
-                        )}
+                                  ] || []
+                                : []
+                            }
+                            loadingItemChange={loadingItemChange}
+                            onUpdateItem={handleUpdateItem}
+                            onDelete={(imagemId) =>
+                              setConfirmDelete({ isOpen: true, imagemId })
+                            }
+                            formatDate={formatDate}
+                          />
+                        ))}
                       </div>
-
-                      {/* Overlay on Hover */}
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs">
-                        <div className="flex flex-col items-center gap-1 text-center w-full">
-                          <Calendar className="w-5 h-5 text-gray-300" />
-                          <span className="text-sm font-medium">
-                            {formatDate(img.dataCaptura)}
-                          </span>
-                        </div>
-
-                        <button
-                          onClick={() =>
-                            setConfirmDelete({ isOpen: true, imagemId: img.id })
-                          }
-                          className="w-full mt-2 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span>Excluir</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
+                    </SortableContext>
+                  </DndContext>
+                  {reorderingImagens && (
+                    <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Salvando nova ordem das imagens...
+                    </div>
+                  )}
+                  {hasMoreImagens && (
+                    <div
+                      ref={imagensLoadMoreRef}
+                      className="h-12 flex items-center justify-center text-sm text-[var(--text-secondary)]"
+                    >
+                      {loadingMaisImagens ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Carregando mais imagens...
+                        </>
+                      ) : (
+                        "Role para carregar mais imagens"
+                      )}
+                    </div>
+                  )}
+                  {!hasMoreImagens && imagens.length > 0 && (
+                    <div className="text-center text-xs text-[var(--text-secondary)] opacity-80 pt-2">
+                      Todas as imagens foram carregadas
+                    </div>
+                  )}
+                  {loadingMaisImagens && !hasMoreImagens && (
+                    <div className="flex items-center justify-center py-3 text-sm text-[var(--text-secondary)]">
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Carregando mais imagens...
+                    </div>
+                  )}
                 </div>
-
-                {/* Paginação de Imagens */}
-                {totalPaginas > 1 && (
-                  <div className="flex justify-center mt-8 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChangeImagens(paginaAtual - 1)}
-                      disabled={paginaAtual === 1}
-                    >
-                      Anterior
-                    </Button>
-                    <span className="flex items-center px-4 text-sm text-[var(--text-secondary)]">
-                      Página {paginaAtual} de {totalPaginas}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChangeImagens(paginaAtual + 1)}
-                      disabled={paginaAtual === totalPaginas}
-                    >
-                      Próxima
-                    </Button>
-                  </div>
-                )}
               </>
             )}
           </>
