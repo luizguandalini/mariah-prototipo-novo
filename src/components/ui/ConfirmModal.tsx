@@ -3,12 +3,16 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "danger" | "primary";
+  isLoading?: boolean;
+  loadingLabel?: string;
+  closeOnConfirm?: boolean;
+  disableClose?: boolean;
 }
 
 export default function ConfirmModal({
@@ -20,12 +24,31 @@ export default function ConfirmModal({
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
   variant = "primary",
+  isLoading = false,
+  loadingLabel = "Processando...",
+  closeOnConfirm = true,
+  disableClose = false,
 }: ConfirmModalProps) {
   if (!isOpen) return null;
 
   const variantClasses = {
     primary: "bg-blue-600 hover:bg-blue-700",
     danger: "bg-red-600 hover:bg-red-700",
+  };
+
+  const handleClose = () => {
+    if (disableClose || isLoading) return;
+    onClose();
+  };
+
+  const handleConfirm = async () => {
+    if (isLoading) return;
+    if (closeOnConfirm) {
+      onConfirm();
+      onClose();
+      return;
+    }
+    await onConfirm();
   };
 
   return (
@@ -35,7 +58,7 @@ export default function ConfirmModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
-        onClick={onClose}
+        onClick={handleClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -50,19 +73,18 @@ export default function ConfirmModal({
 
             <div className="flex gap-3">
               <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                onClick={handleClose}
+                disabled={disableClose || isLoading}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cancelLabel}
               </button>
               <button
-                onClick={() => {
-                  onConfirm();
-                  onClose();
-                }}
-                className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition-colors ${variantClasses[variant]}`}
+                onClick={handleConfirm}
+                disabled={isLoading}
+                className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${variantClasses[variant]}`}
               >
-                {confirmLabel}
+                {isLoading ? loadingLabel : confirmLabel}
               </button>
             </div>
           </div>

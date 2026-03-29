@@ -442,7 +442,9 @@ export default function GaleriaImagens() {
   const [confirmDeleteAmbiente, setConfirmDeleteAmbiente] = useState<{
     isOpen: boolean;
     nomeAmbiente: string;
-  }>({ isOpen: false, nomeAmbiente: "" });
+    totalImagens: number;
+  }>({ isOpen: false, nomeAmbiente: "", totalImagens: 0 });
+  const [deletingAmbiente, setDeletingAmbiente] = useState(false);
   const [renameAmbienteModal, setRenameAmbienteModal] = useState<{
     isOpen: boolean;
     nomeAtual: string;
@@ -667,14 +669,19 @@ export default function GaleriaImagens() {
   };
 
   const handleDeleteAmbiente = async () => {
-    if (!id || !confirmDeleteAmbiente.nomeAmbiente) return;
+    if (!id || !confirmDeleteAmbiente.nomeAmbiente || deletingAmbiente) return;
     try {
+      setDeletingAmbiente(true);
       await laudosService.removeAmbienteWeb(
         id,
         confirmDeleteAmbiente.nomeAmbiente,
       );
       toast.success("Ambiente removido!");
-      setConfirmDeleteAmbiente({ isOpen: false, nomeAmbiente: "" });
+      setConfirmDeleteAmbiente({
+        isOpen: false,
+        nomeAmbiente: "",
+        totalImagens: 0,
+      });
       fetchAmbientes();
       if (
         ambienteSelecionado?.nomeAmbiente === confirmDeleteAmbiente.nomeAmbiente
@@ -684,6 +691,8 @@ export default function GaleriaImagens() {
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao remover ambiente");
+    } finally {
+      setDeletingAmbiente(false);
     }
   };
 
@@ -1545,7 +1554,9 @@ export default function GaleriaImagens() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div
+        className={`space-y-6 ${deletingAmbiente ? "pointer-events-none" : ""}`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-4">
@@ -1864,6 +1875,7 @@ export default function GaleriaImagens() {
                             setConfirmDeleteAmbiente({
                               isOpen: true,
                               nomeAmbiente: ambiente.nomeAmbiente,
+                              totalImagens: ambiente.totalImagens,
                             })
                           }
                           getAmbienteNome={getAmbienteNome}
@@ -2196,15 +2208,31 @@ export default function GaleriaImagens() {
         <ConfirmModal
           isOpen={confirmDeleteAmbiente.isOpen}
           onClose={() =>
-            setConfirmDeleteAmbiente({ isOpen: false, nomeAmbiente: "" })
+            setConfirmDeleteAmbiente({
+              isOpen: false,
+              nomeAmbiente: "",
+              totalImagens: 0,
+            })
           }
           onConfirm={handleDeleteAmbiente}
           title="Remover Ambiente"
-          message={`Tem certeza que deseja remover o ambiente "${confirmDeleteAmbiente.nomeAmbiente}"? As imagens associadas NÃO serão deletadas automaticamente.`}
+          message={`Tem certeza que deseja remover o ambiente "${confirmDeleteAmbiente.nomeAmbiente}"? ${confirmDeleteAmbiente.totalImagens} imagem(ns) associada(s) também será(ão) excluída(s).`}
           confirmLabel="Remover"
+          loadingLabel="Removendo..."
           cancelLabel="Cancelar"
           variant="danger"
+          isLoading={deletingAmbiente}
+          closeOnConfirm={false}
+          disableClose={deletingAmbiente}
         />
+        {deletingAmbiente && (
+          <div className="fixed inset-0 z-[120] bg-black/40 flex items-center justify-center">
+            <div className="flex items-center gap-3 rounded-lg bg-[var(--bg-primary)] px-4 py-3 border border-[var(--border-color)] text-[var(--text-primary)] shadow-xl">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Removendo ambiente e imagens...</span>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
