@@ -29,6 +29,7 @@ export default function NovoLaudo() {
         tipoUso: info.tipoUso,
         tipoImovel: info.tipoImovel,
         tamanho: info.tamanho || undefined,
+        incluirAtestado: 1,
       })
 
       toast.success('Laudo criado com sucesso! Redirecionando para a galeria...')
