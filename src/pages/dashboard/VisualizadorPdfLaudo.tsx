@@ -98,6 +98,22 @@ interface ConfiguracoesPdf {
   assinaturaTexto: string | null;
 }
 
+type ModoPreview = "detalhado" | "compacto";
+
+const PREVIEW_LAYOUTS: Record<
+  ModoPreview,
+  { label: string; imagensPorPagina: number }
+> = {
+  detalhado: {
+    label: "Padrão",
+    imagensPorPagina: 12,
+  },
+  compacto: {
+    label: "Galeria compacta",
+    imagensPorPagina: 15,
+  },
+};
+
 const getMetodologiaPadrao = (tipoVistoria?: string) => {
   const isSaida =
     tipoVistoria?.toLowerCase() === "saída" ||
@@ -232,7 +248,10 @@ export default function VisualizadorPdfLaudo() {
   const [paginaInput, setPaginaInput] = useState("1");
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [totalImagens, setTotalImagens] = useState(0);
+  const [modoPreview, setModoPreview] = useState<ModoPreview>("detalhado");
   const [loading, setLoading] = useState(true);
+  const isModoCompacto = modoPreview === "compacto";
+  const imagensPorPagina = PREVIEW_LAYOUTS[modoPreview].imagensPorPagina;
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPdf>(() => {
     // Tenta carregar do sessionStorage se existir para persistir entre navegação
     const saved = sessionStorage.getItem(`pdf_config_${id}`);
@@ -274,9 +293,19 @@ export default function VisualizadorPdfLaudo() {
   const wasTriggeredRef = useRef(false);
   const isConfigLoadedRef = useRef(false);
   const originalLegendasRef = useRef<Record<string, string>>({});
-  const pagesCache = useRef<Record<number, any[]>>({});
+  const pagesCache = useRef<Record<string, any[]>>({});
 
   const hasCover = true;
+
+  const handleModoPreviewChange = (modo: ModoPreview) => {
+    if (modo === modoPreview) return;
+
+    pagesCache.current = {};
+    setEditingId(null);
+    setImagensComUrls([]);
+    setLoading(true);
+    setModoPreview(modo);
+  };
 
   useEffect(() => {
     if (id && !isConfigLoadedRef.current) {
@@ -293,7 +322,7 @@ export default function VisualizadorPdfLaudo() {
       }
       carregarImagens();
     }
-  }, [id, paginaAtual, laudo?.id]);
+  }, [id, paginaAtual, laudo?.id, modoPreview]);
 
   useEffect(() => {
     setPaginaInput(String(paginaAtual));
@@ -383,65 +412,111 @@ export default function VisualizadorPdfLaudo() {
   const carregarImagens = async () => {
     if (!id || !laudo) return;
 
+    const atualizarResumoImagens = async () => {
+      const response = await laudosService.getImagensPdf(
+        id,
+        1,
+        imagensPorPagina
+      );
+      const adicional = hasCover ? 4 : 0;
+      const totalPaginasVisual = response.meta.totalPages + adicional;
+
+      setTotalPaginas(totalPaginasVisual);
+      setTotalImagens(response.meta.totalImages);
+
+      if (totalPaginasVisual > 0 && paginaAtual > totalPaginasVisual) {
+        setPaginaAtual(totalPaginasVisual);
+      }
+    };
+
     // Se for página de capa, não carrega imagens
     if (hasCover && paginaAtual === 1) {
       setImagensComUrls([]);
-      setLoading(false);
-
-      const response = await laudosService.getImagensPdf(id, 1, 12);
-      const isEntrada = (
-        (response.data?.[0]?.laudo?.tipoVistoria || "") +
-        (laudo?.tipoVistoria || "")
-      )
-        .toLowerCase()
-        .includes("entrada");
-
-      // Se for Entrada: Capa + Termos + Imagens + Relatório + Assinaturas = Total + 4
-      // Se não for Entrada: Apenas Imagens = Total (ajustar conforme necessidade)
-      const adicional = hasCover ? 4 : 0;
-
-      setTotalPaginas(response.meta.totalPages + adicional);
-      setTotalImagens(response.meta.totalImages);
+      setLoading(true);
+      try {
+        await atualizarResumoImagens();
+      } catch (error: any) {
+        toast.error(error.message || "Erro ao carregar imagens");
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
     // Se for página de Termos (Página 2), não carrega imagens
     if (hasCover && paginaAtual === 2) {
       setImagensComUrls([]);
-      setLoading(false);
+      setLoading(true);
+      try {
+        await atualizarResumoImagens();
+      } catch (error: any) {
+        toast.error(error.message || "Erro ao carregar imagens");
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
     // Se for página de Relatório (Penúltima Página), não carrega imagens
     if (hasCover && paginaAtual === totalPaginas - 1) {
       setImagensComUrls([]);
-      setLoading(false);
+      setLoading(true);
+      try {
+        await atualizarResumoImagens();
+      } catch (error: any) {
+        toast.error(error.message || "Erro ao carregar imagens");
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
     // Se for página de Assinaturas (Última Página), não carrega imagens
     if (hasCover && paginaAtual === totalPaginas) {
       setImagensComUrls([]);
-      setLoading(false);
+      setLoading(true);
+      try {
+        await atualizarResumoImagens();
+      } catch (error: any) {
+        toast.error(error.message || "Erro ao carregar imagens");
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
     // Calculo da página do backend (Pagina 1 do backend começa na página 3 do visualizador se tiver capa)
     const backendPage = hasCover ? paginaAtual - 2 : paginaAtual;
+    const cacheKey = `${modoPreview}:${paginaAtual}`;
 
-    if (pagesCache.current[paginaAtual]) {
-      setImagensComUrls(pagesCache.current[paginaAtual]);
+    if (pagesCache.current[cacheKey]) {
+      setImagensComUrls(pagesCache.current[cacheKey]);
       return;
     }
 
     try {
       setLoading(true);
-      const response = await laudosService.getImagensPdf(id, backendPage, 12);
-
-      setTotalPaginas(
-        hasCover ? response.meta.totalPages + 4 : response.meta.totalPages
+      const response = await laudosService.getImagensPdf(
+        id,
+        backendPage,
+        imagensPorPagina
       );
+
+      const totalPaginasVisual = hasCover
+        ? response.meta.totalPages + 4
+        : response.meta.totalPages;
+
+      setTotalPaginas(totalPaginasVisual);
       setTotalImagens(response.meta.totalImages);
+
+      if (totalPaginasVisual > 0 && paginaAtual > totalPaginasVisual) {
+        setPaginaAtual(totalPaginasVisual);
+        return;
+      }
 
       const s3Keys = response.data.map((img: any) => img.s3Key);
       const urls = await laudosService.getSignedUrlsBatch(s3Keys);
@@ -451,7 +526,7 @@ export default function VisualizadorPdfLaudo() {
         url: urls[img.s3Key],
       }));
 
-      pagesCache.current[paginaAtual] = imagensComUrl;
+      pagesCache.current[cacheKey] = imagensComUrl;
       setImagensComUrls(imagensComUrl);
     } catch (error: any) {
       toast.error(error.message || "Erro ao carregar imagens");
@@ -1847,10 +1922,37 @@ export default function VisualizadorPdfLaudo() {
         </div>
 
         {/* Paginação */}
-        <div className="flex flex-col md:flex-row items-center justify-between bg-white rounded-lg shadow-sm p-4 gap-4 md:gap-0">
-          <div className="text-sm text-gray-600 text-center md:text-left">
-            Página {paginaAtual} de {totalPaginas} • {totalImagens} imagens no
-            total
+        <div className="flex flex-col lg:flex-row items-center justify-between bg-white rounded-lg shadow-sm p-4 gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+            <div className="text-sm text-gray-600 text-center sm:text-left">
+              Página {paginaAtual} de {totalPaginas} • {totalImagens} imagens
+              no total • {imagensPorPagina} por página
+            </div>
+
+            <div
+              className="inline-flex rounded-lg border border-gray-300 bg-gray-50 p-1"
+              aria-label="Modo do preview"
+            >
+              {(Object.keys(PREVIEW_LAYOUTS) as ModoPreview[]).map((modo) => {
+                const ativo = modoPreview === modo;
+
+                return (
+                  <button
+                    key={modo}
+                    type="button"
+                    onClick={() => handleModoPreviewChange(modo)}
+                    aria-pressed={ativo}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                      ativo
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    {PREVIEW_LAYOUTS[modo].label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
@@ -1948,8 +2050,11 @@ export default function VisualizadorPdfLaudo() {
               }`}
               style={{
                 width: "210mm",
-                padding: `${configuracoes.margemPagina}px`,
+                padding: isModoCompacto
+                  ? "18px 20px 28px"
+                  : `${configuracoes.margemPagina}px`,
                 height: "297mm",
+                boxSizing: isModoCompacto ? "border-box" : undefined,
                 color: "black",
                 position: "relative",
                 fontFamily: '"Roboto", Arial, sans-serif',
@@ -1959,12 +2064,66 @@ export default function VisualizadorPdfLaudo() {
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: `${configuracoes.espacamentoVertical}px ${configuracoes.espacamentoHorizontal}px`,
+                  gap: isModoCompacto
+                    ? "0 8px"
+                    : `${configuracoes.espacamentoVertical}px ${configuracoes.espacamentoHorizontal}px`,
+                  alignContent: "start",
                 }}
               >
                 {imagensComUrls.map((img) => {
                   const ambienteSemNumero =
                     img.ambiente?.replace(/^\d+\s*-\s*/, "") || img.ambiente;
+                  const numeroFoto =
+                    img.numeroImagemNoAmbiente ?? img.count ?? "";
+                  const numeroAmbiente = img.numeroAmbiente ?? "";
+                  const rotuloCompacto = `${numeroFoto} (${numeroAmbiente}) ${ambienteSemNumero}`;
+
+                  if (isModoCompacto) {
+                    return (
+                      <div key={img.id}>
+                        <div className="border border-gray-300">
+                          <img
+                            src={img.url}
+                            alt={`${img.ambiente} - ${img.numeroImagemNoAmbiente}`}
+                            className="w-full object-cover"
+                            style={{
+                              height: "178px",
+                              display: "block",
+                            }}
+                            crossOrigin="anonymous"
+                          />
+                        </div>
+                        <div
+                          className="font-bold"
+                          style={{
+                            height: "23px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "9px",
+                            lineHeight: "1.2",
+                            textAlign: "center",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                          title={rotuloCompacto}
+                        >
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: "100%",
+                            }}
+                          >
+                            {rotuloCompacto}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const isEditing = editingId === img.id;
 
                   return (
