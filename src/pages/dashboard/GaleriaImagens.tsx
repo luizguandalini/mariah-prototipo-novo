@@ -50,6 +50,7 @@ import {
 } from "../../services/laudos";
 import { ambientesService } from "../../services/ambientes";
 import { queueService } from "../../services/queue";
+import { configService } from "../../services/config";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
@@ -231,6 +232,7 @@ interface SortableImagemCardProps {
   opcoesItens: string[];
   loadingItemChange: string | null;
   loadingCategoriaChange: string | null;
+  hideItemControls: boolean;
   onUpdateItem: (imgId: string, novoItem: string) => void;
   onToggleAvaria: (imgId: string, marcarAvaria: boolean) => void;
   onDelete: (imgId: string) => void;
@@ -245,6 +247,7 @@ function SortableImagemCard({
   opcoesItens,
   loadingItemChange,
   loadingCategoriaChange,
+  hideItemControls,
   onUpdateItem,
   onToggleAvaria,
   onDelete,
@@ -286,12 +289,27 @@ function SortableImagemCard({
       />
 
       {img.imagemJaFoiAnalisadaPelaIa === "sim" && (
-        <div className="absolute top-10 right-2 bg-green-500 rounded-full p-1.5 shadow-lg z-20">
+        <div
+          className={`absolute ${hideItemControls ? "top-2" : "top-10"} right-2 bg-green-500 rounded-full p-1.5 shadow-lg z-20`}
+        >
           <CheckCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
       )}
 
-      <div className="absolute top-0 left-0 right-0 bg-black/60 p-2 z-10 flex items-center justify-between pointer-events-auto shadow-sm">
+      {hideItemControls && (
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-2 left-2 z-10 p-1.5 rounded bg-black/55 hover:bg-black/70 border border-white/20 text-white cursor-grab active:cursor-grabbing shadow-sm"
+          {...attributes}
+          {...listeners}
+          title="Arraste para reordenar"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      <div className={`${hideItemControls ? "hidden" : ""} absolute top-0 left-0 right-0 bg-black/60 p-2 z-10 flex items-center justify-between pointer-events-auto shadow-sm`}>
         {loadingItemChange === img.id ? (
           <div className="flex items-center gap-2 text-white text-xs w-full justify-center">
             <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />{" "}
@@ -461,6 +479,9 @@ export default function GaleriaImagens() {
   const [uploadPreviewItems, setUploadPreviewItems] = useState<
     UploadPreviewItem[]
   >([]);
+  const [filenameCaptionAllowed, setFilenameCaptionAllowed] = useState(false);
+  const [usarNomeArquivoComoLegenda, setUsarNomeArquivoComoLegenda] =
+    useState(false);
   const uploadPreviewItemsRef = useRef<UploadPreviewItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -500,6 +521,8 @@ export default function GaleriaImagens() {
   const totalImagensSemItem = imagens.filter((img) =>
     isTipoNaoIdentificado(img.tipo),
   ).length;
+  const ocultarControlesItemPorLegendaArquivo =
+    filenameCaptionAllowed && usarNomeArquivoComoLegenda;
 
   // ========== CARREGAR AMBIENTES ==========
   const fetchAmbientes = useCallback(async () => {
@@ -520,6 +543,31 @@ export default function GaleriaImagens() {
   useEffect(() => {
     fetchAmbientes();
   }, [fetchAmbientes]);
+
+  useEffect(() => {
+    let active = true;
+
+    configService
+      .getFilenameCaptionConfig()
+      .then((config) => {
+        if (!active) return;
+        setFilenameCaptionAllowed(!!config.enabledForCurrentUser);
+        if (!config.enabledForCurrentUser) {
+          setUsarNomeArquivoComoLegenda(false);
+        }
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar configuração de legenda por arquivo:", error);
+        if (active) {
+          setFilenameCaptionAllowed(false);
+          setUsarNomeArquivoComoLegenda(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // ========== CARREGAR TIPOS DE AMBIENTE (para criar) ==========
   const loadTipos = useCallback(
@@ -1144,6 +1192,9 @@ export default function GaleriaImagens() {
                 ordem: ordemUploadBase + index,
                 uploadSessionId,
                 clientFileId: itemId,
+                originalFilename: file.name,
+                usarNomeArquivoComoLegenda:
+                  filenameCaptionAllowed && usarNomeArquivoComoLegenda,
               });
               if (!response?.imagem?.id || !response.imagem.url) {
                 throw new Error("Upload confirmado sem imagem retornada");
@@ -1959,6 +2010,28 @@ export default function GaleriaImagens() {
         ) : (
           // === MODO IMAGENS (ambiente selecionado) ===
           <>
+            {filenameCaptionAllowed && (
+              <label className="flex items-start gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] p-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={usarNomeArquivoComoLegenda}
+                  onChange={(event) =>
+                    setUsarNomeArquivoComoLegenda(event.target.checked)
+                  }
+                  disabled={uploading}
+                  className="mt-0.5 w-5 h-5 accent-[var(--primary)]"
+                />
+                <span>
+                  <span className="block text-sm font-bold text-[var(--text-primary)]">
+                    Usar nome do arquivo como legenda
+                  </span>
+                  <span className="block text-xs text-[var(--text-secondary)] mt-1">
+                    Ao enviar, cada imagem será salva com a legenda igual ao nome original do arquivo e marcada como analisada.
+                  </span>
+                </span>
+              </label>
+            )}
+
             {/* Upload Area */}
             <div
               className="border-2 border-dashed border-[var(--border-color)] bg-[var(--bg-primary)] rounded-xl p-6 text-center hover:border-primary transition-colors cursor-pointer group"
@@ -2075,7 +2148,7 @@ export default function GaleriaImagens() {
             ) : (
               <>
                 {/* Aviso de imagens sem item */}
-                {totalImagensSemItem > 0 && (
+                {!ocultarControlesItemPorLegendaArquivo && totalImagensSemItem > 0 && (
                   <div className="flex items-center gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-600 dark:text-yellow-500">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />
                     <span>
@@ -2122,6 +2195,7 @@ export default function GaleriaImagens() {
                             }
                             loadingItemChange={loadingItemChange}
                             loadingCategoriaChange={loadingCategoriaChange}
+                            hideItemControls={ocultarControlesItemPorLegendaArquivo}
                             onUpdateItem={handleUpdateItem}
                             onToggleAvaria={handleToggleAvaria}
                             onDelete={(imagemId) =>

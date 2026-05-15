@@ -3,6 +3,9 @@ import { toast } from "sonner";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
 import { queueService, openaiService, QueueItem, QueueStats, OpenAIStatus, GlobalStatus } from "../../services/queue";
+import { configService } from "../../services/config";
+
+const FILENAME_CAPTION_ROLE_OPTIONS = ["DEV", "ADMIN", "USUARIO"];
 
 export default function ConfiguracoesIA() {
   // Estados para API Key
@@ -16,20 +19,24 @@ export default function ConfiguracoesIA() {
   const [isLoadingQueue, setIsLoadingQueue] = useState(true);
   const [globalStatus, setGlobalStatus] = useState<GlobalStatus | null>(null);
   const [isResuming, setIsResuming] = useState(false);
+  const [filenameCaptionRoles, setFilenameCaptionRoles] = useState<string[]>([]);
+  const [isSavingFilenameCaptionRoles, setIsSavingFilenameCaptionRoles] = useState(false);
 
   // Carregar dados iniciais
   const loadData = useCallback(async () => {
     try {
-      const [status, stats, queue, global] = await Promise.all([
+      const [status, stats, queue, global, filenameCaptionConfig] = await Promise.all([
         openaiService.getStatus(),
         queueService.getQueueStats(),
         queueService.getFullQueue(),
         queueService.getGlobalStatus(),
+        configService.getFilenameCaptionConfig(),
       ]);
       setOpenaiStatus(status);
       setQueueStats(stats);
       setFullQueue(queue);
       setGlobalStatus(global);
+      setFilenameCaptionRoles(filenameCaptionConfig.allowedRoles || []);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -77,6 +84,25 @@ export default function ConfiguracoesIA() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Erro ao testar conexão");
+    }
+  };
+
+  const toggleFilenameCaptionRole = (role: string) => {
+    setFilenameCaptionRoles((prev) =>
+      prev.includes(role) ? prev.filter((item) => item !== role) : [...prev, role],
+    );
+  };
+
+  const handleSaveFilenameCaptionRoles = async () => {
+    setIsSavingFilenameCaptionRoles(true);
+    try {
+      const result = await configService.setFilenameCaptionRoles(filenameCaptionRoles);
+      setFilenameCaptionRoles(result.allowedRoles || []);
+      toast.success("Permissões atualizadas com sucesso!");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Erro ao atualizar permissões");
+    } finally {
+      setIsSavingFilenameCaptionRoles(false);
     }
   };
 
@@ -211,6 +237,46 @@ export default function ConfiguracoesIA() {
                 Testar Conexão Agora →
               </button>
             </div>
+          </div>
+        </div>
+
+        <div className="bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] p-5 sm:p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-1.5 h-6 bg-primary rounded-full" />
+            <h2 className="text-xl font-black text-[var(--text-primary)]">
+              Legenda pelo nome do arquivo
+            </h2>
+          </div>
+
+          <p className="text-sm text-[var(--text-secondary)] mb-5">
+            Roles habilitadas poderão escolher, no upload web, usar o nome original do arquivo como legenda da imagem.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            {FILENAME_CAPTION_ROLE_OPTIONS.map((role) => (
+              <label
+                key={role}
+                className="flex items-center gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] px-4 py-3 cursor-pointer hover:border-primary transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={filenameCaptionRoles.includes(role)}
+                  onChange={() => toggleFilenameCaptionRole(role)}
+                  className="w-4 h-4 accent-[var(--primary)]"
+                />
+                <span className="text-sm font-bold text-[var(--text-primary)]">{role}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSaveFilenameCaptionRoles}
+              disabled={isSavingFilenameCaptionRoles}
+              className="w-full sm:w-auto"
+            >
+              {isSavingFilenameCaptionRoles ? "Salvando..." : "Salvar permissões"}
+            </Button>
           </div>
         </div>
 

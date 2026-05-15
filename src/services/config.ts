@@ -27,4 +27,17 @@ export const configService = {
   ): Promise<{ success: boolean; message: string }> {
     return await api.put("/config/avaria-prompt", { value }, true);
   },
+
+  async getFilenameCaptionConfig(): Promise<{
+    allowedRoles: string[];
+    enabledForCurrentUser: boolean;
+  }> {
+    return await api.get("/config/filename-caption", true);
+  },
+
+  async setFilenameCaptionRoles(
+    roles: string[],
+  ): Promise<{ success: boolean; allowedRoles: string[] }> {
+    return await api.put("/config/filename-caption", { roles }, true);
+  },
 };

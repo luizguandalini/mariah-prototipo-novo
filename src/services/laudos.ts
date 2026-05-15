@@ -55,6 +55,8 @@ export interface ImagemLaudo {
   tipo: string;
   categoria: string;
   avariaLocal?: string;
+  descricao?: string;
+  legenda?: string;
   dataCaptura: string;
   imagemJaFoiAnalisadaPelaIa: string;
   ordem: number;
@@ -505,6 +507,8 @@ class LaudosService {
     ambienteComentario?: string;
     uploadSessionId?: string;
     clientFileId?: string;
+    originalFilename?: string;
+    usarNomeArquivoComoLegenda?: boolean;
   }): Promise<{ success: boolean; imagem: ImagemLaudo }> {
     return api.post(`/uploads/confirm-web`, data, true);
   }
