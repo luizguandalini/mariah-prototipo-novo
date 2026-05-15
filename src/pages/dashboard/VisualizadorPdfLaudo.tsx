@@ -114,6 +114,9 @@ const PREVIEW_LAYOUTS: Record<
   },
 };
 
+const isModoPreviewValido = (modo: unknown): modo is ModoPreview =>
+  modo === "detalhado" || modo === "compacto";
+
 const getMetodologiaPadrao = (tipoVistoria?: string) => {
   const isSaida =
     tipoVistoria?.toLowerCase() === "saída" ||
@@ -292,19 +295,33 @@ export default function VisualizadorPdfLaudo() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const wasTriggeredRef = useRef(false);
   const isConfigLoadedRef = useRef(false);
+  const modoPreviewAlteradoRef = useRef(false);
   const originalLegendasRef = useRef<Record<string, string>>({});
   const pagesCache = useRef<Record<string, any[]>>({});
 
   const hasCover = true;
 
-  const handleModoPreviewChange = (modo: ModoPreview) => {
+  const handleModoPreviewChange = async (modo: ModoPreview) => {
     if (modo === modoPreview) return;
 
+    const modoAnterior = modoPreview;
+    modoPreviewAlteradoRef.current = true;
     pagesCache.current = {};
     setEditingId(null);
     setImagensComUrls([]);
     setLoading(true);
     setModoPreview(modo);
+
+    try {
+      await laudosService.updateConfiguracoesPdf({ modoPreviewPdf: modo });
+    } catch (error) {
+      console.error("Erro ao salvar modo do preview:", error);
+      toast.error("Erro ao salvar preferência do preview");
+      pagesCache.current = {};
+      setImagensComUrls([]);
+      setLoading(true);
+      setModoPreview(modoAnterior);
+    }
   };
 
   useEffect(() => {
@@ -385,6 +402,13 @@ export default function VisualizadorPdfLaudo() {
         setConfiguracoes(configNormalizada);
       }
       setConfiguracoesOriginais(configNormalizada);
+
+      if (
+        !modoPreviewAlteradoRef.current &&
+        isModoPreviewValido(config.modoPreviewPdf)
+      ) {
+        setModoPreview(config.modoPreviewPdf);
+      }
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
     }
@@ -459,36 +483,6 @@ export default function VisualizadorPdfLaudo() {
       return;
     }
 
-    // Se for página de Relatório (Penúltima Página), não carrega imagens
-    if (hasCover && paginaAtual === totalPaginas - 1) {
-      setImagensComUrls([]);
-      setLoading(true);
-      try {
-        await atualizarResumoImagens();
-      } catch (error: any) {
-        toast.error(error.message || "Erro ao carregar imagens");
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // Se for página de Assinaturas (Última Página), não carrega imagens
-    if (hasCover && paginaAtual === totalPaginas) {
-      setImagensComUrls([]);
-      setLoading(true);
-      try {
-        await atualizarResumoImagens();
-      } catch (error: any) {
-        toast.error(error.message || "Erro ao carregar imagens");
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
     // Calculo da página do backend (Pagina 1 do backend começa na página 3 do visualizador se tiver capa)
     const backendPage = hasCover ? paginaAtual - 2 : paginaAtual;
     const cacheKey = `${modoPreview}:${paginaAtual}`;
@@ -513,12 +507,63 @@ export default function VisualizadorPdfLaudo() {
       setTotalPaginas(totalPaginasVisual);
       setTotalImagens(response.meta.totalImages);
 
+      if (totalPaginas > 0 && totalPaginas !== totalPaginasVisual) {
+        const paginaEraRelatorio =
+          hasCover && paginaAtual === totalPaginas - 1;
+        const paginaEraAssinatura = hasCover && paginaAtual === totalPaginas;
+        const ultimaPaginaComImagem = hasCover
+          ? response.meta.totalPages + 2
+          : response.meta.totalPages;
+
+        if (paginaEraRelatorio) {
+          setImagensComUrls([]);
+          setPaginaAtual(Math.max(1, totalPaginasVisual - 1));
+          return;
+        }
+
+        if (paginaEraAssinatura || paginaAtual > totalPaginasVisual) {
+          setImagensComUrls([]);
+          setPaginaAtual(totalPaginasVisual);
+          return;
+        }
+
+        if (
+          response.meta.totalPages > 0 &&
+          backendPage > response.meta.totalPages
+        ) {
+          setImagensComUrls([]);
+          setPaginaAtual(ultimaPaginaComImagem);
+          return;
+        }
+      }
+
       if (totalPaginasVisual > 0 && paginaAtual > totalPaginasVisual) {
+        setImagensComUrls([]);
         setPaginaAtual(totalPaginasVisual);
         return;
       }
 
+      if (
+        hasCover &&
+        totalPaginasVisual > 0 &&
+        (paginaAtual === totalPaginasVisual - 1 ||
+          paginaAtual === totalPaginasVisual)
+      ) {
+        setImagensComUrls([]);
+        return;
+      }
+
+      if (response.data.length === 0) {
+        setImagensComUrls([]);
+        return;
+      }
+
       const s3Keys = response.data.map((img: any) => img.s3Key);
+      if (s3Keys.length === 0) {
+        setImagensComUrls([]);
+        return;
+      }
+
       const urls = await laudosService.getSignedUrlsBatch(s3Keys);
 
       const imagensComUrl = response.data.map((img: any) => ({

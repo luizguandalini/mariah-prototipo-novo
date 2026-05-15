@@ -450,6 +450,7 @@ class LaudosService {
     espacamentoHorizontal?: number;
     espacamentoVertical?: number;
     margemPagina?: number;
+    modoPreviewPdf?: "detalhado" | "compacto";
     metodologiaTexto?: string | null;
     termosGeraisTexto?: string | null;
     assinaturaTexto?: string | null;
