@@ -2142,7 +2142,7 @@ export default function VisualizadorPdfLaudo() {
                   const numeroFoto =
                     img.numeroImagemNoAmbiente ?? img.count ?? "";
                   const numeroAmbiente = img.numeroAmbiente ?? "";
-                  const rotuloCompacto = `${numeroFoto} (${numeroAmbiente}) ${ambienteSemNumero}`;
+                  const rotuloCompacto = `${numeroAmbiente} (${numeroFoto}) ${ambienteSemNumero}`;
 
                   if (isModoCompacto) {
                     return (
