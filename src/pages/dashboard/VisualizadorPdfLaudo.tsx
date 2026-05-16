@@ -292,6 +292,9 @@ export default function VisualizadorPdfLaudo() {
     });
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [progresso, setProgresso] = useState(0);
+  const [mensagemGeracaoPdf, setMensagemGeracaoPdf] = useState(
+    "Estamos processando as imagens e organizando o laudo completo..."
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
   const wasTriggeredRef = useRef(false);
   const isConfigLoadedRef = useRef(false);
@@ -744,11 +747,21 @@ export default function VisualizadorPdfLaudo() {
         const isFirstLoad = !laudo.pdfUrl && update.url;
         const isUpdated = update.url && laudo.pdfUrl !== update.url;
 
-        if (update.url && (isFirstLoad || isUpdated)) {
-          toast.success("PDF gerado com sucesso!");
+        if (update.url) {
+          if (isFirstLoad || isUpdated) {
+            toast.success("PDF gerado com sucesso!");
+          }
+
           setLaudo((prev) =>
             prev
-              ? { ...prev, pdfUrl: update.url, pdfStatus: "COMPLETED" }
+              ? {
+                  ...prev,
+                  pdfUrl: update.url,
+                  pdfStatus: "COMPLETED",
+                  pdfModoPreview: isModoPreviewValido(update.modoPreviewPdf)
+                    ? update.modoPreviewPdf
+                    : modoPreview,
+                }
               : null
           );
         }
@@ -768,35 +781,43 @@ export default function VisualizadorPdfLaudo() {
         setLaudo((prev) => (prev ? { ...prev, pdfStatus: "ERROR" } : null));
       }
     }
-  }, [pdfProgressMap, id, laudo?.pdfStatus]); // Dependência cuidadosa para evitar loops
+  }, [pdfProgressMap, id, laudo?.pdfStatus, laudo?.pdfUrl, modoPreview]);
 
   const handleGerarPdfCompleto = async () => {
     if (!id || !laudo) return;
 
-    // Se já tem PDF pronto e não está processando, abre o link
-    if (laudo.pdfUrl && laudo.pdfStatus === "COMPLETED") {
+    const modoPdfGerado = laudo.pdfModoPreview || "detalhado";
+    const pdfEstaNoModoAtual = modoPdfGerado === modoPreview;
+
+    if (laudo.pdfUrl && laudo.pdfStatus === "COMPLETED" && pdfEstaNoModoAtual) {
       window.open(laudo.pdfUrl, "_blank");
       return;
     }
 
-    iniciarGeracao();
+    const labelModo = PREVIEW_LAYOUTS[modoPreview].label;
+    iniciarGeracao(
+      laudo.pdfUrl
+        ? `Atualizando PDF em ${labelModo}...`
+        : `Gerando PDF em ${labelModo}...`
+    );
   };
 
   const handleRegenerarPdf = async () => {
     // Força a geração mesmo se já existir
-    iniciarGeracao();
+    iniciarGeracao(`Atualizando PDF em ${PREVIEW_LAYOUTS[modoPreview].label}...`);
   };
 
-  const iniciarGeracao = async () => {
+  const iniciarGeracao = async (mensagem: string) => {
     if (!id) return;
     try {
       setGerandoPdf(true);
       setProgresso(0);
+      setMensagemGeracaoPdf(mensagem);
       wasTriggeredRef.current = true;
 
-      await laudosService.requestPdfGeneration(id);
+      await laudosService.requestPdfGeneration(id, modoPreview);
 
-      toast.info("Geração de PDF iniciada no servidor. Aguarde...");
+      toast.info(mensagem);
 
       // O progresso será atualizado pelo useEffect do socket
     } catch (error: any) {
@@ -2339,7 +2360,7 @@ export default function VisualizadorPdfLaudo() {
                 Gerando PDF
               </h3>
               <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm">
-                Estamos processando as imagens e organizando o laudo completo...
+                {mensagemGeracaoPdf}
               </p>
 
               <div className="w-full mb-2">

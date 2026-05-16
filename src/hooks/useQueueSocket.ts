@@ -39,7 +39,7 @@ export const useQueueSocket = () => {
         }));
     });
 
-    socketRef.current.on('pdfProgress', (data: { laudoId: string; status: string; progress: number, url?: string, error?: string }) => {
+    socketRef.current.on('pdfProgress', (data: { laudoId: string; status: string; progress: number, url?: string, error?: string, modoPreviewPdf?: "detalhado" | "compacto" }) => {
         console.log('socket: pdfProgress received', data);
         setPdfProgressMap(prev => ({
             ...prev,

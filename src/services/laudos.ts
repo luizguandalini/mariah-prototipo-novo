@@ -111,6 +111,7 @@ export interface Laudo {
   status: "nao_iniciado" | "processando" | "concluido" | "paralisado";
   tamanho?: string;
   pdfUrl?: string;
+  pdfModoPreview?: "detalhado" | "compacto";
   pdfStatus?: string; // NONE, PENDING, PROCESSING, COMPLETED, ERROR
   pdfProgress?: number;
   totalAmbientes: number;
@@ -461,8 +462,15 @@ class LaudosService {
   /**
    * Solicita a geração do PDF no backend
    */
-  async requestPdfGeneration(laudoId: string): Promise<void> {
-    return api.post(`/laudos/${laudoId}/pdf-request`, {}, true);
+  async requestPdfGeneration(
+    laudoId: string,
+    modoPreviewPdf: "detalhado" | "compacto" = "detalhado",
+  ): Promise<void> {
+    return api.post(
+      `/laudos/${laudoId}/pdf-request`,
+      { modoPreviewPdf },
+      true,
+    );
   }
 
   // ========== UPLOAD WEB ==========
