@@ -114,6 +114,7 @@ export interface Laudo {
   pdfModoPreview?: "detalhado" | "compacto";
   pdfStatus?: string; // NONE, PENDING, PROCESSING, COMPLETED, ERROR
   pdfProgress?: number;
+  usarNomeArquivoComoLegenda?: boolean;
   totalAmbientes: number;
   totalFotos: number;
 
@@ -320,8 +321,20 @@ class LaudosService {
     ambientes: AmbienteWebInfo[];
     tipoUso?: string;
     tipoImovel?: string;
+    usarNomeArquivoComoLegenda: boolean;
   }> {
     return api.get(`/laudos/${laudoId}/ambientes-web`, true);
+  }
+
+  async updateFilenameCaptionPreference(
+    laudoId: string,
+    usarNomeArquivoComoLegenda: boolean,
+  ): Promise<{ usarNomeArquivoComoLegenda: boolean }> {
+    return api.patch(
+      `/laudos/${laudoId}/filename-caption-preference`,
+      { usarNomeArquivoComoLegenda },
+      true,
+    );
   }
 
   /**

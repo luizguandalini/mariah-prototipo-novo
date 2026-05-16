@@ -482,6 +482,10 @@ export default function GaleriaImagens() {
   const [filenameCaptionAllowed, setFilenameCaptionAllowed] = useState(false);
   const [usarNomeArquivoComoLegenda, setUsarNomeArquivoComoLegenda] =
     useState(false);
+  const [
+    savingFilenameCaptionPreference,
+    setSavingFilenameCaptionPreference,
+  ] = useState(false);
   const uploadPreviewItemsRef = useRef<UploadPreviewItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -532,6 +536,7 @@ export default function GaleriaImagens() {
       const res = await laudosService.getAmbientesWeb(id);
       setAmbientes([...res.ambientes].sort((a, b) => a.ordem - b.ordem));
       setLaudoInfo({ tipoUso: res.tipoUso, tipoImovel: res.tipoImovel });
+      setUsarNomeArquivoComoLegenda(!!res.usarNomeArquivoComoLegenda);
     } catch (err: any) {
       console.error(err);
       toast.error("Não foi possível carregar os ambientes.");
@@ -568,6 +573,28 @@ export default function GaleriaImagens() {
       active = false;
     };
   }, []);
+
+  const handleFilenameCaptionPreferenceChange = async (checked: boolean) => {
+    if (!id || uploading || savingFilenameCaptionPreference) return;
+
+    const valorAnterior = usarNomeArquivoComoLegenda;
+    setUsarNomeArquivoComoLegenda(checked);
+    setSavingFilenameCaptionPreference(true);
+
+    try {
+      const response = await laudosService.updateFilenameCaptionPreference(
+        id,
+        checked,
+      );
+      setUsarNomeArquivoComoLegenda(!!response.usarNomeArquivoComoLegenda);
+    } catch (error: any) {
+      console.error("Erro ao salvar preferência de legenda por arquivo:", error);
+      setUsarNomeArquivoComoLegenda(valorAnterior);
+      toast.error("Não foi possível salvar a preferência de legenda.");
+    } finally {
+      setSavingFilenameCaptionPreference(false);
+    }
+  };
 
   // ========== CARREGAR TIPOS DE AMBIENTE (para criar) ==========
   const loadTipos = useCallback(
@@ -2016,14 +2043,17 @@ export default function GaleriaImagens() {
                   type="checkbox"
                   checked={usarNomeArquivoComoLegenda}
                   onChange={(event) =>
-                    setUsarNomeArquivoComoLegenda(event.target.checked)
+                    handleFilenameCaptionPreferenceChange(event.target.checked)
                   }
-                  disabled={uploading}
+                  disabled={uploading || savingFilenameCaptionPreference}
                   className="mt-0.5 w-5 h-5 accent-[var(--primary)]"
                 />
                 <span>
-                  <span className="block text-sm font-bold text-[var(--text-primary)]">
-                    Usar nome do arquivo como legenda
+                  <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+                    <span>Usar nome do arquivo como legenda</span>
+                    {savingFilenameCaptionPreference && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--text-secondary)]" />
+                    )}
                   </span>
                   <span className="block text-xs text-[var(--text-secondary)] mt-1">
                     Ao enviar, cada imagem será salva com a legenda igual ao nome original do arquivo e marcada como analisada.
