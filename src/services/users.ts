@@ -95,6 +95,47 @@ class UsersService {
   async deletarUsuario(id: string): Promise<void> {
     await api.delete(`/users/${id}`, true);
   }
+
+  /**
+   * Faz upload da foto de perfil / logo:
+   * 1. pede uma URL pré-assinada ao backend
+   * 2. envia o arquivo direto ao S3
+   * 3. confirma o upload e recebe a URL assinada para exibição
+   */
+  async uploadFotoPerfil(file: File): Promise<{ fotoPerfilUrl: string }> {
+    const { uploadUrl, s3Key } = await api.post<{ uploadUrl: string; s3Key: string }>(
+      "/users/me/foto-perfil/presigned-url",
+      {
+        filename: file.name,
+        contentType: file.type,
+        fileSize: file.size,
+      },
+      true
+    );
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error("Falha ao enviar a imagem para o armazenamento.");
+    }
+
+    return api.post<{ fotoPerfilUrl: string }>(
+      "/users/me/foto-perfil/confirm",
+      { s3Key },
+      true
+    );
+  }
+
+  /**
+   * Remove a foto de perfil / logo do usuário
+   */
+  async removerFotoPerfil(): Promise<void> {
+    await api.delete("/users/me/foto-perfil", true);
+  }
 }
 
 export const usersService = new UsersService();
