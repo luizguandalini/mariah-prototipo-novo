@@ -16,6 +16,8 @@ export interface User {
   quantidadeImagens: number;
   quantidadeClassificacoesWeb: number;
   ativo?: boolean;
+  /** URL assinada (temporária) da foto de perfil / logo, gerada pelo backend */
+  fotoPerfilUrl?: string | null;
 }
 
 export interface LoginCredentials {
