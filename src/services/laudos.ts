@@ -110,6 +110,8 @@ export interface Laudo {
 
   status: "nao_iniciado" | "processando" | "concluido" | "paralisado";
   tamanho?: string;
+  // URL assinada da logo personalizada do laudo (substitui a foto de perfil na capa)
+  logoPersonalizadaUrl?: string | null;
   pdfUrl?: string;
   pdfModoPreview?: "detalhado" | "compacto";
   pdfStatus?: string; // NONE, PENDING, PROCESSING, COMPLETED, ERROR
@@ -279,6 +281,53 @@ class LaudosService {
    */
   async deleteLaudo(id: string): Promise<void> {
     return api.delete<void>(`/laudos/${id}`, true);
+  }
+
+  /**
+   * Faz upload da logo/imagem personalizada de um laudo específico:
+   * 1. pede uma URL pré-assinada ao backend
+   * 2. envia o arquivo direto ao S3
+   * 3. confirma o upload e recebe a URL assinada para exibição
+   */
+  async uploadLaudoLogo(
+    laudoId: string,
+    file: File,
+  ): Promise<{ logoPersonalizadaUrl: string }> {
+    const { uploadUrl, s3Key } = await api.post<{
+      uploadUrl: string;
+      s3Key: string;
+    }>(
+      `/laudos/${laudoId}/logo/presigned-url`,
+      {
+        filename: file.name,
+        contentType: file.type,
+        fileSize: file.size,
+      },
+      true,
+    );
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error("Falha ao enviar a imagem para o armazenamento.");
+    }
+
+    return api.post<{ logoPersonalizadaUrl: string }>(
+      `/laudos/${laudoId}/logo/confirm`,
+      { s3Key },
+      true,
+    );
+  }
+
+  /**
+   * Remove a logo/imagem personalizada de um laudo (volta a usar a foto de perfil)
+   */
+  async removerLaudoLogo(laudoId: string): Promise<void> {
+    await api.delete(`/laudos/${laudoId}/logo`, true);
   }
 
   /**

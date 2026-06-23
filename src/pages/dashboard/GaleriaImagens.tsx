@@ -39,6 +39,8 @@ import {
   AlertCircle,
   GripVertical,
   Pencil,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
@@ -60,6 +62,8 @@ const MAX_UPLOAD_ATTEMPTS = 2;
 const CONCURRENT_UPLOADS = 3;
 const BATCH_DELAY_MS = 200;
 const MAX_AMBIENTE_NOME_LENGTH = 100;
+const LOGO_LAUDO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const LOGO_LAUDO_FORMATOS = ["image/jpeg", "image/png", "image/webp"];
 
 type UploadPreviewStatus = "pending" | "uploading" | "done" | "error";
 
@@ -489,6 +493,13 @@ export default function GaleriaImagens() {
   const uploadPreviewItemsRef = useRef<UploadPreviewItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // === Estado para a logo/imagem personalizada do laudo (capa) ===
+  // null = ainda não carregado; string vazia = sem logo personalizada
+  const [logoLaudoUrl, setLogoLaudoUrl] = useState<string | null>(null);
+  const [uploadingLogoLaudo, setUploadingLogoLaudo] = useState(false);
+  const [logoLaudoComErro, setLogoLaudoComErro] = useState(false);
+  const logoLaudoInputRef = useRef<HTMLInputElement>(null);
+
   // === Estado para delete ===
   const [confirmDelete, setConfirmDelete] = useState<{
     isOpen: boolean;
@@ -593,6 +604,85 @@ export default function GaleriaImagens() {
       toast.error("Não foi possível salvar a preferência de legenda.");
     } finally {
       setSavingFilenameCaptionPreference(false);
+    }
+  };
+
+  // ========== LOGO / IMAGEM PERSONALIZADA DO LAUDO ==========
+  // Carrega a logo personalizada do laudo (se houver). Mantém "" quando não há.
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    laudosService
+      .getLaudo(id)
+      .then((laudo) => {
+        if (!active) return;
+        setLogoLaudoUrl(laudo.logoPersonalizadaUrl || "");
+        setLogoLaudoComErro(false);
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar logo do laudo:", error);
+        if (active) setLogoLaudoUrl("");
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const temLogoPersonalizada = Boolean(logoLaudoUrl);
+  // Imagem exibida no controle: logo do laudo se houver, senão a foto de perfil.
+  const logoExibida =
+    (temLogoPersonalizada ? logoLaudoUrl : user?.fotoPerfilUrl) || "";
+
+  const handleSelecionarLogoLaudo = () => {
+    logoLaudoInputRef.current?.click();
+  };
+
+  const handleLogoLaudoSelecionada = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !id) return;
+
+    if (!LOGO_LAUDO_FORMATOS.includes(file.type)) {
+      toast.error("Formato inválido. Envie uma imagem JPEG, PNG ou WEBP.");
+      return;
+    }
+    if (file.size > LOGO_LAUDO_MAX_BYTES) {
+      toast.error("A imagem é muito grande. O limite é de 5MB.");
+      return;
+    }
+
+    try {
+      setUploadingLogoLaudo(true);
+      const { logoPersonalizadaUrl } = await laudosService.uploadLaudoLogo(
+        id,
+        file,
+      );
+      setLogoLaudoUrl(logoPersonalizadaUrl);
+      setLogoLaudoComErro(false);
+      toast.success("Imagem do laudo atualizada!");
+    } catch (error) {
+      console.error("Erro ao enviar imagem do laudo:", error);
+      toast.error("Erro ao enviar a imagem. Tente novamente.");
+    } finally {
+      setUploadingLogoLaudo(false);
+    }
+  };
+
+  const handleRemoverLogoLaudo = async () => {
+    if (!id || uploadingLogoLaudo || !temLogoPersonalizada) return;
+    try {
+      setUploadingLogoLaudo(true);
+      await laudosService.removerLaudoLogo(id);
+      setLogoLaudoUrl("");
+      setLogoLaudoComErro(false);
+      toast.success("Imagem personalizada removida. O laudo voltou a usar a foto de perfil.");
+    } catch (error) {
+      console.error("Erro ao remover imagem do laudo:", error);
+      toast.error("Erro ao remover a imagem. Tente novamente.");
+    } finally {
+      setUploadingLogoLaudo(false);
     }
   };
 
@@ -1745,6 +1835,63 @@ export default function GaleriaImagens() {
 
           {/* Info cards no header */}
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Imagem personalizada da capa do laudo */}
+            <div className="group relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleSelecionarLogoLaudo}
+                disabled={uploadingLogoLaudo}
+                title={
+                  temLogoPersonalizada
+                    ? "Trocar a imagem da capa deste laudo"
+                    : "Definir uma imagem só para a capa deste laudo"
+                }
+                aria-label="Imagem da capa do laudo"
+                className="relative w-11 h-11 rounded-lg overflow-hidden border border-[var(--border-color)] bg-[var(--bg-primary)] flex items-center justify-center transition-all hover:border-primary/60 disabled:cursor-not-allowed"
+              >
+                {logoExibida && !logoLaudoComErro ? (
+                  <img
+                    src={logoExibida}
+                    alt="Imagem da capa do laudo"
+                    className="w-full h-full object-cover"
+                    onError={() => setLogoLaudoComErro(true)}
+                  />
+                ) : (
+                  <ImagePlus className="w-5 h-5 text-[var(--text-secondary)]" />
+                )}
+
+                {/* Overlay no hover */}
+                <span className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {uploadingLogoLaudo ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ImagePlus className="w-4 h-4" />
+                  )}
+                </span>
+              </button>
+
+              {/* Botão remover (somente quando há logo personalizada) */}
+              {temLogoPersonalizada && !uploadingLogoLaudo && (
+                <button
+                  type="button"
+                  onClick={handleRemoverLogoLaudo}
+                  title="Remover imagem personalizada (voltar à foto de perfil)"
+                  aria-label="Remover imagem personalizada do laudo"
+                  className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              <input
+                ref={logoLaudoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleLogoLaudoSelecionada}
+              />
+            </div>
+
             {/* Total de imagens */}
             <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
               <ImageIcon className="w-4 h-4 text-blue-400" />

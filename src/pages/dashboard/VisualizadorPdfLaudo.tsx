@@ -960,9 +960,9 @@ export default function VisualizadorPdfLaudo() {
           }
         `}</style>
 
-        {/* Logo da capa (foto de perfil) — arrastável e redimensionável */}
+        {/* Logo da capa — usa a logo personalizada do laudo se houver, senão a foto de perfil */}
         <LogoCapaEditavel
-          src={user?.fotoPerfilUrl}
+          src={laudo?.logoPersonalizadaUrl ?? user?.fotoPerfilUrl}
           value={{
             mostrar: configuracoes.mostrarLogoCapa,
             x: configuracoes.logoCapaX,
