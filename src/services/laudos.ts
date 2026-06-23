@@ -468,6 +468,11 @@ class LaudosService {
     metodologiaTexto?: string | null;
     termosGeraisTexto?: string | null;
     assinaturaTexto?: string | null;
+    mostrarLogoCapa?: boolean;
+    logoCapaX?: number | null;
+    logoCapaY?: number | null;
+    logoCapaLargura?: number | null;
+    logoCapaAltura?: number | null;
   }): Promise<any> {
     return api.put(`/users/configuracoes-pdf`, config, true);
   }
