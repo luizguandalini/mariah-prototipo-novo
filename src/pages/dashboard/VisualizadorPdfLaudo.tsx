@@ -10,6 +10,9 @@ import { motion } from "framer-motion";
 import Button from "../../components/ui/Button";
 import { QRCodeSVG } from "qrcode.react";
 import { Save, Check, Loader2 } from "lucide-react";
+import LogoCapaEditavel, {
+  LogoCapaValue,
+} from "../../components/laudo/LogoCapaEditavel";
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
 const normalizeSectionName = (name: string): string => {
@@ -96,6 +99,11 @@ interface ConfiguracoesPdf {
   metodologiaTexto: string | null;
   termosGeraisTexto: string | null;
   assinaturaTexto: string | null;
+  mostrarLogoCapa: boolean;
+  logoCapaX: number | null;
+  logoCapaY: number | null;
+  logoCapaLargura: number | null;
+  logoCapaAltura: number | null;
 }
 
 type ModoPreview = "detalhado" | "compacto";
@@ -255,30 +263,49 @@ export default function VisualizadorPdfLaudo() {
   const [loading, setLoading] = useState(true);
   const isModoCompacto = modoPreview === "compacto";
   const imagensPorPagina = PREVIEW_LAYOUTS[modoPreview].imagensPorPagina;
+  const LOGO_DEFAULTS = {
+    mostrarLogoCapa: true,
+    logoCapaX: null,
+    logoCapaY: null,
+    logoCapaLargura: null,
+    logoCapaAltura: null,
+  };
   const [configuracoes, setConfiguracoes] = useState<ConfiguracoesPdf>(() => {
-    // Tenta carregar do sessionStorage se existir para persistir entre navegação
-    const saved = sessionStorage.getItem(`pdf_config_${id}`);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Erro ao carregar configurações do cache:", e);
-      }
-    }
-    return {
+    const base: ConfiguracoesPdf = {
       espacamentoHorizontal: 10,
       espacamentoVertical: 15,
       margemPagina: 20,
       metodologiaTexto: null,
       termosGeraisTexto: null,
       assinaturaTexto: null,
+      ...LOGO_DEFAULTS,
     };
+    // Tenta carregar do sessionStorage se existir para persistir entre navegação.
+    // A posição/tamanho da logo NÃO é rascunhada: ela só persiste via "Salvar
+    // Alterações" e é sempre recarregada do backend (evita parecer auto-salva).
+    const saved = sessionStorage.getItem(`pdf_config_${id}`);
+    if (saved) {
+      try {
+        return { ...base, ...JSON.parse(saved), ...LOGO_DEFAULTS };
+      } catch (e) {
+        console.error("Erro ao carregar configurações do cache:", e);
+      }
+    }
+    return base;
   });
 
-  // Salva no sessionStorage sempre que as configurações mudarem
+  // Salva no sessionStorage sempre que as configurações mudarem (exceto a logo)
   useEffect(() => {
     if (id) {
-      sessionStorage.setItem(`pdf_config_${id}`, JSON.stringify(configuracoes));
+      const {
+        mostrarLogoCapa: _m,
+        logoCapaX: _x,
+        logoCapaY: _y,
+        logoCapaLargura: _l,
+        logoCapaAltura: _a,
+        ...semLogo
+      } = configuracoes;
+      sessionStorage.setItem(`pdf_config_${id}`, JSON.stringify(semLogo));
     }
   }, [configuracoes, id]);
   const [configuracoesOriginais, setConfiguracoesOriginais] =
@@ -289,6 +316,11 @@ export default function VisualizadorPdfLaudo() {
       metodologiaTexto: null,
       termosGeraisTexto: null,
       assinaturaTexto: null,
+      mostrarLogoCapa: true,
+      logoCapaX: null,
+      logoCapaY: null,
+      logoCapaLargura: null,
+      logoCapaAltura: null,
     });
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [progresso, setProgresso] = useState(0);
@@ -397,12 +429,28 @@ export default function VisualizadorPdfLaudo() {
         metodologiaTexto: config.metodologiaTexto ?? null,
         termosGeraisTexto: config.termosGeraisTexto ?? null,
         assinaturaTexto: config.assinaturaTexto ?? null,
+        mostrarLogoCapa: config.mostrarLogoCapa ?? true,
+        logoCapaX: config.logoCapaX ?? null,
+        logoCapaY: config.logoCapaY ?? null,
+        logoCapaLargura: config.logoCapaLargura ?? null,
+        logoCapaAltura: config.logoCapaAltura ?? null,
       };
 
-      // Só atualiza configuracoes se não houver rascunho no sessionStorage
+      // Só atualiza configuracoes se não houver rascunho no sessionStorage.
+      // A logo, porém, é SEMPRE recarregada do backend (não é rascunhada),
+      // garantindo que a posição só mude após "Salvar Alterações".
       const hasDraft = !!sessionStorage.getItem(`pdf_config_${id}`);
       if (!hasDraft) {
         setConfiguracoes(configNormalizada);
+      } else {
+        setConfiguracoes((prev) => ({
+          ...prev,
+          mostrarLogoCapa: configNormalizada.mostrarLogoCapa,
+          logoCapaX: configNormalizada.logoCapaX,
+          logoCapaY: configNormalizada.logoCapaY,
+          logoCapaLargura: configNormalizada.logoCapaLargura,
+          logoCapaAltura: configNormalizada.logoCapaAltura,
+        }));
       }
       setConfiguracoesOriginais(configNormalizada);
 
@@ -595,6 +643,11 @@ export default function VisualizadorPdfLaudo() {
       "metodologiaTexto",
       "termosGeraisTexto",
       "assinaturaTexto",
+      "mostrarLogoCapa",
+      "logoCapaX",
+      "logoCapaY",
+      "logoCapaLargura",
+      "logoCapaAltura",
     ];
     return keys.some(
       (key) => configuracoes[key] !== configuracoesOriginais[key]
@@ -609,6 +662,11 @@ export default function VisualizadorPdfLaudo() {
       "metodologiaTexto",
       "termosGeraisTexto",
       "assinaturaTexto",
+      "mostrarLogoCapa",
+      "logoCapaX",
+      "logoCapaY",
+      "logoCapaLargura",
+      "logoCapaAltura",
     ];
     return keys.reduce<Record<string, any>>((acc, key) => {
       if (configuracoes[key] !== configuracoesOriginais[key]) {
@@ -633,6 +691,17 @@ export default function VisualizadorPdfLaudo() {
     field: "metodologiaTexto" | "termosGeraisTexto" | "assinaturaTexto"
   ) => {
     setConfiguracoes((prev) => ({ ...prev, [field]: null }));
+  };
+
+  const handleLogoCapaChange = (patch: Partial<LogoCapaValue>) => {
+    setConfiguracoes((prev) => ({
+      ...prev,
+      ...(patch.mostrar !== undefined && { mostrarLogoCapa: patch.mostrar }),
+      ...(patch.x !== undefined && { logoCapaX: patch.x }),
+      ...(patch.y !== undefined && { logoCapaY: patch.y }),
+      ...(patch.largura !== undefined && { logoCapaLargura: patch.largura }),
+      ...(patch.altura !== undefined && { logoCapaAltura: patch.altura }),
+    }));
   };
 
   const handleFieldChange = (
@@ -891,7 +960,20 @@ export default function VisualizadorPdfLaudo() {
           }
         `}</style>
 
-        {/* Espaço reservado para o topo (logo removida conforme pedido) */}
+        {/* Logo da capa (foto de perfil) — arrastável e redimensionável */}
+        <LogoCapaEditavel
+          src={user?.fotoPerfilUrl}
+          value={{
+            mostrar: configuracoes.mostrarLogoCapa,
+            x: configuracoes.logoCapaX,
+            y: configuracoes.logoCapaY,
+            largura: configuracoes.logoCapaLargura,
+            altura: configuracoes.logoCapaAltura,
+          }}
+          onChange={handleLogoCapaChange}
+          editable
+        />
+
         <div style={{ height: "35px" }}></div>
 
         <div className="div-laudo-de-vistoria">
