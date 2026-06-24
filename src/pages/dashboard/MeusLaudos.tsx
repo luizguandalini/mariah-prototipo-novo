@@ -11,13 +11,17 @@ import { queueService } from "../../services/queue";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
-import { FileText, Camera, Bot, Pencil, Trash2, Loader2, Plus } from "lucide-react";
+import { FileText, Camera, Bot, Pencil, Trash2, Loader2, Plus, Search, X } from "lucide-react";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
+import { useDebounce } from "../../hooks/useDebounce";
 
 export default function MeusLaudos() {
   const { user, refreshUser } = useAuth();
   const location = useLocation();
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
+  const [busca, setBusca] = useState("");
+  // Termo "atrasado": só dispara a busca no backend após o usuário parar de digitar.
+  const buscaDebounced = useDebounce(busca.trim(), 450);
   const [laudos, setLaudos] = useState<Laudo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,10 +81,14 @@ export default function MeusLaudos() {
   }, [statusMap]);
 
   useEffect(() => {
-    fetchLaudos(paginaAtual, filtroStatus);
-  }, [paginaAtual, filtroStatus]);
+    fetchLaudos(paginaAtual, filtroStatus, buscaDebounced);
+  }, [paginaAtual, filtroStatus, buscaDebounced]);
 
-  const fetchLaudos = async (page: number, statusFiltro: string) => {
+  const fetchLaudos = async (
+    page: number,
+    statusFiltro: string,
+    termoBusca: string = ""
+  ) => {
     try {
       setLoading(true);
       setError(null);
@@ -89,7 +97,8 @@ export default function MeusLaudos() {
       const response = await laudosService.getMyLaudos(
         page,
         itensPorPagina,
-        status
+        status,
+        termoBusca || undefined
       );
 
       setLaudos(response.data);
@@ -115,7 +124,7 @@ export default function MeusLaudos() {
       const proximaPagina =
         laudos.length === 1 && paginaAtual > 1 ? paginaAtual - 1 : paginaAtual;
       setPaginaAtual(proximaPagina);
-      await fetchLaudos(proximaPagina, filtroStatus);
+      await fetchLaudos(proximaPagina, filtroStatus, buscaDebounced);
       toast.success("Laudo deletado com sucesso!");
     } catch (err: any) {
       toast.error(err.message || "Erro ao deletar laudo");
@@ -220,7 +229,13 @@ export default function MeusLaudos() {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [filtroStatus]);
+  }, [filtroStatus, buscaDebounced]);
+
+  // True enquanto o usuário digita e a busca "atrasada" ainda não foi aplicada,
+  // ou enquanto a requisição correspondente está em andamento. Serve para dar
+  // feedback imediato (spinner) sem disparar chamadas ao backend a cada tecla.
+  const buscando =
+    busca.trim() !== buscaDebounced || (loading && buscaDebounced !== "");
 
   const indexInicio =
     totalLaudos === 0 ? 0 : (paginaAtual - 1) * itensPorPagina;
@@ -242,9 +257,9 @@ export default function MeusLaudos() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
         >
-          <div>
+          <div className="shrink-0">
             <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-2 transition-colors">
               Meus Laudos
             </h2>
@@ -252,15 +267,48 @@ export default function MeusLaudos() {
               Gerencie todos os seus laudos imobiliários
             </p>
           </div>
-          <Link to="/dashboard/novo-laudo">
-            <Button
-              variant="primary"
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg shadow-purple-500/30 border-0 transition-all duration-300 group"
-            >
-              <Plus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-              Novo Laudo
-            </Button>
-          </Link>
+
+          {/* Busca + Novo Laudo agrupados à direita */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:justify-end">
+            {/* Busca por endereço */}
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)] pointer-events-none" />
+              <input
+                type="text"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                maxLength={100}
+                placeholder="Buscar por rua, bairro, cidade..."
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                {buscando ? (
+                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                ) : (
+                  busca && (
+                    <button
+                      type="button"
+                      onClick={() => setBusca("")}
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                      aria-label="Limpar busca"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            <Link to="/dashboard/novo-laudo" className="shrink-0">
+              <Button
+                variant="primary"
+                className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg shadow-purple-500/30 border-0 transition-all duration-300 group"
+              >
+                <Plus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                Novo Laudo
+              </Button>
+            </Link>
+          </div>
         </motion.div>
 
         {/* Filtros */}
@@ -307,7 +355,7 @@ export default function MeusLaudos() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
             <p className="text-red-600 mb-4">{error}</p>
             <Button
-              onClick={() => fetchLaudos(paginaAtual, filtroStatus)}
+              onClick={() => fetchLaudos(paginaAtual, filtroStatus, buscaDebounced)}
               variant="outline"
             >
               Tentar Novamente
@@ -316,13 +364,32 @@ export default function MeusLaudos() {
         ) : laudos.length === 0 ? (
           <div className="bg-[var(--bg-secondary)] rounded-xl p-12 text-center border border-[var(--border-color)] transition-all">
             <p className="text-[var(--text-secondary)] mb-4">
-              {filtroStatus === "todos"
+              {buscaDebounced
+                ? `Nenhum laudo encontrado para "${buscaDebounced}".`
+                : filtroStatus === "todos"
                 ? "Nenhum laudo encontrado. Comece criando seu primeiro laudo!"
                 : "Nenhum laudo encontrado com este status."}
             </p>
+            {buscaDebounced && (
+              <Button variant="outline" onClick={() => setBusca("")}>
+                Limpar busca
+              </Button>
+            )}
           </div>
         ) : (
           <>
+            {buscaDebounced && (
+              <div className="text-sm text-[var(--text-secondary)] -mt-2">
+                {totalLaudos}{" "}
+                {totalLaudos === 1
+                  ? "laudo encontrado"
+                  : "laudos encontrados"}{" "}
+                para{" "}
+                <span className="font-medium text-[var(--text-primary)]">
+                  "{buscaDebounced}"
+                </span>
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-4">
               {laudos.map((laudo, index) => {
                 const status = mapStatus(laudo.status);

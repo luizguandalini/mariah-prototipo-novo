@@ -180,6 +180,7 @@ class LaudosService {
     page: number = 1,
     limit: number = 10,
     status?: string,
+    search?: string,
   ): Promise<PaginatedLaudosResponse> {
     const query = new URLSearchParams({
       page: String(page),
@@ -188,6 +189,11 @@ class LaudosService {
 
     if (status) {
       query.set("status", status);
+    }
+
+    const termoBusca = search?.trim();
+    if (termoBusca) {
+      query.set("search", termoBusca);
     }
 
     return api.get<PaginatedLaudosResponse>(
