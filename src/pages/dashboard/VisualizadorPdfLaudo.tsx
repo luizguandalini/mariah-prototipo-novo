@@ -1696,8 +1696,9 @@ export default function VisualizadorPdfLaudo() {
            .assinaturas-box-col:first-child { border-right: 1px solid #000; }
            .assinaturas-label { border-top: 1px solid #000; padding-top: 2px; font-size: 10px; width: 100%; }
            
-           .testemunhas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
+           .testemunhas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
            .testemunha-item { display: flex; flex-direction: column; gap: 5px; }
+           .testemunha-assinatura-area { height: 45px; border-bottom: 1px solid #000; margin-bottom: 8px; }
            .testemunha-linha { display: flex; align-items: baseline; border-bottom: 1px solid #000; font-size: 11px; padding-bottom: 2px; }
            .testemunha-linha strong { margin-right: 5px; min-width: 40px; }
            
@@ -1892,106 +1893,111 @@ export default function VisualizadorPdfLaudo() {
         </div>
 
         {/* TESTEMUNHAS */}
-        <div className="testemunhas-grid">
-          <div className="testemunha-item">
-            <div className="testemunha-linha">
-              <strong>Nome:</strong>
-              <input
-                style={{
-                  flex: 1,
-                  border: "none",
-                  background: "transparent",
-                  outline: "none",
-                  borderBottom: "1px dashed transparent",
-                }}
-                className={`${
-                  editedFields.testemunha1Nome ? "field-edited" : ""
-                }`}
-                value={laudo.testemunha1Nome || ""}
-                onChange={(e) =>
-                  handleFieldChange("testemunha1Nome", e.target.value)
-                }
-                placeholder="Nome Testemunha 1"
-              />
+        <div className="assinaturas-box-wrapper">
+          <div className="assinaturas-box-header">TESTEMUNHAS</div>
+          <div className="testemunhas-grid">
+            <div className="testemunha-item">
+              <div className="testemunha-assinatura-area"></div>
+              <div className="testemunha-linha">
+                <strong>Nome:</strong>
+                <input
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    background: "transparent",
+                    outline: "none",
+                    borderBottom: "1px dashed transparent",
+                  }}
+                  className={`${
+                    editedFields.testemunha1Nome ? "field-edited" : ""
+                  }`}
+                  value={laudo.testemunha1Nome || ""}
+                  onChange={(e) =>
+                    handleFieldChange("testemunha1Nome", e.target.value)
+                  }
+                  placeholder="Nome Testemunha 1"
+                />
+              </div>
+              <div className="testemunha-linha">
+                <strong>RG:</strong>
+                <input
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    background: "transparent",
+                    outline: "none",
+                    borderBottom: "1px dashed transparent",
+                  }}
+                  className={`${
+                    editedFields.testemunha1Rg ? "field-edited" : ""
+                  }`}
+                  value={laudo.testemunha1Rg || ""}
+                  onChange={(e) =>
+                    handleFieldChange("testemunha1Rg", e.target.value)
+                  }
+                  placeholder="RG Testemunha 1"
+                />
+              </div>
             </div>
-            <div className="testemunha-linha">
-              <strong>RG:</strong>
-              <input
-                style={{
-                  flex: 1,
-                  border: "none",
-                  background: "transparent",
-                  outline: "none",
-                  borderBottom: "1px dashed transparent",
-                }}
-                className={`${
-                  editedFields.testemunha1Rg ? "field-edited" : ""
-                }`}
-                value={laudo.testemunha1Rg || ""}
-                onChange={(e) =>
-                  handleFieldChange("testemunha1Rg", e.target.value)
-                }
-                placeholder="RG Testemunha 1"
-              />
-            </div>
-          </div>
 
-          <div className="testemunha-item">
-            <div className="testemunha-linha">
-              <strong>Nome:</strong>
-              <input
-                style={{
-                  flex: 1,
-                  border: "none",
-                  background: "transparent",
-                  outline: "none",
-                  borderBottom: "1px dashed transparent",
-                }}
-                className={`${
-                  editedFields.testemunha2Nome ? "field-edited" : ""
-                }`}
-                value={laudo.testemunha2Nome || ""}
-                onChange={(e) =>
-                  handleFieldChange("testemunha2Nome", e.target.value)
-                }
-                placeholder="Nome Testemunha 2"
-              />
-            </div>
-            <div className="testemunha-linha">
-              <strong>RG:</strong>
-              <input
-                style={{
-                  flex: 1,
-                  border: "none",
-                  background: "transparent",
-                  outline: "none",
-                  borderBottom: "1px dashed transparent",
-                }}
-                className={`${
-                  editedFields.testemunha2Rg ? "field-edited" : ""
-                }`}
-                value={laudo.testemunha2Rg || ""}
-                onChange={(e) =>
-                  handleFieldChange("testemunha2Rg", e.target.value)
-                }
-                placeholder="RG Testemunha 2"
-              />
+            <div className="testemunha-item">
+              <div className="testemunha-assinatura-area"></div>
+              <div className="testemunha-linha">
+                <strong>Nome:</strong>
+                <input
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    background: "transparent",
+                    outline: "none",
+                    borderBottom: "1px dashed transparent",
+                  }}
+                  className={`${
+                    editedFields.testemunha2Nome ? "field-edited" : ""
+                  }`}
+                  value={laudo.testemunha2Nome || ""}
+                  onChange={(e) =>
+                    handleFieldChange("testemunha2Nome", e.target.value)
+                  }
+                  placeholder="Nome Testemunha 2"
+                />
+              </div>
+              <div className="testemunha-linha">
+                <strong>RG:</strong>
+                <input
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    background: "transparent",
+                    outline: "none",
+                    borderBottom: "1px dashed transparent",
+                  }}
+                  className={`${
+                    editedFields.testemunha2Rg ? "field-edited" : ""
+                  }`}
+                  value={laudo.testemunha2Rg || ""}
+                  onChange={(e) =>
+                    handleFieldChange("testemunha2Rg", e.target.value)
+                  }
+                  placeholder="RG Testemunha 2"
+                />
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Número de página */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: "10mm",
-              right: "15mm",
-              fontFamily: '"Roboto", Arial, sans-serif',
-              fontSize: "10px",
-              color: "#555",
-            }}
-          >
-            {paginaAtual}
-          </div>
+        {/* Número de página */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "10mm",
+            right: "15mm",
+            fontFamily: '"Roboto", Arial, sans-serif',
+            fontSize: "10px",
+            color: "#555",
+          }}
+        >
+          {paginaAtual}
         </div>
       </div>
     );
