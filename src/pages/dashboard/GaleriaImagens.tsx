@@ -236,9 +236,11 @@ interface SortableImagemCardProps {
   opcoesItens: string[];
   loadingItemChange: string | null;
   loadingCategoriaChange: string | null;
+  loadingItemFlagChange: string | null;
   hideItemControls: boolean;
   onUpdateItem: (imgId: string, novoItem: string) => void;
   onToggleAvaria: (imgId: string, marcarAvaria: boolean) => void;
+  onMarcarItem: (imgId: string) => void;
   onDelete: (imgId: string) => void;
   formatDate: (dateString: string) => string;
   isDropTarget: boolean;
@@ -251,9 +253,11 @@ function SortableImagemCard({
   opcoesItens,
   loadingItemChange,
   loadingCategoriaChange,
+  loadingItemFlagChange,
   hideItemControls,
   onUpdateItem,
   onToggleAvaria,
+  onMarcarItem,
   onDelete,
   formatDate,
   isDropTarget,
@@ -402,6 +406,22 @@ function SortableImagemCard({
         </button>
 
         <button
+          onClick={() => onMarcarItem(img.id)}
+          disabled={loadingItemFlagChange === img.id}
+          className={`w-full py-2 rounded flex items-center justify-center gap-2 transition-colors border bg-blue-500/20 hover:bg-blue-500/35 text-blue-100 border-blue-500/50 ${
+            loadingItemFlagChange === img.id ? "opacity-70 cursor-not-allowed" : ""
+          }`}
+          title="Adiciona a palavra ITEM ao início da descrição"
+        >
+          {loadingItemFlagChange === img.id ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Tag className="w-4 h-4" />
+          )}
+          <span>Marcar como item</span>
+        </button>
+
+        <button
           onClick={() => onDelete(img.id)}
           className="w-full mt-2 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
         >
@@ -526,6 +546,9 @@ export default function GaleriaImagens() {
     null,
   );
   const [loadingCategoriaChange, setLoadingCategoriaChange] = useState<
+    string | null
+  >(null);
+  const [loadingItemFlagChange, setLoadingItemFlagChange] = useState<
     string | null
   >(null);
 
@@ -1108,6 +1131,34 @@ export default function GaleriaImagens() {
       toast.error("Erro ao atualizar categoria da imagem.");
     } finally {
       setLoadingCategoriaChange(null);
+    }
+  };
+
+  const handleMarcarItem = async (imgId: string) => {
+    const imagem = imagens.find((i) => i.id === imgId);
+    const legendaAtual = (imagem?.legenda || "").trim();
+    const semPrefixo = legendaAtual.replace(/^ITEM\s*[-–—:]*\s*/i, "").trim();
+    const prefixo = "ITEM ";
+    // Coluna legenda é VARCHAR(200) — garante que o prefixo sempre caiba
+    const espacoUtil = 200 - prefixo.length;
+    const corpo =
+      semPrefixo.length > espacoUtil
+        ? semPrefixo.slice(0, espacoUtil).trimEnd()
+        : semPrefixo;
+    const novaLegenda = `${prefixo}${corpo}`;
+    try {
+      setLoadingItemFlagChange(imgId);
+      await laudosService.updateLegenda(imgId, novaLegenda);
+      setImagens((prev) =>
+        prev.map((img) =>
+          img.id === imgId ? { ...img, legenda: novaLegenda } : img,
+        ),
+      );
+      toast.success("Imagem marcada como item.");
+    } catch (err) {
+      toast.error("Erro ao marcar imagem como item.");
+    } finally {
+      setLoadingItemFlagChange(null);
     }
   };
 
@@ -2372,9 +2423,11 @@ export default function GaleriaImagens() {
                             }
                             loadingItemChange={loadingItemChange}
                             loadingCategoriaChange={loadingCategoriaChange}
+                            loadingItemFlagChange={loadingItemFlagChange}
                             hideItemControls={ocultarControlesItemPorLegendaArquivo}
                             onUpdateItem={handleUpdateItem}
                             onToggleAvaria={handleToggleAvaria}
+                            onMarcarItem={handleMarcarItem}
                             onDelete={(imagemId) =>
                               setConfirmDelete({ isOpen: true, imagemId })
                             }
