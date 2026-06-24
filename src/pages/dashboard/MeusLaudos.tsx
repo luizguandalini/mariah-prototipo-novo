@@ -322,7 +322,7 @@ export default function MeusLaudos() {
             {[
               { key: "todos", label: "Todos" },
               { key: "concluido", label: "Concluídos" },
-              { key: "processando", label: "Processando" },
+              { key: "processando", label: "Em andamento" },
               { key: "nao_iniciado", label: "Não Iniciados" },
               { key: "paralisado", label: "Paralisados" },
             ].map((filtro) => (
