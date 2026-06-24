@@ -173,7 +173,7 @@ export default function TodosLaudos() {
       processando: {
         bg: "bg-yellow-100 dark:bg-yellow-900/30",
         text: "text-yellow-800 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800",
-        label: "Processando",
+        label: "Em andamento",
       },
       nao_iniciado: {
         bg: "bg-gray-100 dark:bg-gray-800",

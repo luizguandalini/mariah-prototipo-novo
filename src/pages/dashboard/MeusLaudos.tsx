@@ -199,7 +199,7 @@ export default function MeusLaudos() {
       processando: {
         bg: "bg-yellow-500/10",
         text: "text-yellow-500 border border-yellow-500/20",
-        label: "⏳ Processando",
+        label: "⏳ Em andamento",
         icon: "⏳",
       },
       nao_iniciado: {

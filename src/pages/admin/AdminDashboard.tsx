@@ -47,7 +47,7 @@ export default function AdminDashboard() {
                   <p className="font-semibold text-[var(--text-primary)]">Laudo #{1000 + i}</p>
                   <p className="text-sm text-[var(--text-secondary)]">Usuário: João Silva</p>
                 </div>
-                <span className="text-sm text-yellow-500 font-medium animate-pulse">Processando...</span>
+                <span className="text-sm text-yellow-500 font-medium animate-pulse">Em andamento...</span>
               </div>
             ))}
           </div>

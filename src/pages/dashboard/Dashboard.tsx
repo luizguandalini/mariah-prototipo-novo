@@ -80,7 +80,7 @@ export default function Dashboard() {
     };
     const labels = {
       concluido: "Concluído",
-      processando: "Processando",
+      processando: "Em andamento",
       nao_iniciado: "Não Iniciado",
       paralisado: "Paralisado",
     };
