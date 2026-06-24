@@ -35,7 +35,6 @@ import {
   Loader2,
   Upload,
   ChevronDown,
-  Bot,
   AlertCircle,
   GripVertical,
   Pencil,
@@ -1968,7 +1967,7 @@ export default function GaleriaImagens() {
                   </>
                 ) : (
                   <>
-                    <Bot className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                    <img src="/Icon.png" alt="" className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(255,255,255,0.85),0_2px_5px_rgba(0,0,0,0.7)]" />
                     Iniciar Análise IA
                   </>
                 )}

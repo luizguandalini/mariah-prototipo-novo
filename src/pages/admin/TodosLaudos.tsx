@@ -7,7 +7,7 @@ import { laudosService, type Laudo } from "../../services/laudos";
 import { toast } from "sonner";
 import { queueService } from "../../services/queue";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
-import { Bot, Loader2, FileText, Camera } from "lucide-react";
+import { Loader2, FileText, Camera } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 
@@ -451,7 +451,7 @@ export default function TodosLaudos() {
                             <>
                               {mapStatus(laudo.status) === "nao_iniciado" ? (
                                 <>
-                                  <Bot className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                  <img src="/Icon.png" alt="" className="w-4 h-4 mr-0 group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(255,255,255,0.85),0_2px_5px_rgba(0,0,0,0.7)]" />
                                   Iniciar IA
                                 </>
                               ) : (

@@ -11,7 +11,7 @@ import { queueService } from "../../services/queue";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
-import { FileText, Camera, Bot, Pencil, Trash2, Loader2, Plus, Search, X } from "lucide-react";
+import { FileText, Camera, Pencil, Trash2, Loader2, Plus, Search, X } from "lucide-react";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
 import { useDebounce } from "../../hooks/useDebounce";
 
@@ -550,7 +550,7 @@ export default function MeusLaudos() {
                               </>
                             ) : (
                               <>
-                                <Bot className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                                <img src="/Icon.png" alt="" className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform drop-shadow-[0_0_4px_rgba(255,255,255,0.85),0_2px_5px_rgba(0,0,0,0.7)]" />
                                 Iniciar Análise IA
                               </>
                             )}

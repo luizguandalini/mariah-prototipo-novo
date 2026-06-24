@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Button from '../ui/Button'
 import { queueService } from '../../services/queue'
 import { toast } from 'sonner'
-import { CheckCircle, MapPin, FolderOpen, Image, Bot, Loader2, Rocket } from 'lucide-react'
+import { CheckCircle, MapPin, FolderOpen, Image, Loader2, Rocket } from 'lucide-react'
 
 interface Step4Props {
   onSubmit: (data?: any) => void
@@ -217,7 +217,7 @@ export default function Step4Revisao({ onSubmit, onBack, laudoData }: Step4Props
               </>
             ) : (
               <>
-                <Bot className="w-4 h-4 mr-2" />
+                <img src="/Icon.png" alt="" className="w-4 h-4 mr-2 drop-shadow-[0_0_4px_rgba(255,255,255,0.85),0_2px_5px_rgba(0,0,0,0.7)]" />
                 Finalizar + Análise IA
               </>
             )}
