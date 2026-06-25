@@ -610,7 +610,19 @@ export default function GaleriaImagens() {
     try {
       setLoadingAmbientes(true);
       const res = await laudosService.getAmbientesWeb(id);
-      setAmbientes([...res.ambientes].sort((a, b) => a.ordem - b.ordem));
+      // Filtro defensivo: o backend já ignora ambientes com sentinela
+      // "Desconhecido" (legado da Lambda EXIF), mas garantimos aqui
+      // também para o caso de um backend mais antigo em produção. Essas
+      // entradas representam imagens complementares/órfãs que não
+      // pertencem a nenhum ambiente real e não devem aparecer.
+      const ambientesFiltrados = (res.ambientes || []).filter(
+        (amb) =>
+          amb.nomeAmbiente?.trim() &&
+          amb.nomeAmbiente.trim().toLowerCase() !== "desconhecido",
+      );
+      setAmbientes(
+        [...ambientesFiltrados].sort((a, b) => a.ordem - b.ordem),
+      );
       setLaudoInfo({ tipoUso: res.tipoUso, tipoImovel: res.tipoImovel });
       setUsarNomeArquivoComoLegenda(!!res.usarNomeArquivoComoLegenda);
     } catch (err: any) {

@@ -115,6 +115,13 @@ export default function RegistrosComplementaresModal({
    * Faz upload + confirm de CADA imagem (em paralelo onde dá) e devolve a
    * lista de IDs. Cada imagem precisa de legenda válida — sem isso, o
    * backend rejeita o confirm e retornamos erro aqui.
+   *
+   * IMPORTANTE: imagens complementares (registros complementares /
+   * contestação) NÃO pertencem a nenhum ambiente e portanto NÃO devem
+   * popular a página "AMBIENTES" do laudo. Por isso usamos exclusivamente
+   * os endpoints `/contestacao/*` (tabela `contestacao_imagens`,
+   * isolada). Nunca chamar `confirmWebUpload` aqui — isso escreveria em
+   * `imagens_laudo` e criaria entradas fantasma de ambiente.
    */
   const uploadAllImages = useCallback(async (): Promise<string[]> => {
     const snapshots = images; // trava a lista atual
