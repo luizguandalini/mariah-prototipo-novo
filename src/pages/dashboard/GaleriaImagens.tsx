@@ -637,6 +637,14 @@ export default function GaleriaImagens() {
     fetchAmbientes();
   }, [fetchAmbientes]);
 
+  // Carrega a config de feature (role-based) SOMENTE para controlar a
+  // visibilidade do checkbox. NUNCA escreve em `usarNomeArquivoComoLegenda`
+  // — esse valor é de propriedade do `fetchAmbientes` (que vem do DB) e do
+  // `handleFilenameCaptionPreferenceChange` (que o usuário acabou de
+  // alterar). Sobrescrever aqui causava o bug em que, após F5, o checkbox
+  // aparecia desmarcado mesmo com `Laudo.usar_nome_arquivo_como_legenda =
+  // true` persistido, porque as duas requisições (`getAmbientesWeb` e
+  // `getFilenameCaptionConfig`) resolviam em ordem não-determinística.
   useEffect(() => {
     let active = true;
 
@@ -645,15 +653,11 @@ export default function GaleriaImagens() {
       .then((config) => {
         if (!active) return;
         setFilenameCaptionAllowed(!!config.enabledForCurrentUser);
-        if (!config.enabledForCurrentUser) {
-          setUsarNomeArquivoComoLegenda(false);
-        }
       })
       .catch((error) => {
         console.error("Erro ao carregar configuração de legenda por arquivo:", error);
         if (active) {
           setFilenameCaptionAllowed(false);
-          setUsarNomeArquivoComoLegenda(false);
         }
       });
 

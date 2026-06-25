@@ -264,6 +264,29 @@ export default function Step3Upload({
     if (uploaded > 0) {
       toast.success(`${uploaded} imagens enviadas com sucesso!`);
     }
+
+    // Persiste a preferência per-laudo. Sem isso, o flag fica apenas como
+    // estado local do wizard e nunca é gravado em
+    // `laudos.usar_nome_arquivo_como_legenda` — após o usuário navegar
+    // para a Galeria (ou F5), o checkbox aparecia desmarcado porque o DB
+    // ainda estava em `false`. O `confirmWebUpload` acima só persiste o
+    // flag *per-imagem*; este PATCH é o que fecha o ciclo do flag
+    // *per-laudo* no mesmo envio. Não bloqueamos o `onNext` caso falhe —
+    // as imagens já foram salvas, e a UI da Galeria trata a falha
+    // silenciosamente (o usuário pode re-marcar lá).
+    if (filenameCaptionAllowed && uploaded > 0) {
+      try {
+        await laudosService.updateFilenameCaptionPreference(
+          laudoId,
+          usarNomeArquivoComoLegenda,
+        );
+      } catch (err) {
+        console.error(
+          "Não foi possível persistir a preferência de legenda por arquivo no laudo:",
+          err,
+        );
+      }
+    }
   }, [
     imagesByAmbiente,
     ambientes,
