@@ -710,11 +710,17 @@ class PdfService {
               /^\d+\s*-\s*/,
               ""
             );
+            // Flag per-imagem: quando a foto foi enviada com a opção
+            // "Usar nome do arquivo como legenda" ativa, suprimimos o
+            // prefixo "Nº amb (Nº foto)" e mostramos só a legenda.
+            const prefixoNumeros = img.usarNomeArquivoComoLegenda
+              ? ""
+              : `<strong>${img.numeroAmbiente} (${img.numeroImagemNoAmbiente})</strong> `;
             return `
           <div>
             <div style="border: 1px solid #999; margin-bottom: 4px;">
-              <img 
-                src="${urls[img.s3Key]}" 
+              <img
+                src="${urls[img.s3Key]}"
                 crossorigin="anonymous"
                 style="width: 100%; height: 200px; object-fit: cover; display: block;"
               />
@@ -723,9 +729,7 @@ class PdfService {
               ${ambienteSemNumero}
             </div>
             <div style="font-size: 9px; line-height: 1.4; text-align: left;">
-              <strong>${img.numeroAmbiente} (${
-              img.numeroImagemNoAmbiente
-            })</strong> ${img.legenda || "sem legenda"}
+              ${prefixoNumeros}${img.legenda || "sem legenda"}
             </div>
           </div>
         `;

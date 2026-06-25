@@ -68,6 +68,10 @@ interface ImagemPdf {
   ordem: number;
   categoria: string;
   tipo: string;
+  // Flag per-imagem: quando true, esta foto foi enviada com a opção
+  // "Usar nome do arquivo como legenda" ativa. O PDF preview suprime o
+  // prefixo "Nº amb (Nº foto)" e mostra apenas a legenda.
+  usarNomeArquivoComoLegenda?: boolean;
 }
 
 const METODOLOGIA_TEXTS = [
@@ -2339,7 +2343,14 @@ export default function VisualizadorPdfLaudo() {
                   const numeroFoto =
                     img.numeroImagemNoAmbiente ?? img.count ?? "";
                   const numeroAmbiente = img.numeroAmbiente ?? "";
-                  const rotuloCompacto = `${numeroAmbiente} (${numeroFoto}) ${ambienteSemNumero}`;
+                  // Flag per-imagem: quando a foto foi enviada com a opção
+                  // "Usar nome do arquivo como legenda" ativa, suprimimos o
+                  // prefixo "Nº amb (Nº foto)" e mostramos apenas a legenda.
+                  const usarNomeArquivoComoLegenda =
+                    !!img.usarNomeArquivoComoLegenda;
+                  const rotuloCompacto = usarNomeArquivoComoLegenda
+                    ? (img.legenda?.trim() || ambienteSemNumero)
+                    : `${numeroAmbiente} (${numeroFoto}) ${ambienteSemNumero}`;
 
                   if (isModoCompacto) {
                     return (
@@ -2422,12 +2433,14 @@ export default function VisualizadorPdfLaudo() {
                       >
                         {isEditing ? (
                           <div>
-                            <div className="flex flex-wrap">
-                              <span className="font-bold mr-1">
-                                {img.numeroAmbiente} (
-                                {img.numeroImagemNoAmbiente})
-                              </span>
-                            </div>
+                            {!usarNomeArquivoComoLegenda && (
+                              <div className="flex flex-wrap">
+                                <span className="font-bold mr-1">
+                                  {img.numeroAmbiente} (
+                                  {img.numeroImagemNoAmbiente})
+                                </span>
+                              </div>
+                            )}
                             <textarea
                               value={img.legenda}
                               maxLength={200}
@@ -2506,10 +2519,12 @@ export default function VisualizadorPdfLaudo() {
                             className="cursor-pointer hover:bg-yellow-50 rounded px-1 -mx-1"
                             title="Clique para editar"
                           >
-                            <span className="font-bold mr-1">
-                              {img.numeroAmbiente} ({img.numeroImagemNoAmbiente}
-                              )
-                            </span>
+                            {!usarNomeArquivoComoLegenda && (
+                              <span className="font-bold mr-1">
+                                {img.numeroAmbiente} ({img.numeroImagemNoAmbiente}
+                                )
+                              </span>
+                            )}
                             {img.legenda || (
                               <span className="text-gray-400 italic">
                                 Sem legenda

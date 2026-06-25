@@ -9,6 +9,10 @@ export interface ImagemPdfDto {
   ordem: number;
   categoria: string;
   tipo: string;
+  // Flag per-imagem: indica se esta foto foi enviada com a opção
+  // "Usar nome do arquivo como legenda" ativa. Quando true, o PDF não
+  // inclui o prefixo "Nº amb (Nº foto)" — apenas a legenda.
+  usarNomeArquivoComoLegenda?: boolean;
 }
 
 export interface ImagensPdfResponse {

@@ -60,6 +60,10 @@ export interface ImagemLaudo {
   dataCaptura: string;
   imagemJaFoiAnalisadaPelaIa: string;
   ordem: number;
+  // Flag per-imagem: quando true, esta foto foi enviada com a opção
+  // "Usar nome do arquivo como legenda" ativa. O PDF suprime o prefixo
+  // "Nº amb (Nº foto)" e mostra apenas a legenda.
+  usarNomeArquivoComoLegenda?: boolean;
 }
 
 export interface AmbienteInfo {
