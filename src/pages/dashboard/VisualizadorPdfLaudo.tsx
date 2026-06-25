@@ -86,6 +86,23 @@ const METODOLOGIA_SAIDA_TEXTS = [
   'Os registros encontrados como irregularidades ou avarias são indicados neste laudo de vistoria pela menção da palavra "APONTAMENTO".',
 ];
 
+const METODOLOGIA_CONSTATACAO_TEXTS = [
+  "As partes recebem o laudo para averiguação de diferenças que possam ter surgido no curso da locação, cabendo ao LOCADOR e LOCATÁRIO avaliarem e ajustarem possíveis acertos apontados pelos registros fotográficos, seja de benfeitorias ou irregularidades.",
+  "A vistoria foi realizada através de uma análise meticulosa baseando-se em procedimentos técnicos específicos, onde a equipe responsável pela vistoria empregou critérios rigorosos para avaliar todos os aspectos relevantes, desde apontamentos estruturais visíveis, até pequenos detalhes construtivos, buscando registrar, de forma clara e objetiva, por textos e imagens, qualquer apontamento ou irregularidade, garantindo uma abordagem sistemática e imparcial, onde as fotos de cada ambiente trazem todos os ângulos necessários de paredes, chãos, tetos, portas, janelas entre outros que componham o imóvel e suas instalações, sendo agrupadas e numeradas por ambientes, o qual, mesmo não estando relacionado algum apontamento em forma de texto poderá ser identificado através da interpretação dos registros fotográficos.",
+  "Este relatório visa fornecer um documento fiel e imparcial para dirimir eventuais dúvidas entre as partes interessadas.",
+];
+
+const METODOLOGIA_PERIODICA_TEXTS = [
+  "O presente laudo foi elaborado com a finalidade de verificar eventuais ocorrências surgidas durante o período de locação, especialmente aquelas que apresentem divergências em relação às condições originalmente pactuadas ou ao estado de conservação constatado no ato da entrega do imóvel. Tais divergências podem envolver benfeitorias executadas ou irregularidades identificadas, devidamente registradas neste documento, o qual caberá ao LOCADOR avaliar referências para atribui-la a preexistente ou pós-ocupação.",
+  "A metodologia aplicada fundamentou-se em uma inspeção técnica detalhada de todos os ambientes do imóvel, acompanhada de registro fotográfico sistemático, realizada em ordem cronológica, assegurando rastreabilidade e fidedignidade das informações e foi elaborado de maneira técnica por um especialista qualificado, que examinou critérios específicos para avaliar todos os aspectos relevantes, desde apontamentos estruturais aparentes até pequenos detalhes construtivos e acessórios presentes no imóvel registrando de forma clara e objetiva, por meio de textos e imagens, qualquer apontamento ou irregularidade.",
+  "Este relatório tem como finalidade servir como instrumento imparcial e documental, proporcionando segurança jurídica às partes e auxiliando na solução de eventuais controvérsias.",
+  "O material fotográfico está organizado da seguinte forma:",
+  "· Registros fotográficos de todos os ambientes, em ordem cronológica dos pontos mais representativos dos ambientes que compõem o imóvel.",
+  "· Fotobook: As fotografias contemplam múltiplos ângulos de cada ambiente, de modo a garantir uma visão abrangente e técnica do imóvel. Além disso, todas as imagens encontram-se disponíveis para download por meio do QR Code inserido neste documento.",
+  "· Descrição foto a foto, indicando o ponto avaliado e apontando eventuais divergências;",
+  "Este laudo não emprega termos subjetivos, como \"bom\", \"regular\" ou \"ótimo\" estado, nas análises. A descrição foi construída de forma objetiva, baseada exclusivamente em fatos observáveis, com o objetivo de evitar interpretações divergentes que possam surgir de perspectivas pessoais e garantir que as informações registradas sejam precisas e imparciais.",
+];
+
 const TERMOS_GERAIS_TEXTS = [
   "É obrigação do locatário o reparo imediato dos danos causados por si mesmo ou por terceiros durante a vigência do contrato de locação, cabendo ao locatário restituir o imóvel no mesmo estado em que o recebeu, de acordo com este laudo de vistoria, comprometendo-se com o zelo e promovendo a manutenção preventiva do mesmo e de seus equipamentos porventura existentes, em especial, equipamentos elétricos, quadros de distribuição de energia, instalações hidráulicas, elétricas, sistemas de ar, sistema de aquecimento em geral ou danos decorrentes do mau uso, tais como: danos ao encanamento provocados pelo descarte de objetos em ralos, em vasos sanitários, conservação dos móveis ou de bens de razão estrutural, como portas, janelas, esquadrias, pias, gabinetes, entre outros.",
   "O locatário será isento de responsabilidade quanto aos desgastes naturais decorrentes do uso normal e zeloso do imóvel, desde que tais condições sejam compatíveis com o período de locação e não decorram de negligência, mau uso ou ausência de manutenção regular. Eventuais danos que ultrapassem o desgaste esperado ou sejam causados por uso inadequado serão de responsabilidade do locatário, firmando compromisso do uso zeloso pelo período em que se der início a locação até a efetiva devolução das chaves.",
@@ -98,6 +115,12 @@ interface ConfiguracoesPdf {
   espacamentoVertical: number;
   margemPagina: number;
   metodologiaTexto: string | null;
+  // Texto de METODOLOGIA customizado por tipo de vistoria. Tem prioridade sobre
+  // o legado `metodologiaTexto` quando definido.
+  metodologiaEntradaTexto: string | null;
+  metodologiaSaidaTexto: string | null;
+  metodologiaConstatacaoTexto: string | null;
+  metodologiaPeriodicaTexto: string | null;
   termosGeraisTexto: string | null;
   assinaturaTexto: string | null;
   mostrarLogoCapa: boolean;
@@ -106,6 +129,29 @@ interface ConfiguracoesPdf {
   logoCapaLargura: number | null;
   logoCapaAltura: number | null;
 }
+
+// Campos de texto editáveis. `metodologiaTexto` é o legado compartilhado
+// (mantido para compatibilidade); os 4 `metodologia<Tipo>Texto` são os
+// overrides atuais, um por tipo de vistoria.
+type CampoTextoEditavel =
+  | "metodologiaTexto"
+  | "metodologiaEntradaTexto"
+  | "metodologiaSaidaTexto"
+  | "metodologiaConstatacaoTexto"
+  | "metodologiaPeriodicaTexto"
+  | "termosGeraisTexto"
+  | "assinaturaTexto";
+
+// Mapeia o tipoVistoria atual para o campo do override de METODOLOGIA.
+const getCampoMetodologiaPorTipo = (tipoVistoria?: string): CampoTextoEditavel => {
+  const norm = (tipoVistoria || "").toLowerCase();
+  if (norm === "saída" || norm === "saida") return "metodologiaSaidaTexto";
+  if (norm === "constatação" || norm === "constatacao")
+    return "metodologiaConstatacaoTexto";
+  if (norm === "periódica" || norm === "periodica")
+    return "metodologiaPeriodicaTexto";
+  return "metodologiaEntradaTexto";
+};
 
 type ModoPreview = "detalhado" | "compacto";
 
@@ -127,10 +173,17 @@ const isModoPreviewValido = (modo: unknown): modo is ModoPreview =>
   modo === "detalhado" || modo === "compacto";
 
 const getMetodologiaPadrao = (tipoVistoria?: string) => {
-  const isSaida =
-    tipoVistoria?.toLowerCase() === "saída" ||
-    tipoVistoria?.toLowerCase() === "saida";
-  return (isSaida ? METODOLOGIA_SAIDA_TEXTS : METODOLOGIA_TEXTS).join("\n\n");
+  const normalized = (tipoVistoria || "").toLowerCase();
+  if (normalized === "saída" || normalized === "saida") {
+    return METODOLOGIA_SAIDA_TEXTS.join("\n\n");
+  }
+  if (normalized === "constatação" || normalized === "constatacao") {
+    return METODOLOGIA_CONSTATACAO_TEXTS.join("\n\n");
+  }
+  if (normalized === "periódica" || normalized === "periodica") {
+    return METODOLOGIA_PERIODICA_TEXTS.join("\n\n");
+  }
+  return METODOLOGIA_TEXTS.join("\n\n");
 };
 
 const splitParagrafos = (texto: string) =>
@@ -277,6 +330,10 @@ export default function VisualizadorPdfLaudo() {
       espacamentoVertical: 15,
       margemPagina: 20,
       metodologiaTexto: null,
+      metodologiaEntradaTexto: null,
+      metodologiaSaidaTexto: null,
+      metodologiaConstatacaoTexto: null,
+      metodologiaPeriodicaTexto: null,
       termosGeraisTexto: null,
       assinaturaTexto: null,
       ...LOGO_DEFAULTS,
@@ -315,6 +372,10 @@ export default function VisualizadorPdfLaudo() {
       espacamentoVertical: 15,
       margemPagina: 20,
       metodologiaTexto: null,
+      metodologiaEntradaTexto: null,
+      metodologiaSaidaTexto: null,
+      metodologiaConstatacaoTexto: null,
+      metodologiaPeriodicaTexto: null,
       termosGeraisTexto: null,
       assinaturaTexto: null,
       mostrarLogoCapa: true,
@@ -428,6 +489,10 @@ export default function VisualizadorPdfLaudo() {
         espacamentoVertical: config.espacamentoVertical ?? 15,
         margemPagina: config.margemPagina ?? 20,
         metodologiaTexto: config.metodologiaTexto ?? null,
+        metodologiaEntradaTexto: config.metodologiaEntradaTexto ?? null,
+        metodologiaSaidaTexto: config.metodologiaSaidaTexto ?? null,
+        metodologiaConstatacaoTexto: config.metodologiaConstatacaoTexto ?? null,
+        metodologiaPeriodicaTexto: config.metodologiaPeriodicaTexto ?? null,
         termosGeraisTexto: config.termosGeraisTexto ?? null,
         assinaturaTexto: config.assinaturaTexto ?? null,
         mostrarLogoCapa: config.mostrarLogoCapa ?? true,
@@ -642,6 +707,10 @@ export default function VisualizadorPdfLaudo() {
       "espacamentoVertical",
       "margemPagina",
       "metodologiaTexto",
+      "metodologiaEntradaTexto",
+      "metodologiaSaidaTexto",
+      "metodologiaConstatacaoTexto",
+      "metodologiaPeriodicaTexto",
       "termosGeraisTexto",
       "assinaturaTexto",
       "mostrarLogoCapa",
@@ -661,6 +730,10 @@ export default function VisualizadorPdfLaudo() {
       "espacamentoVertical",
       "margemPagina",
       "metodologiaTexto",
+      "metodologiaEntradaTexto",
+      "metodologiaSaidaTexto",
+      "metodologiaConstatacaoTexto",
+      "metodologiaPeriodicaTexto",
       "termosGeraisTexto",
       "assinaturaTexto",
       "mostrarLogoCapa",
@@ -680,7 +753,7 @@ export default function VisualizadorPdfLaudo() {
   }, [configuracoes, configuracoesOriginais]);
 
   const handleConfigTextChange = (
-    field: "metodologiaTexto" | "termosGeraisTexto" | "assinaturaTexto",
+    field: CampoTextoEditavel,
     value: string
   ) => {
     // Se o valor for vazio, salvamos uma string vazia em vez de null
@@ -688,9 +761,7 @@ export default function VisualizadorPdfLaudo() {
     setConfiguracoes((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleRestoreDefaultText = (
-    field: "metodologiaTexto" | "termosGeraisTexto" | "assinaturaTexto"
-  ) => {
+  const handleRestoreDefaultText = (field: CampoTextoEditavel) => {
     setConfiguracoes((prev) => ({ ...prev, [field]: null }));
   };
 
@@ -943,13 +1014,20 @@ export default function VisualizadorPdfLaudo() {
           .div-metodologia { margin-top: 17px; }
           .div-metodologia > h1 { font-size: 14px; border-bottom: solid #c0c0c0 1px; margin: 0; padding-bottom: 2px; font-weight: 700; }
           .div-metodologia > p { font-weight: 400; font-size: 16px; text-align: justify; margin: 10px 0; line-height: 1.4; }
-          .valor-campo-input { 
-              font-size: 12px; 
-              margin-left: 3px; 
-              border: 1px dashed transparent; 
-              background: transparent; 
+          .valor-campo-input {
+              font-size: 12px;
+              margin-left: 3px;
+              border: 1px dashed transparent;
+              background: transparent;
               font-family: inherit;
               padding: 0;
+              /* O input tem min-width: auto por padrão, o que o impede de
+                 preencher todo o espaço do flex container (campo-longo). Isso
+                 fazia o preview ficar com caixas cinza mais estreitas que o
+                 PDF do backend. min-width: 0 + width: 100% corrigem. */
+              min-width: 0;
+              width: 100%;
+              box-sizing: border-box;
           }
           .valor-campo-input:hover, .valor-campo-input:focus {
               border-bottom: 1px dashed #666;
@@ -1107,6 +1185,8 @@ export default function VisualizadorPdfLaudo() {
                 >
                   <option value="ENTRADA">Entrada</option>
                   <option value="SAIDA">Saída</option>
+                  <option value="CONSTATACAO">Constatação</option>
+                  <option value="PERIODICA">Periódica</option>
                 </select>
               </div>
               <div className="formatacao-campos campo-longo">
@@ -1147,12 +1227,14 @@ export default function VisualizadorPdfLaudo() {
             <h1 style={{ borderBottom: "none", paddingBottom: 0 }}>
               METODOLOGIA
             </h1>
-            {configuracoes.metodologiaTexto !== null &&
-              configuracoes.metodologiaTexto !==
-                getMetodologiaPadrao(laudo.tipoVistoria) && (
+            {(() => {
+              const campo = getCampoMetodologiaPorTipo(laudo.tipoVistoria);
+              const valor = configuracoes[campo];
+              const padrao = getMetodologiaPadrao(laudo.tipoVistoria);
+              return valor !== null && valor !== padrao ? (
                 <button
                   type="button"
-                  onClick={() => handleRestoreDefaultText("metodologiaTexto")}
+                  onClick={() => handleRestoreDefaultText(campo)}
                   style={{
                     fontSize: "11px",
                     color: "#4338ca",
@@ -1164,35 +1246,35 @@ export default function VisualizadorPdfLaudo() {
                 >
                   Restaurar texto original
                 </button>
-              )}
+              ) : null;
+            })()}
           </div>
-          <EditableText
-            value={
-              configuracoes.metodologiaTexto !== null
-                ? configuracoes.metodologiaTexto
-                : getMetodologiaPadrao(laudo.tipoVistoria)
-            }
-            onSave={(newValue) =>
-              handleConfigTextChange("metodologiaTexto", newValue)
-            }
-            style={{
-              fontSize: "12px",
-              textAlign: "justify",
-              lineHeight: "1.5",
-              borderBottom:
-                configuracoes.metodologiaTexto !== null &&
-                configuracoes.metodologiaTexto !==
-                  getMetodologiaPadrao(laudo.tipoVistoria)
-                  ? "1px dashed #22c55e"
-                  : "1px dashed transparent",
-              backgroundColor:
-                configuracoes.metodologiaTexto !== null &&
-                configuracoes.metodologiaTexto !==
-                  getMetodologiaPadrao(laudo.tipoVistoria)
-                  ? "#f0fdf4"
-                  : "transparent",
-            }}
-          />
+          {(() => {
+            const campo = getCampoMetodologiaPorTipo(laudo.tipoVistoria);
+            const valor = configuracoes[campo];
+            const padrao = getMetodologiaPadrao(laudo.tipoVistoria);
+            return (
+              <EditableText
+                value={valor !== null ? valor : padrao}
+                onSave={(newValue) =>
+                  handleConfigTextChange(campo, newValue)
+                }
+                style={{
+                  fontSize: "12px",
+                  textAlign: "justify",
+                  lineHeight: "1.5",
+                  borderBottom:
+                    valor !== null && valor !== padrao
+                      ? "1px dashed #22c55e"
+                      : "1px dashed transparent",
+                  backgroundColor:
+                    valor !== null && valor !== padrao
+                      ? "#f0fdf4"
+                      : "transparent",
+                }}
+              />
+            );
+          })()}
         </div>
 
         {/* Rodapé com número de página */}
@@ -1242,74 +1324,85 @@ export default function VisualizadorPdfLaudo() {
 
         <div style={{ height: "35px" }}></div>
 
-        <div className="termos-gerais">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "8px",
-              borderBottom: "1px solid #c0c0c0",
-              paddingBottom: "4px",
-              marginBottom: "15px",
-            }}
-          >
-            <h2
-              style={{
-                borderBottom: "none",
-                paddingBottom: 0,
-                marginBottom: 0,
-              }}
-            >
-              Termos Gerais
-            </h2>
-            {configuracoes.termosGeraisTexto !== null &&
-              configuracoes.termosGeraisTexto !==
-                TERMOS_GERAIS_TEXTS.join("\n\n") && (
-                <button
-                  type="button"
-                  onClick={() => handleRestoreDefaultText("termosGeraisTexto")}
+        {(() => {
+          const tipoNorm = (laudo.tipoVistoria || "").toLowerCase();
+          const ocultarTermos =
+            tipoNorm === "constatação" ||
+            tipoNorm === "constatacao" ||
+            tipoNorm === "periódica" ||
+            tipoNorm === "periodica";
+          if (ocultarTermos) return null;
+          return (
+            <div className="termos-gerais">
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                  borderBottom: "1px solid #c0c0c0",
+                  paddingBottom: "4px",
+                  marginBottom: "15px",
+                }}
+              >
+                <h2
                   style={{
-                    fontSize: "11px",
-                    color: "#4338ca",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
+                    borderBottom: "none",
+                    paddingBottom: 0,
+                    marginBottom: 0,
                   }}
                 >
-                  Restaurar texto original
-                </button>
-              )}
-          </div>
-          <EditableText
-            value={
-              configuracoes.termosGeraisTexto !== null
-                ? configuracoes.termosGeraisTexto
-                : TERMOS_GERAIS_TEXTS.join("\n\n")
-            }
-            onSave={(newValue) =>
-              handleConfigTextChange("termosGeraisTexto", newValue)
-            }
-            style={{
-              fontSize: "12px",
-              textAlign: "justify",
-              lineHeight: "1.5",
-              borderBottom:
-                configuracoes.termosGeraisTexto !== null &&
-                configuracoes.termosGeraisTexto !==
-                  TERMOS_GERAIS_TEXTS.join("\n\n")
-                  ? "1px dashed #22c55e"
-                  : "1px dashed transparent",
-              backgroundColor:
-                configuracoes.termosGeraisTexto !== null &&
-                configuracoes.termosGeraisTexto !==
-                  TERMOS_GERAIS_TEXTS.join("\n\n")
-                  ? "#f0fdf4"
-                  : "transparent",
-            }}
-          />
-        </div>
+                  Termos Gerais
+                </h2>
+                {configuracoes.termosGeraisTexto !== null &&
+                  configuracoes.termosGeraisTexto !==
+                    TERMOS_GERAIS_TEXTS.join("\n\n") && (
+                    <button
+                      type="button"
+                      onClick={() => handleRestoreDefaultText("termosGeraisTexto")}
+                      style={{
+                        fontSize: "11px",
+                        color: "#4338ca",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      Restaurar texto original
+                    </button>
+                  )}
+              </div>
+              <EditableText
+                value={
+                  configuracoes.termosGeraisTexto !== null
+                    ? configuracoes.termosGeraisTexto
+                    : TERMOS_GERAIS_TEXTS.join("\n\n")
+                }
+                onSave={(newValue) =>
+                  handleConfigTextChange("termosGeraisTexto", newValue)
+                }
+                style={{
+                  fontSize: "12px",
+                  textAlign: "justify",
+                  lineHeight: "1.5",
+                  borderBottom:
+                    configuracoes.termosGeraisTexto !== null &&
+                    configuracoes.termosGeraisTexto !==
+                      TERMOS_GERAIS_TEXTS.join("\n\n")
+                      ? "1px dashed #22c55e"
+                      : "1px dashed transparent",
+                  backgroundColor:
+                    configuracoes.termosGeraisTexto !== null &&
+                    configuracoes.termosGeraisTexto !==
+                      TERMOS_GERAIS_TEXTS.join("\n\n")
+                      ? "#f0fdf4"
+                      : "transparent",
+                }}
+              />
+            </div>
+          );
+        })()}
 
         <div className="ambientes-section">
           <h2>Ambientes</h2>

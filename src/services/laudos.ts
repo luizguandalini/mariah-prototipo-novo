@@ -524,6 +524,10 @@ class LaudosService {
     margemPagina?: number;
     modoPreviewPdf?: "detalhado" | "compacto";
     metodologiaTexto?: string | null;
+    metodologiaEntradaTexto?: string | null;
+    metodologiaSaidaTexto?: string | null;
+    metodologiaConstatacaoTexto?: string | null;
+    metodologiaPeriodicaTexto?: string | null;
     termosGeraisTexto?: string | null;
     assinaturaTexto?: string | null;
     mostrarLogoCapa?: boolean;

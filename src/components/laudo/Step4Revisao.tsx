@@ -69,7 +69,11 @@ export default function Step4Revisao({ onSubmit, onBack, laudoData }: Step4Props
             <div className="p-3 bg-[var(--bg-secondary)] rounded-lg">
               <span className="text-[var(--text-secondary)] text-xs block mb-1">Tipo Vistoria</span>
               <strong className="text-[var(--text-primary)]">
-                {info.tipoVistoria === 'ENTRADA' ? '📋 Entrada' : info.tipoVistoria === 'SAIDA' ? '📋 Saída' : info.tipoVistoria || 'N/A'}
+                {info.tipoVistoria === 'ENTRADA' ? '📋 Entrada'
+                  : info.tipoVistoria === 'SAIDA' ? '📋 Saída'
+                  : info.tipoVistoria === 'CONSTATACAO' ? '📋 Constatação'
+                  : info.tipoVistoria === 'PERIODICA' ? '📋 Periódica'
+                  : info.tipoVistoria || 'N/A'}
               </strong>
             </div>
             <div className="p-3 bg-[var(--bg-secondary)] rounded-lg">

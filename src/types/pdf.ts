@@ -28,6 +28,12 @@ export interface ConfiguracaoPdfUsuario {
   espacamentoVertical: number;
   margemPagina: number;
   metodologiaTexto: string | null;
+  // Texto de METODOLOGIA customizado por tipo de vistoria. Quando null,
+  // usa o padrão (ou o legado `metodologiaTexto` para tipos sem override).
+  metodologiaEntradaTexto: string | null;
+  metodologiaSaidaTexto: string | null;
+  metodologiaConstatacaoTexto: string | null;
+  metodologiaPeriodicaTexto: string | null;
   termosGeraisTexto: string | null;
   assinaturaTexto: string | null;
   updatedAt: string;

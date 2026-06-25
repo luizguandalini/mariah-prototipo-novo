@@ -11,7 +11,13 @@ interface Step1Props {
   initialData?: any
 }
 
-const TIPOS_VISTORIA = ['ENTRADA', 'SAIDA']
+const TIPOS_VISTORIA = ['ENTRADA', 'SAIDA', 'CONSTATACAO', 'PERIODICA']
+const VISTORIA_LABELS: Record<string, string> = {
+  ENTRADA: 'Entrada',
+  SAIDA: 'Saída',
+  CONSTATACAO: 'Constatação',
+  PERIODICA: 'Periódica',
+}
 const TIPOS_USO = ['Residencial', 'Comercial', 'Industrial']
 
 export default function Step1Informacoes({ onNext, initialData = {} }: Step1Props) {
@@ -193,7 +199,7 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
               >
                 <option value="">Selecione...</option>
                 {TIPOS_VISTORIA.map(t => (
-                  <option key={t} value={t}>{t === 'ENTRADA' ? 'Entrada' : 'Saída'}</option>
+                  <option key={t} value={t}>{VISTORIA_LABELS[t]}</option>
                 ))}
               </select>
               {errors.tipoVistoria && <p className="text-red-500 text-xs mt-1">{errors.tipoVistoria}</p>}
