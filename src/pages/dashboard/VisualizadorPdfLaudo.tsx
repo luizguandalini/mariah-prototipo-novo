@@ -1586,12 +1586,10 @@ export default function VisualizadorPdfLaudo() {
   };
 
   /**
-   * Renderiza a(s) página(s) de Registros Complementares. Espelha o
-   * backend: cabeçalho com título + data + contagem (somente na primeira
-   * página) + grid 3x3 com fotos e legendas.
-   *
-   * O índice da página atual dentro do bloco de contestação é calculado
-   * pela diferença `paginaAtual - primeiraPaginaContestacao`.
+   * Renderiza a(s) página(s) de Registros Complementares. IDÊNTICA ao
+   * backend (pdf.service.ts): header "REGISTROS COMPLEMENTARES" + meta
+   * na primeira página do bloco, grid 3x3 com fotos de altura fixa
+   * (200px) e legendas individuais. Múltiplas páginas quando há >9 fotos.
    */
   const renderContestacaoPage = () => {
     if (!contestacao?.contestacaoRealizada || !contestacao.imagens?.length) {
@@ -1610,35 +1608,46 @@ export default function VisualizadorPdfLaudo() {
       ? new Date(contestacao.contestacaoData).toLocaleDateString("pt-BR")
       : "";
     const plural = total === 1 ? "1 foto anexada" : `${total} fotos anexadas`;
-    const headerHtml =
-      idxLote === 0
-        ? `
-          <div className="contestacao-header">
-            <h1 className="contestacao-header-titulo">REGISTROS COMPLEMENTARES</h1>
-            <div className="contestacao-header-meta">
-              ${dataFmt ? `<span>Realizado em ${dataFmt}</span>` : ""}
-              <span>${plural}</span>
-            </div>
-          </div>
-        `
-        : "";
 
     return (
       <div className="page-container page-standard contestacao-pagina">
+        <style>{`
+          .contestacao-pagina { padding: 20mm; box-sizing: border-box; }
+          .contestacao-header { border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 14px; }
+          .contestacao-header-titulo { font-size: 18px; font-weight: 700; text-transform: uppercase; margin: 0; letter-spacing: 0.5px; color: #000; }
+          .contestacao-header-meta { display: flex; gap: 16px; font-size: 11px; color: #555; margin-top: 4px; }
+          .contestacao-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+          .contestacao-card { break-inside: avoid; }
+          .contestacao-card-foto { border: 1px solid #9ca3af; overflow: hidden; margin-bottom: 3px; }
+          .contestacao-card-foto img { width: 100%; height: 200px; object-fit: cover; object-position: center; display: block; }
+          .contestacao-card-legenda { font-size: 9px; line-height: 1.35; text-align: left; color: #000; padding: 0 2px; word-wrap: break-word; }
+        `}</style>
+
         <div style={{ height: "35px" }}></div>
-        {headerHtml && (
-          <div
-            dangerouslySetInnerHTML={{ __html: headerHtml }}
-            style={{ display: "contents" }}
-          />
+
+        {idxLote === 0 && (
+          <div className="contestacao-header">
+            <h1 className="contestacao-header-titulo">
+              REGISTROS COMPLEMENTARES
+            </h1>
+            <div className="contestacao-header-meta">
+              {dataFmt && <span>Realizado em {dataFmt}</span>}
+              <span>{plural}</span>
+            </div>
+          </div>
         )}
+
         <div className="contestacao-grid">
           {lote.map((img) => {
             const legenda = (img.legenda || "").trim();
             return (
               <div key={img.id} className="contestacao-card">
                 <div className="contestacao-card-foto">
-                  <img src={img.url} alt={legenda} crossOrigin="anonymous" />
+                  <img
+                    src={img.url}
+                    alt={legenda}
+                    crossOrigin="anonymous"
+                  />
                 </div>
                 <div className="contestacao-card-legenda">{legenda}</div>
               </div>
