@@ -512,6 +512,19 @@ class LaudosService {
       totalPages: number;
       totalImages: number;
       imagesPerPage: number;
+      /**
+       * Quantidade de imagens de Registros Complementares (contestação)
+       * deste laudo, devolvida pelo backend no mesmo round-trip. Permite
+       * ao frontend calcular `totalPaginas` corretamente na primeira
+       * carga — sem precisar de uma segunda chamada (`getContestacao`)
+       * apenas para descobrir se há páginas extras. Veja o
+       * `useEffect[contestacao]` legado em VisualizadorPdfLaudo, que
+       * foi removido por causar um "salto" visível de 1/5 → 1/7 ao
+       * carregar um preview com imagens de contestação.
+       */
+      contestacaoImagesCount: number;
+      /** Flag que indica se a contestação já foi enviada (travada). */
+      contestacaoRealizada: boolean;
     };
   }> {
     return api.get(

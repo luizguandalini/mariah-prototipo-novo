@@ -406,6 +406,24 @@ export default function VisualizadorPdfLaudo() {
 
   const hasCover = true;
 
+  /**
+   * Quantas páginas de Registros Complementares (contestação) precisam ser
+   * somadas ao `totalPaginas` do preview. Mesma regra do backend de PDF:
+   * grid 3x3 → 9 fotos por página. Fonte única: `meta` do `getImagensPdf`.
+   * Encapsulando aqui, evitamos o drift entre a regra do backend (que
+   * renderiza o PDF) e do frontend (que mostra a paginação no preview).
+   */
+  const FOTOS_POR_PAGINA_CONTESTACAO = 9;
+  const calcularPaginasContestacao = (
+    contestacaoImagesCount: number | undefined,
+    contestacaoRealizada: boolean | undefined,
+  ): number => {
+    if (!contestacaoRealizada) return 0;
+    const count = contestacaoImagesCount ?? 0;
+    if (count <= 0) return 0;
+    return Math.ceil(count / FOTOS_POR_PAGINA_CONTESTACAO);
+  };
+
   const handleModoPreviewChange = async (modo: ModoPreview) => {
     if (modo === modoPreview) return;
 
@@ -447,33 +465,22 @@ export default function VisualizadorPdfLaudo() {
   }, [id, paginaAtual, laudo?.id, modoPreview]);
 
   /**
-   * Recalcula `totalPaginas` quando a contestação carrega (após o efeito
-   * acima já ter rodado). Sem isso, abrir com contestacao=null daria
-   * `paginasContestacao=0`, e ao navegar uma página (com contestacao já
-   * carregada) a contagem pula de N para N+K — bug visual clássico de
-   * "dependência implícita".
+   * IMPORTANTE: este `useEffect` foi REMOVIDO por causar um "salto"
+   * visível de totalPaginas (ex.: 1/5 → 1/7) ao abrir o preview de um
+   * laudo com imagens de contestação.
+   *
+   * Motivo: o backend já devolve `contestacaoImagesCount` e
+   * `contestacaoRealizada` no `meta` do `getImagensPdf`, então o
+   * `carregarImagens` calcula `totalPaginas` corretamente na primeira
+   * ida ao servidor. Antes, este effect disparava uma SEGUNDA chamada
+   * `getImagensPdf(id, 1, ...)` só para atualizar o total quando a
+   * contestação terminava de carregar (resolvida em série após
+   * `getLaudo`), o que produzia o delay de 1–2s relatado.
+   *
+   * O objeto `contestacao` (com as imagens) continua sendo carregado em
+   * paralelo com `getLaudo` para a renderização da página de Registros
+   * Complementares — só não usamos mais ele para o cálculo de paginação.
    */
-  useEffect(() => {
-    if (!laudo) return;
-    const FOTOS_POR_PAGINA_CONTESTACAO = 9;
-    const paginasContestacao =
-      contestacao?.contestacaoRealizada && contestacao.imagens?.length
-        ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
-        : 0;
-    if (paginasContestacao === 0) return;
-
-    // Busca leve só pra somar: 1ª página de fotos (já cacheada).
-    laudosService
-      .getImagensPdf(id!, 1, imagensPorPagina)
-      .then((response) => {
-        const adicional = hasCover ? 4 : 0;
-        setTotalPaginas(response.meta.totalPages + adicional + paginasContestacao);
-      })
-      .catch(() => {
-        /* silencioso — fallback fica como o último valor conhecido */
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contestacao, laudo?.id, hasCover]);
 
   useEffect(() => {
     setPaginaInput(String(paginaAtual));
@@ -571,26 +578,36 @@ export default function VisualizadorPdfLaudo() {
   const carregarLaudo = async () => {
     if (!id) return;
     try {
+      // Dispara getLaudo primeiro (precisa do objeto antes dos demais
+      // efeitos). getLaudoDetalhes e getContestacao rodam em paralelo
+      // — antes eram sequenciais, o que somava ~1 round-trip de latência
+      // ao abrir o preview (visível como atraso antes do "1/5" aparecer).
       const data = await laudosService.getLaudo(id);
       setLaudo(data);
 
-      // Carregar detalhes completos (perguntas e respostas dinâmicas)
-      try {
-        const details = await laudosService.getLaudoDetalhes(id);
-        setDetalhes(details);
-      } catch (err) {
-        console.error("Erro ao carregar detalhes dinâmicos:", err);
-      }
-
-      // Carregar Registros Complementares (se existirem). Falha aqui é
-      // silenciosa — a UI simplesmente mostra o PDF sem a página extra.
-      try {
-        const cont = await laudosService.getContestacao(id);
-        setContestacao(cont);
-      } catch (err) {
-        console.error("Erro ao carregar contestação:", err);
-        setContestacao(null);
-      }
+      Promise.all([
+        laudosService
+          .getLaudoDetalhes(id)
+          .then((details) => {
+            setDetalhes(details);
+          })
+          .catch((err) => {
+            console.error("Erro ao carregar detalhes dinâmicos:", err);
+          }),
+        laudosService
+          .getContestacao(id)
+          .then((cont) => {
+            // Objeto completo (imagens + URLs) só é necessário para
+            // RENDERIZAR a página de Registros Complementares; o cálculo
+            // de totalPaginas usa o `meta` do `getImagensPdf` (não este
+            // estado), por isso o atraso aqui não atrasa mais a UI.
+            setContestacao(cont);
+          })
+          .catch((err) => {
+            console.error("Erro ao carregar contestação:", err);
+            setContestacao(null);
+          }),
+      ]);
     } catch (error) {
       console.error("Erro ao carregar laudo:", error);
       toast.error("Erro ao carregar dados do laudo");
@@ -608,11 +625,15 @@ export default function VisualizadorPdfLaudo() {
       );
       // +4 = capa + termos + relatório + assinaturas (com cover)
       // +N = páginas de Registros Complementares (grid 3x3, 9 fotos/página)
-      const FOTOS_POR_PAGINA_CONTESTACAO = 9;
-      const paginasContestacao =
-        contestacao?.contestacaoRealizada && contestacao.imagens?.length
-          ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
-          : 0;
+      //
+      // A contagem de páginas de contestação vem direto do `meta` retornado
+      // pelo backend no MESMO round-trip (`contestacaoImagesCount` /
+      // `contestacaoRealizada`). Antes isso dependia do estado `contestacao`
+      // que carregava em série após `getLaudo`, gerando o salto 1/5 → 1/7.
+      const paginasContestacao = calcularPaginasContestacao(
+        response.meta.contestacaoImagesCount,
+        response.meta.contestacaoRealizada,
+      );
       const adicional = hasCover ? 4 : 0;
       const totalPaginasVisual =
         response.meta.totalPages + adicional + paginasContestacao;
@@ -672,11 +693,14 @@ export default function VisualizadorPdfLaudo() {
         imagensPorPagina
       );
 
-      const FOTOS_POR_PAGINA_CONTESTACAO = 9;
-      const paginasContestacao =
-        contestacao?.contestacaoRealizada && contestacao.imagens?.length
-          ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
-          : 0;
+      // Mesma fonte da verdade (meta do backend) usada em
+      // `atualizarResumoImagens`. Não depende mais do estado `contestacao`,
+      // que carregava em série — isso era o que causava o "salto" no
+      // totalPaginas.
+      const paginasContestacao = calcularPaginasContestacao(
+        response.meta.contestacaoImagesCount,
+        response.meta.contestacaoRealizada,
+      );
       const totalPaginasVisual = hasCover
         ? response.meta.totalPages + 4 + paginasContestacao
         : response.meta.totalPages + paginasContestacao;
@@ -1595,7 +1619,6 @@ export default function VisualizadorPdfLaudo() {
     if (!contestacao?.contestacaoRealizada || !contestacao.imagens?.length) {
       return null;
     }
-    const FOTOS_POR_PAGINA_CONTESTACAO = 9;
     const total = contestacao.imagens.length;
     const idxRelatorio = getIdxRelatorio();
     const idxLote = paginaAtual - (idxRelatorio + 1); // 0..N-1
@@ -1664,7 +1687,6 @@ export default function VisualizadorPdfLaudo() {
    * de Registros Complementares (se houver), e as Assinaturas ficam por
    * último (quando há cover).
    */
-  const FOTOS_POR_PAGINA_CONTESTACAO = 9;
   const paginasContestacaoTotal =
     contestacao?.contestacaoRealizada && contestacao.imagens?.length
       ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
