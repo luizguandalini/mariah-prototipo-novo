@@ -207,7 +207,11 @@ class PdfService {
           );
           await new Promise((resolve) => setTimeout(resolve, 800));
         } else if (hasCover && pagina === 2) {
-          elementoParaCaptura = this.criarPaginaTermos(ambientes, mountPoint);
+          elementoParaCaptura = this.criarPaginaTermos(
+            laudo,
+            ambientes,
+            mountPoint
+          );
           await new Promise((resolve) => setTimeout(resolve, 400));
         } else if (
           // Páginas de Registros Complementares vêm logo após a última
@@ -456,6 +460,7 @@ class PdfService {
   }
 
   private criarPaginaTermos(
+    laudo: any,
     ambientes: any[],
     parent: HTMLElement = document.body
   ): HTMLElement {

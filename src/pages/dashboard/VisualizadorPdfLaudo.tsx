@@ -1391,7 +1391,7 @@ export default function VisualizadorPdfLaudo() {
         <div style={{ height: "35px" }}></div>
 
         {(() => {
-          const tipoNorm = (laudo.tipoVistoria || "").toLowerCase();
+          const tipoNorm = (laudo?.tipoVistoria || "").toLowerCase();
           const ocultarTermos =
             tipoNorm === "constatação" ||
             tipoNorm === "constatacao" ||
