@@ -6,12 +6,13 @@ import Button from "../../components/ui/Button";
 import LaudoDetalhes from "../../components/LaudoDetalhes";
 import EditarEnderecoLaudo from "../../components/EditarEnderecoLaudo";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import RegistrosComplementaresModal from "../../components/laudo/RegistrosComplementaresModal";
 import { laudosService, type Laudo } from "../../services/laudos";
 import { queueService } from "../../services/queue";
 import { useAuth } from "../../contexts/AuthContext";
 import { UserRole } from "../../types/auth";
 import { toast } from "sonner";
-import { FileText, Camera, Pencil, Trash2, Loader2, Plus, Search, X } from "lucide-react";
+import { FileText, Camera, Pencil, Trash2, Loader2, Plus, Search, X, MessageSquarePlus, CheckCircle2 } from "lucide-react";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
 import { useDebounce } from "../../hooks/useDebounce";
 
@@ -38,6 +39,8 @@ export default function MeusLaudos() {
   const [analisandoLaudoId, setAnalisandoLaudoId] = useState<string | null>(
     null
   );
+  // Laudo atualmente aberto no modal de "Registros Complementares".
+  const [laudoContestacao, setLaudoContestacao] = useState<Laudo | null>(null);
 
   // WebSocket Hook
   const { progressMap, statusMap, joinLaudo, leaveLaudo } = useQueueSocket();
@@ -136,6 +139,25 @@ export default function MeusLaudos() {
     // Atualizar o laudo na lista
     setLaudos((prevLaudos) =>
       prevLaudos.map((l) => (l.id === laudoAtualizado.id ? laudoAtualizado : l))
+    );
+  };
+
+  /**
+   * Atualiza o flag de contestação realizada em um laudo da lista local após
+   * o usuário enviar os "Registros Complementares". Como o backend já persiste,
+   * só precisamos refletir o estado na UI.
+   */
+  const handleContestacaoEnviada = (laudoId: string) => {
+    setLaudos((prevLaudos) =>
+      prevLaudos.map((l) =>
+        l.id === laudoId
+          ? {
+              ...l,
+              contestacaoRealizada: true,
+              contestacaoData: new Date().toISOString(),
+            }
+          : l,
+      ),
     );
   };
 
@@ -568,6 +590,28 @@ export default function MeusLaudos() {
                           Editar Endereço
                         </Button>
 
+                        {/* Registros Complementares (contestação) — só aparece
+                            para laudos concluídos. Após o envio, vira um badge
+                            estático (uma única vez por laudo). */}
+                        {status === "concluido" && !laudo.contestacaoRealizada && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="w-full justify-center bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg shadow-purple-500/30 border-0 transition-all duration-300 group"
+                            onClick={() => setLaudoContestacao(laudo)}
+                          >
+                            <MessageSquarePlus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                            Registros complementares
+                          </Button>
+                        )}
+
+                        {status === "concluido" && laudo.contestacaoRealizada && (
+                          <div className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-green-500 text-xs font-semibold">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Registros complementares enviados
+                          </div>
+                        )}
+
                         {/* Deletar - Always Visible */}
                         <Button
                           variant="outline"
@@ -671,6 +715,17 @@ export default function MeusLaudos() {
           confirmLabel="Deletar"
           variant="danger"
         />
+
+        {laudoContestacao && (
+          <RegistrosComplementaresModal
+            laudoId={laudoContestacao.id}
+            isOpen={!!laudoContestacao}
+            onClose={() => setLaudoContestacao(null)}
+            onSuccess={() =>
+              handleContestacaoEnviada(laudoContestacao.id)
+            }
+          />
+        )}
       </div>
     </DashboardLayout>
   );

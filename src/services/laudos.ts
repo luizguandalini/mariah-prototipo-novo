@@ -154,8 +154,30 @@ export interface Laudo {
   // Rodapé exibido em todas as páginas do PDF (texto livre, ex.: dados da empresa).
   rodape?: string | null;
 
+  // Registros complementares (contestação). Apenas uma vez por laudo,
+  // depois que o laudo for concluído.
+  contestacaoRealizada?: boolean;
+  contestacaoData?: string | null;
+
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Resposta do backend ao consultar/enviar uma contestação.
+ */
+export interface ContestacaoImagem {
+  id: string;
+  s3Key: string;
+  url: string;
+  ordem: number;
+  legenda: string;
+}
+
+export interface Contestacao {
+  contestacaoRealizada: boolean;
+  contestacaoData: string | null;
+  imagens: ContestacaoImagem[];
 }
 
 class LaudosService {
@@ -667,6 +689,63 @@ class LaudosService {
         message: error.response?.data?.message || "Erro de comunicação.",
       };
     }
+  }
+
+  // ========== REGISTROS COMPLEMENTARES (CONTESTAÇÃO) ==========
+
+  /**
+   * Busca a contestação atual de um laudo (descrição + imagens já enviadas).
+   * Retorna `contestacaoRealizada=false` se o usuário ainda não exerceu o
+   * direito.
+   */
+  async getContestacao(laudoId: string): Promise<Contestacao> {
+    return api.get<Contestacao>(`/contestacao/laudos/${laudoId}`, true);
+  }
+
+  /**
+   * Solicita uma URL pré-assinada para fazer upload direto ao S3 de uma
+   * imagem da contestação. Segue o mesmo padrão de chave do resto do sistema
+   * (`users/{userId}/laudos/{laudoId}/contestacao/...`).
+   */
+  async getContestacaoPresignedUrl(
+    laudoId: string,
+    filename: string,
+  ): Promise<{ uploadUrl: string; s3Key: string }> {
+    return api.post<{ uploadUrl: string; s3Key: string }>(
+      `/contestacao/laudos/${laudoId}/presigned-url`,
+      { filename },
+      true,
+    );
+  }
+
+  /**
+   * Confirma o upload de uma imagem da contestação (cria o registro no banco).
+   * A legenda é OBRIGATÓRIA — sem ela o backend rejeita o confirm.
+   */
+  async confirmContestacaoUpload(
+    laudoId: string,
+    s3Key: string,
+    ordem: number,
+    legenda: string,
+  ): Promise<{ id: string; s3Key: string; ordem: number; legenda: string }> {
+    return api.post<{ id: string; s3Key: string; ordem: number; legenda: string }>(
+      `/contestacao/laudos/${laudoId}/confirm`,
+      { s3Key, ordem, legenda },
+      true,
+    );
+  }
+
+  /**
+   * Trava os registros complementares. Apenas uma vez por laudo.
+   * O backend lê as imagens já confirmadas (com legenda) e fecha o ciclo —
+   * não precisa de payload.
+   */
+  async submitContestacao(laudoId: string): Promise<Contestacao> {
+    return api.post<Contestacao>(
+      `/contestacao/laudos/${laudoId}/submit`,
+      {},
+      true,
+    );
   }
 }
 
