@@ -147,6 +147,9 @@ export interface Laudo {
   dataVistoria?: string;
   dataRelatorio?: string;
 
+  // Rodapé exibido em todas as páginas do PDF (texto livre, ex.: dados da empresa).
+  rodape?: string | null;
+
   createdAt: string;
   updatedAt: string;
 }

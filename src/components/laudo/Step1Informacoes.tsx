@@ -4,6 +4,7 @@ import { viaCepService } from '../../services/viacep'
 import { ambientesService } from '../../services/ambientes'
 import { toast } from 'sonner'
 import { Loader2, Search, MapPin } from 'lucide-react'
+import RodapeEditor from './RodapeEditor'
 
 interface Step1Props {
   onNext: (data: any) => void
@@ -28,6 +29,7 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
     unidade: initialData.unidade || '',
     tamanho: initialData.tamanho || '',
     dataVistoria: initialData.dataVistoria || new Date().toISOString().split('T')[0],
+    rodape: initialData.rodape || '',
   })
 
   const [tiposImovel, setTiposImovel] = useState<string[]>([])
@@ -424,6 +426,14 @@ export default function Step1Informacoes({ onNext, initialData = {} }: Step1Prop
                 className={inputClass('dataVistoria')}
               />
             </div>
+          </div>
+
+          {/* Rodapé do Laudo (aparece em todas as páginas do PDF) */}
+          <div className="mt-4">
+            <RodapeEditor
+              value={formData.rodape}
+              onChange={(val) => handleChange('rodape', val)}
+            />
           </div>
         </div>
 

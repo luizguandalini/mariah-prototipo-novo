@@ -9,10 +9,11 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import Button from "../../components/ui/Button";
 import { QRCodeSVG } from "qrcode.react";
-import { Save, Check, Loader2 } from "lucide-react";
+import { Save, Check, Loader2, Type, X } from "lucide-react";
 import LogoCapaEditavel, {
   LogoCapaValue,
 } from "../../components/laudo/LogoCapaEditavel";
+import RodapeEditor from "../../components/laudo/RodapeEditor";
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
 const normalizeSectionName = (name: string): string => {
@@ -1194,19 +1195,8 @@ export default function VisualizadorPdfLaudo() {
           />
         </div>
 
-        {/* Número de página */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "10mm",
-            right: "15mm",
-            fontFamily: '"Roboto", Arial, sans-serif',
-            fontSize: "10px",
-            color: "#555",
-          }}
-        >
-          {paginaAtual}
-        </div>
+        {/* Rodapé com número de página */}
+        {renderPageFooter()}
       </div>
     );
   };
@@ -1337,19 +1327,8 @@ export default function VisualizadorPdfLaudo() {
           </div>
         </div>
 
-        {/* Número de página */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "10mm",
-            right: "15mm",
-            fontFamily: '"Roboto", Arial, sans-serif',
-            fontSize: "10px",
-            color: "#555",
-          }}
-        >
-          {paginaAtual}
-        </div>
+        {/* Rodapé com número de página */}
+        {renderPageFooter()}
       </div>
     );
   };
@@ -1618,19 +1597,8 @@ export default function VisualizadorPdfLaudo() {
           <div className="encerramento-rodape"></div>
         </div>
 
-        {/* Número de página */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "10mm",
-            right: "15mm",
-            fontFamily: '"Roboto", Arial, sans-serif',
-            fontSize: "10px",
-            color: "#555",
-          }}
-        >
-          {paginaAtual}
-        </div>
+        {/* Rodapé com número de página */}
+        {renderPageFooter()}
       </div>
     );
   };
@@ -1986,15 +1954,55 @@ export default function VisualizadorPdfLaudo() {
           </div>
         </div>
 
-        {/* Número de página */}
+        {/* Rodapé com número de página */}
+        {renderPageFooter()}
+      </div>
+    );
+  };
+
+  const hasPendingChanges =
+    Object.keys(editedFields).length > 0 || configuracoesAlteradas();
+
+  // Modal de configuração do rodapé (acessível a partir do header).
+  const [modalRodapeAberto, setModalRodapeAberto] = useState(false);
+
+  const renderPageFooter = () => {
+    const rodape = (laudo?.rodape || "").toString();
+    return (
+      <div
+        style={{
+          position: "absolute",
+          bottom: "10mm",
+          left: "20mm",
+          right: "15mm",
+          height: "22mm",
+          fontFamily: '"Roboto", Arial, sans-serif',
+          fontSize: "10px",
+          color: "#555",
+        }}
+      >
+        {rodape ? (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: "25mm",
+              textAlign: "center",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              maxHeight: "22mm",
+              overflow: "hidden",
+            }}
+          >
+            {rodape}
+          </div>
+        ) : null}
         <div
           style={{
             position: "absolute",
-            bottom: "10mm",
-            right: "15mm",
-            fontFamily: '"Roboto", Arial, sans-serif',
-            fontSize: "10px",
-            color: "#555",
+            bottom: 0,
+            right: 0,
           }}
         >
           {paginaAtual}
@@ -2002,9 +2010,6 @@ export default function VisualizadorPdfLaudo() {
       </div>
     );
   };
-
-  const hasPendingChanges =
-    Object.keys(editedFields).length > 0 || configuracoesAlteradas();
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -2024,6 +2029,17 @@ export default function VisualizadorPdfLaudo() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+            {/* Botão: Configurar Rodapé (mesmo padrão visual do "Baixar PDF") */}
+            <Button
+              variant="primary"
+              onClick={() => setModalRodapeAberto(true)}
+              className="w-full sm:w-auto justify-center"
+              title="Editar o texto exibido no rodapé de todas as páginas do PDF"
+            >
+              <Type className="w-4 h-4 mr-2" />
+              Configurar Rodapé
+            </Button>
+
             {/* Botão Salvar (Apenas se houver alterações) */}
             {hasPendingChanges && (
               <Button
@@ -2414,19 +2430,8 @@ export default function VisualizadorPdfLaudo() {
                 })}
               </div>
 
-              {/* Número de página */}
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "10mm",
-                  right: "15mm",
-                  fontFamily: '"Roboto", Arial, sans-serif',
-                  fontSize: "10px",
-                  color: "#555",
-                }}
-              >
-                {paginaAtual}
-              </div>
+              {/* Rodapé com número de página */}
+              {renderPageFooter()}
             </div>
           )}
         </PdfWrapper>
@@ -2466,6 +2471,84 @@ export default function VisualizadorPdfLaudo() {
                   />
                 </div>
               </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal: Configurar Rodapé (editado uma vez, vale para todas as páginas) */}
+      {modalRodapeAberto && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setModalRodapeAberto(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Type className="w-5 h-5" />
+                  Configurar Rodapé do Laudo
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Este texto aparece em todas as páginas do PDF gerado
+                  (capa, informações, fotos, relatório e assinaturas).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalRodapeAberto(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <RodapeEditor
+                value={laudo?.rodape || ""}
+                onChange={(val) => handleFieldChange("rodape", val)}
+                rows={4}
+                hidePreview={false}
+              />
+
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                Quando terminar de ajustar o texto, clique em{" "}
+                <strong>"Salvar Alterações"</strong> aqui em cima para gravar.
+                Em seguida, clique em <strong>"Gerar Novamente"</strong> para
+                baixar um PDF atualizado com o novo rodapé em todas as páginas.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+              <Button
+                variant="secondary"
+                onClick={() => setModalRodapeAberto(false)}
+                className="bg-white border-gray-300"
+              >
+                Fechar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  setModalRodapeAberto(false);
+                  await handleSaveChanges();
+                }}
+                disabled={isSaving}
+                className="bg-green-600 hover:bg-green-700 text-white border-0"
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Salvar e Fechar
+              </Button>
             </div>
           </motion.div>
         </div>

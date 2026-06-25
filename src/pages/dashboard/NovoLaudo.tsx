@@ -29,6 +29,7 @@ export default function NovoLaudo() {
         tipoUso: info.tipoUso,
         tipoImovel: info.tipoImovel,
         tamanho: info.tamanho || undefined,
+        rodape: info.rodape || undefined,
         incluirAtestado: 1,
       })
 
