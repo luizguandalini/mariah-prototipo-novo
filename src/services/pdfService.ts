@@ -5,6 +5,24 @@ export interface ProgressCallback {
   (percent: number): void;
 }
 
+/**
+ * Modelo da contestação (Registros Complementares) usado pelo PDF service.
+ * Espelha o backend (apenas os campos necessários para renderizar o PDF).
+ */
+export interface ContestacaoImagem {
+  id: string;
+  s3Key: string;
+  url: string;
+  ordem: number;
+  legenda: string;
+}
+
+export interface ContestacaoPdf {
+  contestacaoRealizada: boolean;
+  contestacaoData: string | null;
+  imagens: ContestacaoImagem[];
+}
+
 const METODOLOGIA_TEXTS = [
   "Este documento tem como objetivo garantir às partes da locação o registro do estado de entrega do imóvel, integrando-se como anexo ao contrato formado. Ele concilia as obrigações contratuais e serve como referência para a aferição de eventuais alterações no imóvel ao longo do período de uso.",
   "O laudo de vistoria foi elaborado de maneira técnica por um especialista qualificado, que examinou critérios específicos para avaliar todos os aspectos relevantes, desde apontamentos estruturais aparentes até pequenos detalhes construtivos e acessórios presentes no imóvel. O objetivo foi registrar, de forma clara e objetiva, por meio de textos e imagens, qualquer apontamento ou irregularidade, garantindo uma abordagem sistemática, imparcial e organizada em ordem cronológica, com separação por ambientes e legendas contidas e numerações sequenciais.",
@@ -139,19 +157,37 @@ class PdfService {
     ambientes: any[],
     detalhes: any, // Novo parâmetro com as seções e respostas
     onProgress: ProgressCallback,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    // Registros Complementares (opcional). Quando realizada=true com imagens,
+    // o pdf insere uma página dedicada antes do relatório.
+    contestacao?: ContestacaoPdf | null,
   ): Promise<void> {
     const pdf = new jsPDF("portrait", "mm", "a4");
     let paginaAdicionada = false;
 
     const hasCover = true;
 
+    // Calcula quantas páginas de Registros Complementares serão geradas.
+    // Grid 3x3, 9 fotos por página. Mesma regra do backend.
+    const FOTOS_POR_PAGINA = 9;
+    const paginasContestacao =
+      contestacao && contestacao.contestacaoRealizada && contestacao.imagens?.length
+        ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA)
+        : 0;
+
+    // Página(s) de Registros Complementares entram ANTES do relatório
+    // (que continua sendo a última). Mas o `totalPaginas` que chega aqui
+    // vem do caller e reflete apenas capa+termos+fotos+relatorio. Para
+    // deixar a numeração consistente, somamos as páginas de contestação
+    // ao total.
+    const totalFinal = totalPaginas + paginasContestacao;
+
     // Criar iframe de isolamento uma única vez
     const iframe = this.createIsolationIframe();
     const mountPoint = iframe.contentDocument!.body;
 
     try {
-      for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+      for (let pagina = 1; pagina <= totalFinal; pagina++) {
         if (abortSignal?.aborted) {
           throw new Error("Geração cancelada");
         }
@@ -169,13 +205,47 @@ class PdfService {
             configuracoes,
             mountPoint
           );
-          // Aumentei o delay para garantir carregamento da fonte
           await new Promise((resolve) => setTimeout(resolve, 800));
         } else if (hasCover && pagina === 2) {
           elementoParaCaptura = this.criarPaginaTermos(ambientes, mountPoint);
           await new Promise((resolve) => setTimeout(resolve, 400));
-        } else if (hasCover && pagina === totalPaginas) {
-          // Nova condição: Se for Entrada, a última página é o Relatório
+        } else if (
+          // Páginas de Registros Complementares vêm logo após a última
+          // página de fotos (que era a última ANTES do relatório) e antes
+          // do relatório. A lógica é:
+          //   totalPaginas (original) era: capa(1) + termos(2) + fotos(N) + relatorio(última)
+          //   totalFinal = totalPaginas + paginasContestacao
+          //   → relatorio agora é a ÚLTIMA página (=totalFinal)
+          //   → contestacao fica antes do relatorio, ocupando as páginas
+          //     [totalFinal - paginasContestacao, totalFinal - 1]
+          hasCover &&
+          paginasContestacao > 0 &&
+          pagina >= totalFinal - paginasContestacao &&
+          pagina < totalFinal
+        ) {
+          const idxLote =
+            pagina - (totalFinal - paginasContestacao); // 0..N-1
+          const inicio = idxLote * FOTOS_POR_PAGINA;
+          const lote = (contestacao!.imagens || []).slice(
+            inicio,
+            inicio + FOTOS_POR_PAGINA,
+          );
+          const headerHtml =
+            idxLote === 0
+              ? this.renderContestacaoCabecalho(
+                  contestacao!.imagens.length,
+                  contestacao!.contestacaoData,
+                )
+              : "";
+          elementoParaCaptura = this.criarPaginaContestacao(
+            lote,
+            headerHtml,
+            mountPoint,
+          );
+          await this.aguardarCarregamentoImagens(elementoParaCaptura);
+        } else if (hasCover && pagina === totalFinal) {
+          // A última página agora é o relatório (com as contestação
+          // injetadas logo antes).
           elementoParaCaptura = this.criarPaginaRelatorio(
             laudo,
             detalhes,
@@ -217,7 +287,7 @@ class PdfService {
         pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
         paginaAdicionada = true;
 
-        onProgress((pagina / totalPaginas) * 100);
+        onProgress((pagina / totalFinal) * 100);
       }
     } finally {
       if (iframe.parentNode) {
@@ -755,6 +825,90 @@ class PdfService {
           })
       )
     ).then(() => {});
+  }
+
+  /**
+   * Renderiza a página de Registros Complementares (uma por lote de até 9
+   * fotos). Espelha o backend: grid 3x3 com cabeçalho "REGISTROS
+   * COMPLEMENTARES" + data + contagem (apenas na primeira página).
+   */
+  private criarPaginaContestacao(
+    lote: ContestacaoImagem[],
+    headerHtml: string,
+    parent: HTMLElement,
+  ): HTMLElement {
+    const container = document.createElement("div");
+    container.style.cssText = `
+      position: fixed;
+      top: -10000px;
+      left: 0;
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      padding: 20mm;
+      box-sizing: border-box;
+      font-family: "Roboto", Arial, sans-serif;
+      color: #000;
+    `;
+
+    container.innerHTML = `
+      <div style="height: 35px;"></div>
+      ${headerHtml}
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        ${lote
+          .map((img) => {
+            const legenda = (img.legenda || "").trim();
+            return `
+              <div style="break-inside: avoid;">
+                <div style="border: 1px solid #9ca3af; overflow: hidden; margin-bottom: 3px;">
+                  <img
+                    src="${img.url}"
+                    crossorigin="anonymous"
+                    alt="${this.escapeHtml(legenda)}"
+                    style="width: 100%; height: 200px; object-fit: cover; object-position: center; display: block;"
+                  />
+                </div>
+                <div style="font-size: 9px; line-height: 1.35; text-align: left; color: #000; padding: 0 2px;">
+                  ${this.escapeHtml(legenda)}
+                </div>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+
+    parent.appendChild(container);
+    return container;
+  }
+
+  /**
+   * Renderiza o cabeçalho (HTML string) que vai no topo da PRIMEIRA
+   * página de Registros Complementares.
+   */
+  private renderContestacaoCabecalho(total: number, dataIso: string | null): string {
+    const plural = total === 1 ? "1 foto anexada" : `${total} fotos anexadas`;
+    const data = dataIso ? new Date(dataIso).toLocaleDateString("pt-BR") : "";
+    return `
+      <div style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 14px;">
+        <h1 style="font-size: 18px; font-weight: 700; text-transform: uppercase; margin: 0; letter-spacing: 0.5px;">
+          REGISTROS COMPLEMENTARES
+        </h1>
+        <div style="display: flex; gap: 16px; font-size: 11px; color: #555; margin-top: 4px;">
+          ${data ? `<span>Realizado em ${data}</span>` : ""}
+          <span>${plural}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 }
 

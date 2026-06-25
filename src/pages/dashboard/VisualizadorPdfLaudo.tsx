@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { laudosService, Laudo } from "../../services/laudos";
+import { laudosService, Laudo, Contestacao } from "../../services/laudos";
 import { pdfService } from "../../services/pdfService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
@@ -313,6 +313,10 @@ export default function VisualizadorPdfLaudo() {
   const [imagensComUrls, setImagensComUrls] = useState<any[]>([]);
   const [ambientes, setAmbientes] = useState<any[]>([]);
   const [detalhes, setDetalhes] = useState<any>(null); // Armazena o objeto completo com availableSections
+  // Registros Complementares (carregado junto com o laudo). Quando
+  // contestacaoRealizada=true com imagens, adicionamos 1+ páginas dedicadas
+  // ao totalPaginas, ANTES do relatório.
+  const [contestacao, setContestacao] = useState<Contestacao | null>(null);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [paginaInput, setPaginaInput] = useState("1");
   const [totalPaginas, setTotalPaginas] = useState(0);
@@ -442,6 +446,35 @@ export default function VisualizadorPdfLaudo() {
     }
   }, [id, paginaAtual, laudo?.id, modoPreview]);
 
+  /**
+   * Recalcula `totalPaginas` quando a contestação carrega (após o efeito
+   * acima já ter rodado). Sem isso, abrir com contestacao=null daria
+   * `paginasContestacao=0`, e ao navegar uma página (com contestacao já
+   * carregada) a contagem pula de N para N+K — bug visual clássico de
+   * "dependência implícita".
+   */
+  useEffect(() => {
+    if (!laudo) return;
+    const FOTOS_POR_PAGINA_CONTESTACAO = 9;
+    const paginasContestacao =
+      contestacao?.contestacaoRealizada && contestacao.imagens?.length
+        ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
+        : 0;
+    if (paginasContestacao === 0) return;
+
+    // Busca leve só pra somar: 1ª página de fotos (já cacheada).
+    laudosService
+      .getImagensPdf(id!, 1, imagensPorPagina)
+      .then((response) => {
+        const adicional = hasCover ? 4 : 0;
+        setTotalPaginas(response.meta.totalPages + adicional + paginasContestacao);
+      })
+      .catch(() => {
+        /* silencioso — fallback fica como o último valor conhecido */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contestacao, laudo?.id, hasCover]);
+
   useEffect(() => {
     setPaginaInput(String(paginaAtual));
   }, [paginaAtual]);
@@ -548,6 +581,16 @@ export default function VisualizadorPdfLaudo() {
       } catch (err) {
         console.error("Erro ao carregar detalhes dinâmicos:", err);
       }
+
+      // Carregar Registros Complementares (se existirem). Falha aqui é
+      // silenciosa — a UI simplesmente mostra o PDF sem a página extra.
+      try {
+        const cont = await laudosService.getContestacao(id);
+        setContestacao(cont);
+      } catch (err) {
+        console.error("Erro ao carregar contestação:", err);
+        setContestacao(null);
+      }
     } catch (error) {
       console.error("Erro ao carregar laudo:", error);
       toast.error("Erro ao carregar dados do laudo");
@@ -563,8 +606,16 @@ export default function VisualizadorPdfLaudo() {
         1,
         imagensPorPagina
       );
+      // +4 = capa + termos + relatório + assinaturas (com cover)
+      // +N = páginas de Registros Complementares (grid 3x3, 9 fotos/página)
+      const FOTOS_POR_PAGINA_CONTESTACAO = 9;
+      const paginasContestacao =
+        contestacao?.contestacaoRealizada && contestacao.imagens?.length
+          ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
+          : 0;
       const adicional = hasCover ? 4 : 0;
-      const totalPaginasVisual = response.meta.totalPages + adicional;
+      const totalPaginasVisual =
+        response.meta.totalPages + adicional + paginasContestacao;
 
       setTotalPaginas(totalPaginasVisual);
       setTotalImagens(response.meta.totalImages);
@@ -621,17 +672,28 @@ export default function VisualizadorPdfLaudo() {
         imagensPorPagina
       );
 
+      const FOTOS_POR_PAGINA_CONTESTACAO = 9;
+      const paginasContestacao =
+        contestacao?.contestacaoRealizada && contestacao.imagens?.length
+          ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
+          : 0;
       const totalPaginasVisual = hasCover
-        ? response.meta.totalPages + 4
-        : response.meta.totalPages;
+        ? response.meta.totalPages + 4 + paginasContestacao
+        : response.meta.totalPages + paginasContestacao;
 
       setTotalPaginas(totalPaginasVisual);
       setTotalImagens(response.meta.totalImages);
 
       if (totalPaginas > 0 && totalPaginas !== totalPaginasVisual) {
+        // Relatório e Assinaturas sempre vêm por último; as páginas de
+        // Registros Complementares entram entre as fotos e o relatório.
+        const idxRelatorio = hasCover
+          ? totalPaginasVisual - 1 - paginasContestacao
+          : totalPaginasVisual - paginasContestacao;
         const paginaEraRelatorio =
-          hasCover && paginaAtual === totalPaginas - 1;
-        const paginaEraAssinatura = hasCover && paginaAtual === totalPaginas;
+          hasCover && paginaAtual === idxRelatorio;
+        const paginaEraAssinatura =
+          hasCover && paginaAtual === totalPaginasVisual;
         const ultimaPaginaComImagem = hasCover
           ? response.meta.totalPages + 2
           : response.meta.totalPages;
@@ -1523,6 +1585,92 @@ export default function VisualizadorPdfLaudo() {
     );
   };
 
+  /**
+   * Renderiza a(s) página(s) de Registros Complementares. Espelha o
+   * backend: cabeçalho com título + data + contagem (somente na primeira
+   * página) + grid 3x3 com fotos e legendas.
+   *
+   * O índice da página atual dentro do bloco de contestação é calculado
+   * pela diferença `paginaAtual - primeiraPaginaContestacao`.
+   */
+  const renderContestacaoPage = () => {
+    if (!contestacao?.contestacaoRealizada || !contestacao.imagens?.length) {
+      return null;
+    }
+    const FOTOS_POR_PAGINA_CONTESTACAO = 9;
+    const total = contestacao.imagens.length;
+    const idxRelatorio = getIdxRelatorio();
+    const idxLote = paginaAtual - (idxRelatorio + 1); // 0..N-1
+    const inicio = idxLote * FOTOS_POR_PAGINA_CONTESTACAO;
+    const lote = contestacao.imagens.slice(
+      inicio,
+      inicio + FOTOS_POR_PAGINA_CONTESTACAO,
+    );
+    const dataFmt = contestacao.contestacaoData
+      ? new Date(contestacao.contestacaoData).toLocaleDateString("pt-BR")
+      : "";
+    const plural = total === 1 ? "1 foto anexada" : `${total} fotos anexadas`;
+    const headerHtml =
+      idxLote === 0
+        ? `
+          <div className="contestacao-header">
+            <h1 className="contestacao-header-titulo">REGISTROS COMPLEMENTARES</h1>
+            <div className="contestacao-header-meta">
+              ${dataFmt ? `<span>Realizado em ${dataFmt}</span>` : ""}
+              <span>${plural}</span>
+            </div>
+          </div>
+        `
+        : "";
+
+    return (
+      <div className="page-container page-standard contestacao-pagina">
+        <div style={{ height: "35px" }}></div>
+        {headerHtml && (
+          <div
+            dangerouslySetInnerHTML={{ __html: headerHtml }}
+            style={{ display: "contents" }}
+          />
+        )}
+        <div className="contestacao-grid">
+          {lote.map((img) => {
+            const legenda = (img.legenda || "").trim();
+            return (
+              <div key={img.id} className="contestacao-card">
+                <div className="contestacao-card-foto">
+                  <img src={img.url} alt={legenda} crossOrigin="anonymous" />
+                </div>
+                <div className="contestacao-card-legenda">{legenda}</div>
+              </div>
+            );
+          })}
+        </div>
+        {renderPageFooter()}
+      </div>
+    );
+  };
+
+  /**
+   * Helpers de paginação: a página de Relatório fica logo APÓS as páginas
+   * de Registros Complementares (se houver), e as Assinaturas ficam por
+   * último (quando há cover).
+   */
+  const FOTOS_POR_PAGINA_CONTESTACAO = 9;
+  const paginasContestacaoTotal =
+    contestacao?.contestacaoRealizada && contestacao.imagens?.length
+      ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
+      : 0;
+  const getIdxRelatorio = (): number => {
+    if (!hasCover) return totalPaginas; // sem cover: relatório é a última
+    return totalPaginas - 1 - paginasContestacaoTotal;
+  };
+  const isContestacaoPage = (pagina: number): boolean => {
+    if (!hasCover || paginasContestacaoTotal === 0) return false;
+    const primeira = getIdxRelatorio() + 1;
+    const ultima = primeira + paginasContestacaoTotal - 1;
+    return pagina >= primeira && pagina <= ultima;
+  };
+
   const renderRelatorioPage = () => {
     if (!laudo) return null;
 
@@ -2305,10 +2453,12 @@ export default function VisualizadorPdfLaudo() {
             renderCoverPage()
           ) : hasCover && paginaAtual === 2 ? (
             renderInfoPage()
-          ) : hasCover && paginaAtual === totalPaginas - 1 ? (
-            renderRelatorioPage()
           ) : hasCover && paginaAtual === totalPaginas ? (
             renderAssinaturasPage()
+          ) : hasCover && isContestacaoPage(paginaAtual) ? (
+            renderContestacaoPage()
+          ) : hasCover && paginaAtual === getIdxRelatorio() ? (
+            renderRelatorioPage()
           ) : (
             <div
               id="pdf-grid-preview"
