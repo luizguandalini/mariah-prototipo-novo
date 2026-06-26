@@ -24,7 +24,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft,
   Trash2,
-  Calendar,
   Tag,
   FolderOpen,
   ChevronRight,
@@ -42,7 +41,6 @@ import {
   ImagePlus,
   X,
   Check,
-  Maximize2,
   MoreVertical,
 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -316,24 +314,10 @@ function SortableImagemCard({
       transition={{ delay: index * 0.05 }}
       onClick={(e) => {
         if (isDragging) return;
-        if (isTouchOnly) {
-          // Em mobile: o tap não abre mais o lightbox — alterna o overlay
-          // de ações. Um botão "Ver imagem" dentro do overlay continua
-          // permitindo expandir a imagem. Bloqueia o bubbling para o
-          // container não disparar handlers pais.
-          e.preventDefault();
-          e.stopPropagation();
-          if (mobileActionsImageId === img.id) {
-            // Segundo tap no mesmo card → fecha o overlay (toque em
-            // qualquer área que não seja botão cai aqui porque botões
-            // internos param com stopPropagation).
-            onMobileActionsChange(null);
-          } else {
-            // Primeiro tap (ou tap em outro card) → mostra ações deste.
-            onMobileActionsChange(img.id);
-          }
-          return;
-        }
+        // Tanto em desktop quanto em mobile, o tap na imagem abre o
+        // lightbox direto. Em mobile (touch-only), o overlay com as 3
+        // ações (avaria / item / excluir) continua acessível pelo botão
+        // "..." (MoreVertical) no canto inferior direito do card.
         onOpen(index);
       }}
       role="button"
@@ -454,61 +438,37 @@ function SortableImagemCard({
       )}
 
       {/*
-        Overlay de ações (avaria / item / excluir / ver imagem).
+        Overlay de ações (avaria / item / excluir).
 
-        - Desktop: aparece em hover (`group-hover:opacity-100`). Mantém
-          o comportamento original para quem usa mouse.
+        - Desktop: aparece em hover (`group-hover:opacity-100`). O card
+          abre o lightbox via click; o overlay é puramente para acesso
+          rápido às ações.
         - Mobile (touch-only): controlado pelo state `mobileActionsImageId`
-          — primeiro tap mostra, segundo tap (ou tap em outro card / fora)
-          esconde. `pointer-events-none` quando invisível evita cliques
-          fantasmas em botões cobertos pelo overlay.
+          — é aberto pelo botão "..." (MoreVertical) no canto inferior
+          direito. Tap fora do card fecha. Tap na área que NÃO é botão
+          borbulha para o card e abre o lightbox (o container não tem
+          stopPropagation; só os botões individuais têm, para não
+          disparar a ação duas vezes). `pointer-events-none` quando
+          invisível evita cliques fantasmas em botões cobertos pelo
+          overlay.
 
         `data-image-actions-trigger={img.id}` é o gancho usado pelo
-        listener global de mousedown/touchstart no pai para ignorar cliques
-        dentro do overlay (caso contrário, tocar num botão faria o pai
-        fechar antes do botão reagir).
+        listener global de mousedown/touchstart no pai para ignorar
+        toques DENTRO do overlay (caso contrário, tocar num botão faria
+        o overlay fechar antes do botão reagir).
       */}
       <div
         data-image-actions-trigger={img.id}
-        onClick={(e) => e.stopPropagation()}
         className={
           isTouchOnly
-            ? `absolute inset-0 bg-black/70 transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs ${
+            ? `absolute inset-0 bg-black/70 transition-opacity duration-200 p-3 pt-10 flex flex-col justify-center content-center gap-3 text-white text-xs ${
                 showActionsOnMobile
                   ? "opacity-100 pointer-events-auto"
                   : "opacity-0 pointer-events-none"
               }`
-            : "absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs"
+            : "absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none transition-opacity duration-200 p-3 pt-10 flex flex-col justify-center content-center gap-3 text-white text-xs"
         }
       >
-        <div className="flex flex-col items-center gap-1 text-center w-full">
-          <Calendar className="w-5 h-5 text-gray-300" />
-          <span className="text-sm font-medium">
-            {formatDate(img.dataCaptura)}
-          </span>
-        </div>
-
-        {/*
-          "Ver imagem" só faz sentido em mobile (no desktop, o click já
-          abre o lightbox diretamente). Em desktop o card abre via click;
-          em mobile, o card mostra o overlay e este botão é o caminho
-          para o lightbox.
-        */}
-        {isTouchOnly && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMobileActionsChange(null);
-              onOpen(index);
-            }}
-            className="w-full py-2 rounded flex items-center justify-center gap-2 transition-colors border bg-white/10 hover:bg-white/20 text-white border-white/30"
-          >
-            <Maximize2 className="w-4 h-4" />
-            <span>Ver imagem</span>
-          </button>
-        )}
-
         <button
           onClick={(e) => {
             e.stopPropagation();
