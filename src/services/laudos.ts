@@ -704,6 +704,9 @@ class LaudosService {
       descricao?: string;
       ordem?: number;
       ambienteComentario?: string;
+      // Coordenadas normalizadas (0..1) do círculo de avaria. Aceita
+      // `null` explícito para apagar o marker. Ver tipo DamageMarker.
+      damageMarker?: DamageMarker | null;
     },
   ): Promise<ImagemLaudo> {
     return api.patch(`/uploads/imagem/${imagemId}/metadata`, metadata, true);
