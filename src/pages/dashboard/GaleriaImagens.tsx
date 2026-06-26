@@ -50,7 +50,9 @@ import {
   laudosService,
   type ImagemLaudo,
   type AmbienteWebInfo,
+  type DamageMarker,
 } from "../../services/laudos";
+import { DamageMarkerOverlay } from "../../components/laudo/DamageMarkerOverlay";
 import { ambientesService } from "../../services/ambientes";
 import { queueService } from "../../services/queue";
 import { configService } from "../../services/config";
@@ -241,6 +243,9 @@ interface SortableImagemCardProps {
   hideItemControls: boolean;
   onUpdateItem: (imgId: string, novoItem: string) => void;
   onToggleAvaria: (imgId: string, marcarAvaria: boolean) => void;
+  // Persiste a posição/tamanho do círculo de avaria após o usuário
+  // terminar o drag/resize. Recebe o novo marker normalizado (0..1).
+  onMarkerChange: (imgId: string, marker: DamageMarker) => void;
   onMarcarItem: (imgId: string) => void;
   onDelete: (imgId: string) => void;
   onOpen: (index: number) => void;
@@ -270,6 +275,7 @@ function SortableImagemCard({
   loadingItemChange,
   loadingCategoriaChange,
   loadingItemFlagChange,
+  onMarkerChange,
   hideItemControls,
   onUpdateItem,
   onToggleAvaria,
@@ -300,6 +306,11 @@ function SortableImagemCard({
   // Touch-only (sem :hover): o overlay de ações só aparece por tap. Em
   // desktop, o `group-hover` no CSS já cuida e este state é ignorado.
   const isTouchOnly = !hoverSupportedRef.current;
+
+  // Ref do `<img>` do card. O `DamageMarkerOverlay` lê o
+  // `getBoundingClientRect` dessa ref para converter coordenadas
+  // normalizadas (0..1) em pixels e vice-versa.
+  const cardImgRef = useRef<HTMLImageElement | null>(null);
   const showActionsOnMobile =
     isTouchOnly && mobileActionsImageId === img.id;
   const anyMobileActionsOpen =
@@ -334,11 +345,12 @@ function SortableImagemCard({
           : "border border-[var(--border-color)]"
       } ${isDragging ? "ring-2 ring-primary/80" : ""} ${isDropTarget ? "ring-2 ring-cyan-400 scale-[1.02]" : ""}`}
     >
-      <img
-        src={img.url}
-        alt={img.tipo || "Imagem do laudo"}
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
+      {/*
+        `<img>` + `DamageMarkerOverlay` foram MOVIDOS para dentro de um
+        wrapper abaixo (próximo dos badges), de modo que o scale do
+        `group-hover:scale-105` afete ambos em sincronia — sem isso, o
+        overlay ficaria "descolado" da imagem quando o card faz hover.
+      */}
 
       {/*
         Ícone de lápis fixo no canto superior direito do card. Ao clicar,
@@ -369,6 +381,43 @@ function SortableImagemCard({
           <CheckCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
       )}
+
+      {/*
+        Wrapper que escala img + overlay juntos no hover (`group-hover:scale-105`).
+        Motivo: o overlay de avaria é posicionado em % sobre o wrapper. Se só
+        a img escalasse, o overlay ficaria visualmente "parado" enquanto a
+        foto cresce — o usuário veria o círculo "descolando" da imagem no
+        hover. Movendo o transform para o wrapper, ambos crescem juntos e o
+        marker continua alinhado com a região marcada.
+      */}
+      <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+        <img
+          ref={cardImgRef}
+          src={img.url}
+          alt={img.tipo || "Imagem do laudo"}
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
+        {/* Overlay do marcador de avaria.
+            - `marker` é passado APENAS quando `categoria === 'AVARIA'`:
+              o spec pede "desmarcando a avaria o círculo some;
+              retomando a avaria o círculo reaparece na última
+              posição salva". A posição (`damageMarker` no DB)
+              continua persistida — só a renderização do overlay é
+              gated pelo categoria.
+            - `disabled=false` aqui: no card da galeria o usuário pode
+              arrastar/redimensionar.
+            - As coords do marker são em relação à IMAGEM ORIGINAL
+              (não ao container), por isso a posição fica idêntica em
+              qualquer view (card, lightbox, preview). */}
+        <DamageMarkerOverlay
+          imageRef={cardImgRef}
+          marker={
+            img.categoria === "AVARIA" ? img.damageMarker ?? null : null
+          }
+          onChange={(m) => onMarkerChange(img.id, m)}
+        />
+      </div>
 
       {hideItemControls && (
         <button
@@ -720,6 +769,10 @@ export default function GaleriaImagens() {
   const [lightboxLegendaErro, setLightboxLegendaErro] = useState(false);
   const [lightboxImageLoading, setLightboxImageLoading] = useState(false);
   const lightboxRef = useRef<HTMLDivElement | null>(null);
+  // Ref do `<img>` do lightbox, usada pelo `DamageMarkerOverlay` para
+  // medir a área renderizada da foto (que pode ter barras pretas nos
+  // lados por causa de `object-contain`).
+  const lightboxImgRef = useRef<HTMLImageElement | null>(null);
   const lightboxLegendaInputRef = useRef<HTMLTextAreaElement | null>(null);
   const lightboxSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -1298,11 +1351,23 @@ export default function GaleriaImagens() {
 
   const handleToggleAvaria = async (imgId: string, marcarAvaria: boolean) => {
     const novaCategoria = marcarAvaria ? "AVARIA" : "VISTORIA";
+    // Quando o usuário MARCA uma foto como AVARIA pela primeira vez e
+    // ainda não há marker persistido, centralizamos um círculo default
+    // para que o overlay apareça imediatamente — o usuário já pode
+    // arrastá-lo/redimensioná-lo. Quando DESMARCA, mantemos o marker
+    // persistido (escondido na UI pela checagem `categoria === 'AVARIA'`);
+    // se ele re-marcar depois, o círculo reaparece na última posição.
+    const imgAtual = imagens.find((i) => i.id === imgId);
+    const payload: {
+      categoria: string;
+      damageMarker?: DamageMarker | null;
+    } = { categoria: novaCategoria };
+    if (marcarAvaria && !imgAtual?.damageMarker) {
+      payload.damageMarker = { x: 0.5, y: 0.5, r: 0.12 };
+    }
     try {
       setLoadingCategoriaChange(imgId);
-      await laudosService.updateImagemMetadata(imgId, {
-        categoria: novaCategoria,
-      });
+      await laudosService.updateImagemMetadata(imgId, payload);
       setImagens((prev) =>
         prev.map((img) =>
           img.id === imgId
@@ -1310,6 +1375,7 @@ export default function GaleriaImagens() {
                 ...img,
                 categoria: novaCategoria,
                 imagemJaFoiAnalisadaPelaIa: "nao",
+                damageMarker: payload.damageMarker ?? img.damageMarker,
               }
             : img,
         ),
@@ -1325,6 +1391,40 @@ export default function GaleriaImagens() {
       setLoadingCategoriaChange(null);
     }
   };
+
+  /**
+   * Persiste a posição/tamanho do marcador de avaria após o usuário
+   * terminar de arrastar ou redimensionar o círculo. Comportamento:
+   * - Atualização otimista local (já espelhada no overlay durante o
+   *   drag); só chamamos `updateImagemMetadata` no fim para não
+   *   spammar o backend com PATCH por pixel.
+   * - Falha silenciosa com log: o overlay já está visualmente na
+   *   posição escolhida; se o backend falhar, o usuário pode
+   *   re-arrastar para forçar nova tentativa.
+   */
+  const handleMarkerChange = useCallback(
+    async (imgId: string, marker: DamageMarker) => {
+      // Atualização otimista local: o overlay já está visualmente na
+      // posição escolhida, então refletimos no estado da galeria
+      // imediatamente para o card refletir.
+      setImagens((prev) =>
+        prev.map((img) =>
+          img.id === imgId ? { ...img, damageMarker: marker } : img,
+        ),
+      );
+      try {
+        await laudosService.updateImagemMetadata(imgId, {
+          damageMarker: marker,
+        });
+      } catch (err) {
+        console.error(
+          "[GaleriaImagens] Falha ao persistir marcador de avaria:",
+          err,
+        );
+      }
+    },
+    [],
+  );
 
   const handleMarcarItem = async (imgId: string) => {
     const imagem = imagens.find((i) => i.id === imgId);
@@ -2920,6 +3020,7 @@ export default function GaleriaImagens() {
                             hideItemControls={ocultarControlesItemPorLegendaArquivo}
                             onUpdateItem={handleUpdateItem}
                             onToggleAvaria={handleToggleAvaria}
+                            onMarkerChange={handleMarkerChange}
                             onMarcarItem={handleMarcarItem}
                             onDelete={(imagemId) =>
                               setConfirmDelete({ isOpen: true, imagemId })
@@ -3169,18 +3270,44 @@ export default function GaleriaImagens() {
                     <Loader2 className="w-10 h-10 animate-spin text-white/70" />
                   </div>
                 )}
-                <motion.img
-                  key={imagens[lightboxIndex].id}
-                  src={imagens[lightboxIndex].url}
-                  alt={imagens[lightboxIndex].tipo || "Imagem do laudo"}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.18 }}
-                  onLoad={() => setLightboxImageLoading(false)}
-                  onError={() => setLightboxImageLoading(false)}
-                  className="max-w-full max-h-full object-contain select-none"
-                  draggable={false}
-                />
+                {/*
+                  Wrapper inline-block ao redor da imagem do lightbox:
+                  ele "abraça" o tamanho real renderizado do `<img>` (que
+                  usa `max-w-full max-h-full object-contain`, então pode
+                  deixar barras pretas nos lados quando a proporção não
+                  bate com o viewport). O `DamageMarkerOverlay` é
+                  posicionado dentro deste wrapper em `inset-0` para
+                  cobrir exatamente a área da foto — não a área toda do
+                  viewport. `disabled` é FALSE aqui: o lightbox é onde o
+                  usuário edita a legenda, faz sentido ser editável
+                  também para o marcador de avaria.
+                */}
+                <div className="relative inline-block">
+                  <motion.img
+                    ref={lightboxImgRef}
+                    key={imagens[lightboxIndex].id}
+                    src={imagens[lightboxIndex].url}
+                    alt={imagens[lightboxIndex].tipo || "Imagem do laudo"}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.18 }}
+                    onLoad={() => setLightboxImageLoading(false)}
+                    onError={() => setLightboxImageLoading(false)}
+                    className="max-w-full max-h-full object-contain select-none block"
+                    draggable={false}
+                  />
+                  <DamageMarkerOverlay
+                    imageRef={lightboxImgRef}
+                    marker={
+                      imagens[lightboxIndex].categoria === "AVARIA"
+                        ? imagens[lightboxIndex].damageMarker ?? null
+                        : null
+                    }
+                    onChange={(m) =>
+                      handleMarkerChange(imagens[lightboxIndex].id, m)
+                    }
+                  />
+                </div>
               </div>
 
               {imagens.length > 1 && (

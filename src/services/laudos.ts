@@ -45,6 +45,17 @@ export interface Mobilias {
   nao_fixa: string;
 }
 
+/**
+ * Coordenadas do marcador de avaria (círculo vermelho arrastável).
+ * - `x`, `y`: centro em coords normalizadas 0..1 (largura/altura).
+ * - `r`: raio como fração do menor lado da imagem (0..0.5).
+ */
+export interface DamageMarker {
+  x: number;
+  y: number;
+  r: number;
+}
+
 export interface ImagemLaudo {
   id: string;
   url: string;
@@ -64,6 +75,11 @@ export interface ImagemLaudo {
   // "Usar nome do arquivo como legenda" ativa. O PDF suprime o prefixo
   // "Nº amb (Nº foto)" e mostra apenas a legenda.
   usarNomeArquivoComoLegenda?: boolean;
+  // Marcador de avaria (círculo vermelho arrastável). Persistido mesmo
+  // quando `categoria` não é AVARIA — a UI exibe o overlay apenas
+  // quando `categoria === 'AVARIA'`. Quando re-marcado como AVARIA,
+  // reaparece na última posição salva.
+  damageMarker?: DamageMarker | null;
 }
 
 export interface AmbienteInfo {
@@ -199,6 +215,7 @@ export interface ApontamentoImagem {
   legenda: string;
   usarNomeArquivoComoLegenda: boolean;
   categoria: string;
+  damageMarker?: DamageMarker | null;
 }
 
 export interface Apontamentos {

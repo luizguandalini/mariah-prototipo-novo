@@ -13,6 +13,7 @@ import { LaudoSection } from "../../types/laudo-details";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import Button from "../../components/ui/Button";
+import { DamageMarkerOverlay } from "../../components/laudo/DamageMarkerOverlay";
 import { QRCodeSVG } from "qrcode.react";
 import { Save, Check, Loader2, Type, X } from "lucide-react";
 import LogoCapaEditavel, {
@@ -77,6 +78,10 @@ interface ImagemPdf {
   // "Usar nome do arquivo como legenda" ativa. O PDF preview suprime o
   // prefixo "Nº amb (Nº foto)" e mostra apenas a legenda.
   usarNomeArquivoComoLegenda?: boolean;
+  // Coordenadas normalizadas (0..1) do círculo de avaria. Mesmo
+  // formato da `DamageMarker` da galeria (coords da imagem original,
+  // não do container).
+  damageMarker?: { x: number; y: number; r: number } | null;
 }
 
 const METODOLOGIA_TEXTS = [
@@ -412,6 +417,23 @@ export default function VisualizadorPdfLaudo() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const wasTriggeredRef = useRef(false);
   const isConfigLoadedRef = useRef(false);
+  // Mapa de `<img>` no preview (galeria + apontamentos). STATE
+  // (não useRef) para forçar re-render do `DamageMarkerOverlay`
+  // quando uma imagem monta — assim o overlay SEMPRE recebe a
+  // ref atualizada e pode ler `naturalWidth` etc.
+  //
+  // ARMADILHA EVITADA: o callback ref abaixo SÓ chama setState
+  // quando `el` é o elemento (mount). No unmount (`el === null`),
+  // NÃO chama setState — se chamasse, entraria em loop infinito:
+  // React sempre faz cleanup-null → setup-el → cleanup-null →
+  // setup-el ao TROCAR o callback inline em cada re-render, e
+  // setState dispararia nova re-render → novo callback → ...
+  // Pular o setState no unmount quebra o ciclo: o cleanup deixa
+  // o state apontando para o elemento (já obsoleto, mas o
+  // componente logo será desmontado pelo React de qualquer forma).
+  const [previewImgRefs, setPreviewImgRefs] = useState<
+    Record<string, HTMLImageElement | null>
+  >({});
   const modoPreviewAlteradoRef = useRef(false);
   const originalLegendasRef = useRef<Record<string, string>>({});
   const pagesCache = useRef<Record<string, any[]>>({});
@@ -1816,8 +1838,19 @@ export default function VisualizadorPdfLaudo() {
 
             return (
               <div key={img.id}>
-                <div className="border-[3px] border-red-500 mb-1">
+                <div
+                  className="border-[3px] border-red-500 mb-1"
+                  style={{ position: "relative" }}
+                >
                   <img
+                    ref={(el) => {
+                      if (!el) return;
+                      setPreviewImgRefs((prev) =>
+                        prev[img.id] === el
+                          ? prev
+                          : { ...prev, [img.id]: el },
+                      );
+                    }}
                     src={img.url}
                     alt={textoLegenda || ambienteSemNumero}
                     className="w-full object-cover"
@@ -1826,6 +1859,17 @@ export default function VisualizadorPdfLaudo() {
                       display: "block",
                     }}
                     crossOrigin="anonymous"
+                  />
+                  <DamageMarkerOverlay
+                    imageRef={{
+                      current:
+                        previewImgRefs[img.id] || null,
+                    }}
+                    marker={img.damageMarker ?? null}
+                    onChange={() => {
+                      /* read-only na preview */
+                    }}
+                    disabled
                   />
                 </div>
                 <div
@@ -2826,8 +2870,19 @@ export default function VisualizadorPdfLaudo() {
                   if (isModoCompacto) {
                     return (
                       <div key={img.id}>
-                        <div className={wrapperClass}>
+                        <div
+                          className={wrapperClass}
+                          style={{ position: "relative" }}
+                        >
                           <img
+                            ref={(el) => {
+                              if (!el) return;
+                              setPreviewImgRefs((prev) =>
+                                prev[img.id] === el
+                                  ? prev
+                                  : { ...prev, [img.id]: el },
+                              );
+                            }}
                             src={img.url}
                             alt={`${img.ambiente} - ${img.numeroImagemNoAmbiente}`}
                             className="w-full object-cover"
@@ -2836,6 +2891,21 @@ export default function VisualizadorPdfLaudo() {
                               display: "block",
                             }}
                             crossOrigin="anonymous"
+                          />
+                          {/* Overlay do marcador de avaria. `disabled`
+                              pois o preview é sempre read-only — para
+                              arrastar/redimensionar o círculo o usuário
+                              volta pra galeria. */}
+                          <DamageMarkerOverlay
+                            imageRef={{
+                              current:
+                                previewImgRefs[img.id] || null,
+                            }}
+                            marker={img.damageMarker ?? null}
+                            onChange={() => {
+                              /* read-only no preview */
+                            }}
+                            disabled
                           />
                         </div>
                         <div
@@ -2876,8 +2946,19 @@ export default function VisualizadorPdfLaudo() {
 
                   return (
                     <div key={img.id}>
-                      <div className={detailedWrapperClass}>
+                      <div
+                        className={detailedWrapperClass}
+                        style={{ position: "relative" }}
+                      >
                         <img
+                          ref={(el) => {
+                            if (!el) return;
+                            setPreviewImgRefs((prev) =>
+                              prev[img.id] === el
+                                ? prev
+                                : { ...prev, [img.id]: el },
+                            );
+                          }}
                           src={img.url}
                           alt={`${img.ambiente} - ${img.numeroImagemNoAmbiente}`}
                           className="w-full object-cover"
@@ -2886,6 +2967,17 @@ export default function VisualizadorPdfLaudo() {
                             display: "block",
                           }}
                           crossOrigin="anonymous"
+                        />
+                        <DamageMarkerOverlay
+                          imageRef={{
+                            current:
+                              previewImgRefs[img.id] || null,
+                          }}
+                          marker={img.damageMarker ?? null}
+                          onChange={() => {
+                            /* read-only no preview */
+                          }}
+                          disabled
                         />
                       </div>
                       <div
