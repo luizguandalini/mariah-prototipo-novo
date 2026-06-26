@@ -472,10 +472,14 @@ function SortableImagemCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onToggleAvaria(
-              img.id,
-              (img.categoria || "").trim().toUpperCase() !== "AVARIA",
-            );
+            const willMarcarAvaria =
+              (img.categoria || "").trim().toUpperCase() !== "AVARIA";
+            onToggleAvaria(img.id, willMarcarAvaria);
+            // Ao MARCAR como avaria, abre o lightbox da imagem para o
+            // usuário revisar/legendar a avaria imediatamente. Ao
+            // DESMARCAR, mantém o foco na galeria — não há por que abrir
+            // a imagem.
+            if (willMarcarAvaria) onOpen(index);
             // Em mobile, fecha o overlay após disparar a ação.
             if (isTouchOnly) onMobileActionsChange(null);
           }}
