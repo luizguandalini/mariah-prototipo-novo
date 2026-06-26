@@ -2533,10 +2533,19 @@ export default function VisualizadorPdfLaudo() {
                     ? (img.legenda?.trim() || ambienteSemNumero)
                     : `${numeroAmbiente} (${numeroFoto}) ${ambienteSemNumero}`;
 
+                  // Borda vermelha em fotos marcadas como avaria — espelha a
+                  // `border-[3px] border-red-500` aplicada em
+                  // GaleriaImagens.tsx no card da galeria.
+                  const isAvaria =
+                    (img.categoria || "").trim().toUpperCase() === "AVARIA";
+                  const wrapperClass = isAvaria
+                    ? "border-[3px] border-red-500"
+                    : "border border-gray-300";
+
                   if (isModoCompacto) {
                     return (
                       <div key={img.id}>
-                        <div className="border border-gray-300">
+                        <div className={wrapperClass}>
                           <img
                             src={img.url}
                             alt={`${img.ambiente} - ${img.numeroImagemNoAmbiente}`}
@@ -2580,10 +2589,13 @@ export default function VisualizadorPdfLaudo() {
                   }
 
                   const isEditing = editingId === img.id;
+                  const detailedWrapperClass = isAvaria
+                    ? "border-[3px] border-red-500 mb-1"
+                    : "border border-gray-400 mb-1";
 
                   return (
                     <div key={img.id}>
-                      <div className="border border-gray-400 mb-1">
+                      <div className={detailedWrapperClass}>
                         <img
                           src={img.url}
                           alt={`${img.ambiente} - ${img.numeroImagemNoAmbiente}`}

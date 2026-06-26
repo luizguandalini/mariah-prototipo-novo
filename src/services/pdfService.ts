@@ -791,9 +791,19 @@ class PdfService {
             const prefixoNumeros = img.usarNomeArquivoComoLegenda
               ? ""
               : `<strong>${img.numeroAmbiente} (${img.numeroImagemNoAmbiente})</strong> `;
+            // Borda vermelha em fotos marcadas como avaria — espelha
+            // `border-[3px] border-red-500` aplicada no card da galeria
+            // (GaleriaImagens.tsx) e no preview do PDF. Mantida inline
+            // porque este HTML é renderizado num iframe offscreen que
+            // vai para html2canvas — sem stylesheet externa.
+            const isAvaria =
+              (img.categoria || "").trim().toUpperCase() === "AVARIA";
+            const wrapperBorderStyle = isAvaria
+              ? "border: 3px solid #ef4444;"
+              : "border: 1px solid #999;";
             return `
           <div>
-            <div style="border: 1px solid #999; margin-bottom: 4px;">
+            <div style="${wrapperBorderStyle} margin-bottom: 4px;">
               <img
                 src="${urls[img.s3Key]}"
                 crossorigin="anonymous"
