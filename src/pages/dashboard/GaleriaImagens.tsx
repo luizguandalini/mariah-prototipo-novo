@@ -42,6 +42,8 @@ import {
   ImagePlus,
   X,
   Check,
+  Maximize2,
+  MoreVertical,
 } from "lucide-react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
@@ -246,6 +248,20 @@ interface SortableImagemCardProps {
   onOpen: (index: number) => void;
   formatDate: (dateString: string) => string;
   isDropTarget: boolean;
+  // === Ações mobile (tap-to-show) ===
+  // `mobileActionsImageId` é o id da imagem cujo overlay está visível no
+  // momento (apenas relevante em touch-only). Em desktop, este state fica
+  // sempre null e o overlay aparece via group-hover.
+  mobileActionsImageId: string | null;
+  // `onMobileActionsChange` recebe o id da imagem a ter ações visíveis, ou
+  // null para esconder. O card chama isso ao ser tocado em touch-only; as
+  // ações (avaria / item / excluir / ver) também chamam com null após
+  // disparar a ação correspondente.
+  onMobileActionsChange: (imgId: string | null) => void;
+  // Ref compartilhado com o pai indicando se o dispositivo tem :hover
+  // nativo. Usado para decidir entre o caminho "tap toggle" e o caminho
+  // "hover + click" sem precisar re-renderizar todos os cards.
+  hoverSupportedRef: React.MutableRefObject<boolean>;
 }
 
 function SortableImagemCard({
@@ -264,6 +280,9 @@ function SortableImagemCard({
   onOpen,
   formatDate,
   isDropTarget,
+  mobileActionsImageId,
+  onMobileActionsChange,
+  hoverSupportedRef,
 }: SortableImagemCardProps) {
   const {
     attributes,
@@ -280,6 +299,14 @@ function SortableImagemCard({
     opacity: isDragging ? 0.35 : 1,
   };
 
+  // Touch-only (sem :hover): o overlay de ações só aparece por tap. Em
+  // desktop, o `group-hover` no CSS já cuida e este state é ignorado.
+  const isTouchOnly = !hoverSupportedRef.current;
+  const showActionsOnMobile =
+    isTouchOnly && mobileActionsImageId === img.id;
+  const anyMobileActionsOpen =
+    isTouchOnly && mobileActionsImageId !== null;
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -287,9 +314,27 @@ function SortableImagemCard({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.05 }}
-      onClick={() => {
-        // Só abre se não estiver arrastando — dnd-kit já lida com distance:8
-        if (!isDragging) onOpen(index);
+      onClick={(e) => {
+        if (isDragging) return;
+        if (isTouchOnly) {
+          // Em mobile: o tap não abre mais o lightbox — alterna o overlay
+          // de ações. Um botão "Ver imagem" dentro do overlay continua
+          // permitindo expandir a imagem. Bloqueia o bubbling para o
+          // container não disparar handlers pais.
+          e.preventDefault();
+          e.stopPropagation();
+          if (mobileActionsImageId === img.id) {
+            // Segundo tap no mesmo card → fecha o overlay (toque em
+            // qualquer área que não seja botão cai aqui porque botões
+            // internos param com stopPropagation).
+            onMobileActionsChange(null);
+          } else {
+            // Primeiro tap (ou tap em outro card) → mostra ações deste.
+            onMobileActionsChange(img.id);
+          }
+          return;
+        }
+        onOpen(index);
       }}
       role="button"
       tabIndex={0}
@@ -386,13 +431,83 @@ function SortableImagemCard({
         )}
       </div>
 
-      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs">
+      {/*
+        Hint "..." visível apenas em mobile (touch-only) quando este card
+        NÃO está com o overlay aberto. Sinaliza que há ações disponíveis
+        via tap. some em desktop. Some também quando QUALQUER overlay de
+        ações mobile está aberto em outro card — assim não acumulamos
+        vários hints na tela.
+      */}
+      {isTouchOnly && !showActionsOnMobile && !anyMobileActionsOpen && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onMobileActionsChange(img.id);
+          }}
+          aria-label="Mostrar ações da imagem"
+          className="absolute bottom-2 right-2 z-20 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+        >
+          <MoreVertical className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {/*
+        Overlay de ações (avaria / item / excluir / ver imagem).
+
+        - Desktop: aparece em hover (`group-hover:opacity-100`). Mantém
+          o comportamento original para quem usa mouse.
+        - Mobile (touch-only): controlado pelo state `mobileActionsImageId`
+          — primeiro tap mostra, segundo tap (ou tap em outro card / fora)
+          esconde. `pointer-events-none` quando invisível evita cliques
+          fantasmas em botões cobertos pelo overlay.
+
+        `data-image-actions-trigger={img.id}` é o gancho usado pelo
+        listener global de mousedown/touchstart no pai para ignorar cliques
+        dentro do overlay (caso contrário, tocar num botão faria o pai
+        fechar antes do botão reagir).
+      */}
+      <div
+        data-image-actions-trigger={img.id}
+        onClick={(e) => e.stopPropagation()}
+        className={
+          isTouchOnly
+            ? `absolute inset-0 bg-black/70 transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs ${
+                showActionsOnMobile
+                  ? "opacity-100 pointer-events-auto"
+                  : "opacity-0 pointer-events-none"
+              }`
+            : "absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none transition-opacity duration-200 p-4 pt-12 flex flex-col justify-center content-center gap-3 text-white text-xs"
+        }
+      >
         <div className="flex flex-col items-center gap-1 text-center w-full">
           <Calendar className="w-5 h-5 text-gray-300" />
           <span className="text-sm font-medium">
             {formatDate(img.dataCaptura)}
           </span>
         </div>
+
+        {/*
+          "Ver imagem" só faz sentido em mobile (no desktop, o click já
+          abre o lightbox diretamente). Em desktop o card abre via click;
+          em mobile, o card mostra o overlay e este botão é o caminho
+          para o lightbox.
+        */}
+        {isTouchOnly && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMobileActionsChange(null);
+              onOpen(index);
+            }}
+            className="w-full py-2 rounded flex items-center justify-center gap-2 transition-colors border bg-white/10 hover:bg-white/20 text-white border-white/30"
+          >
+            <Maximize2 className="w-4 h-4" />
+            <span>Ver imagem</span>
+          </button>
+        )}
 
         <button
           onClick={(e) => {
@@ -401,6 +516,8 @@ function SortableImagemCard({
               img.id,
               (img.categoria || "").trim().toUpperCase() !== "AVARIA",
             );
+            // Em mobile, fecha o overlay após disparar a ação.
+            if (isTouchOnly) onMobileActionsChange(null);
           }}
           disabled={loadingCategoriaChange === img.id}
           className={`w-full py-2 rounded flex items-center justify-center gap-2 transition-colors border ${
@@ -425,6 +542,7 @@ function SortableImagemCard({
           onClick={(e) => {
             e.stopPropagation();
             onMarcarItem(img.id);
+            if (isTouchOnly) onMobileActionsChange(null);
           }}
           disabled={loadingItemFlagChange === img.id}
           className={`w-full py-2 rounded flex items-center justify-center gap-2 transition-colors border bg-blue-500/20 hover:bg-blue-500/35 text-blue-100 border-blue-500/50 ${
@@ -444,6 +562,7 @@ function SortableImagemCard({
           onClick={(e) => {
             e.stopPropagation();
             onDelete(img.id);
+            if (isTouchOnly) onMobileActionsChange(null);
           }}
           className="w-full mt-2 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 border border-red-500/50 rounded flex items-center justify-center gap-2 transition-colors"
         >
@@ -576,6 +695,35 @@ export default function GaleriaImagens() {
 
   // === Estado para análise IA ===
   const [analisandoLaudo, setAnalisandoLaudo] = useState(false);
+
+  // === Estado para ações mobile (tap-to-show overlay em touch-only) ===
+  // `mobileActionsImageId` guarda o id da imagem cujas ações (avaria / item /
+  // excluir / ver imagem) estão visíveis no momento. Em desktop, o overlay
+  // aparece via `group-hover` e este state fica inerte. Em mobile, o primeiro
+  // tap no card define este state; o segundo tap (na área do overlay) oculta.
+  // Fora do card → some. Toque em outro card → troca para o novo.
+  const [mobileActionsImageId, setMobileActionsImageId] = useState<
+    string | null
+  >(null);
+  // `hoverSupportedRef` é true quando o dispositivo principal de entrada
+  // consegue :hover (mouse / trackpad). Ref em vez de state porque o valor
+  // praticamente não muda durante a sessão — evita re-render dos cards.
+  const hoverSupportedRef = useRef<boolean>(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(hover: hover)");
+    hoverSupportedRef.current = mq.matches;
+    const handler = (e: MediaQueryListEvent) => {
+      hoverSupportedRef.current = e.matches;
+    };
+    if (mq.addEventListener) {
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
+    }
+    // Fallback Safari antigo
+    mq.addListener(handler);
+    return () => mq.removeListener(handler);
+  }, []);
 
   // === Estado do Lightbox (visualização expandida) ===
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -1474,6 +1622,33 @@ export default function GaleriaImagens() {
       };
     }
   }, [lightboxOpen]);
+
+  // Dismiss do overlay de ações mobile quando o usuário toca fora do card
+  // ativo. Disparamos em `mousedown`/`touchstart` para fechar ANTES do
+  // `click` do próximo card — assim, ao tocar em outro card, primeiro
+  // escondemos as ações do anterior e só depois o card novo entra em modo
+  // "ações visíveis" via seu próprio `onClick`. `passive: true` em
+  // touchstart evita bloquear o scroll nativo.
+  useEffect(() => {
+    if (!mobileActionsImageId) return;
+    const selector = `[data-image-actions-trigger="${mobileActionsImageId}"]`;
+    const isInside = (target: EventTarget | null): boolean => {
+      if (!(target instanceof Element)) return false;
+      return !!target.closest(selector);
+    };
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!isInside(e.target)) setMobileActionsImageId(null);
+    };
+    const handleTouchStart = (e: TouchEvent) => {
+      if (!isInside(e.target)) setMobileActionsImageId(null);
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [mobileActionsImageId]);
 
   // Se a imagem aberta for removida da lista (delete, reordenação, etc.),
   // fecha o lightbox ou pula para uma vizinha.
@@ -2770,6 +2945,9 @@ export default function GaleriaImagens() {
                               activeImagemId !== img.id &&
                               overImagemId === img.id
                             }
+                            mobileActionsImageId={mobileActionsImageId}
+                            onMobileActionsChange={setMobileActionsImageId}
+                            hoverSupportedRef={hoverSupportedRef}
                           />
                         ))}
                       </div>
