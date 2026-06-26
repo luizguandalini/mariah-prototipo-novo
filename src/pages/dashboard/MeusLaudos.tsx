@@ -423,8 +423,15 @@ export default function MeusLaudos() {
                     transition={{ delay: index * 0.05 }}
                     className="bg-[var(--bg-secondary)] rounded-xl shadow-sm border border-[var(--border-color)] p-6 hover:shadow-md transition-all"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
+                    {/* No mobile (flex-col) o conteúdo fica em cima e os botões
+                        embaixo, ocupando a largura toda do card. A partir do
+                        breakpoint `sm` voltamos ao layout de duas colunas
+                        (info à esquerda, ações à direita) — sem isso, o
+                        `w-full` da coluna de ações competia com o `flex-1`
+                        do conteúdo no mesmo flex-row, fazendo os botões
+                        vazarem horizontalmente para fora do card. */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-3">
                           {getStatusBadge(status)}
 
@@ -528,7 +535,7 @@ export default function MeusLaudos() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-col gap-3 w-full sm:w-48">
+                      <div className="flex flex-col gap-3 w-full sm:w-48 shrink-0">
                         {/* Ver Fotos - Always Visible */}
                         <Link to={`/dashboard/laudos/${laudo.id}/galeria`}>
                           <Button
