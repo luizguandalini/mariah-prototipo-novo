@@ -1835,6 +1835,12 @@ export default function VisualizadorPdfLaudo() {
             const usarNomeArquivoComoLegenda =
               !!img.usarNomeArquivoComoLegenda;
             const textoLegenda = (img.legenda || "").trim();
+            // Gate por categoria=AVARIA: a página de Apontamentos
+            // só renderiza fotos AVARIA pelo backend, mas a
+            // normalização evita render do círculo se a categoria
+            // vier diferente por alguma inconsistência.
+            const isAvaria =
+              (img.categoria || "").trim().toUpperCase() === "AVARIA";
 
             return (
               <div key={img.id}>
@@ -1865,7 +1871,9 @@ export default function VisualizadorPdfLaudo() {
                       current:
                         previewImgRefs[img.id] || null,
                     }}
-                    marker={img.damageMarker ?? null}
+                    marker={
+                      isAvaria ? img.damageMarker ?? null : null
+                    }
                     onChange={() => {
                       /* read-only na preview */
                     }}
@@ -2895,13 +2903,23 @@ export default function VisualizadorPdfLaudo() {
                           {/* Overlay do marcador de avaria. `disabled`
                               pois o preview é sempre read-only — para
                               arrastar/redimensionar o círculo o usuário
-                              volta pra galeria. */}
+                              volta pra galeria. Gate por categoria:
+                              só exibe quando AVARIA (igual ao card
+                              da galeria e ao PDF gerado pelo backend).
+                              Sem o gate, fotos que já foram AVARIA no
+                              passado manteriam o círculo visível no
+                              preview mesmo após desmarcar — bug
+                              reportado. A POSIÇÃO persistida em
+                              damageMarker é preservada; só a
+                              RENDERIZAÇÃO é gated. */}
                           <DamageMarkerOverlay
                             imageRef={{
                               current:
                                 previewImgRefs[img.id] || null,
                             }}
-                            marker={img.damageMarker ?? null}
+                            marker={
+                              isAvaria ? img.damageMarker ?? null : null
+                            }
                             onChange={() => {
                               /* read-only no preview */
                             }}
@@ -2973,7 +2991,9 @@ export default function VisualizadorPdfLaudo() {
                             current:
                               previewImgRefs[img.id] || null,
                           }}
-                          marker={img.damageMarker ?? null}
+                          marker={
+                            isAvaria ? img.damageMarker ?? null : null
+                          }
                           onChange={() => {
                             /* read-only no preview */
                           }}
