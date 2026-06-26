@@ -180,6 +180,31 @@ export interface Contestacao {
   imagens: ContestacaoImagem[];
 }
 
+/**
+ * Imagem marcada como AVARIA devolvida pelo backend para alimentar a
+ * página dedicada "Registro de Apontamentos" no preview do PDF. Inclui
+ * URLs pré-assinadas e numeração (ambiente + ordem) consistente com
+ * a galeria principal. A flag `usarNomeArquivoComoLegenda` reusa a
+ * mesma lógica de supressão do prefixo "Nº amb (Nº foto)" aplicada na
+ * galeria e no PDF.
+ */
+export interface ApontamentoImagem {
+  id: string;
+  s3Key: string;
+  url: string;
+  ambiente: string;
+  numeroAmbiente: number;
+  numeroImagemNoAmbiente: number;
+  ordem: number;
+  legenda: string;
+  usarNomeArquivoComoLegenda: boolean;
+  categoria: string;
+}
+
+export interface Apontamentos {
+  imagens: ApontamentoImagem[];
+}
+
 class LaudosService {
   /**
    * Obtém apenas os detalhes do laudo (questionários)
@@ -525,6 +550,13 @@ class LaudosService {
       contestacaoImagesCount: number;
       /** Flag que indica se a contestação já foi enviada (travada). */
       contestacaoRealizada: boolean;
+      /**
+       * Quantidade de imagens marcadas como AVARIA. Quando > 0, o
+       * frontend aloca 1+ páginas dedicadas para "Registro de
+       * Apontamentos" (entre Info Page e Fotos). Mesma regra do PDF
+       * gerado pelo backend: 9 fotos por página (grid 3x3).
+       */
+      apontamentosImagesCount: number;
     };
   }> {
     return api.get(
@@ -713,6 +745,16 @@ class LaudosService {
    */
   async getContestacao(laudoId: string): Promise<Contestacao> {
     return api.get<Contestacao>(`/contestacao/laudos/${laudoId}`, true);
+  }
+
+  /**
+   * Retorna as imagens marcadas como AVARIA do laudo, com URLs
+   * pré-assinadas e numeração (ambiente + ordem) consistente com a
+   * galeria principal. Alimenta a página dedicada "Registro de
+   * Apontamentos" no preview do PDF.
+   */
+  async getApontamentos(laudoId: string): Promise<Apontamentos> {
+    return api.get<Apontamentos>(`/laudos/${laudoId}/imagens-avarias`, true);
   }
 
   /**

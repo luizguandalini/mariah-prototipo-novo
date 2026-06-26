@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { laudosService, Laudo, Contestacao } from "../../services/laudos";
+import {
+  laudosService,
+  Laudo,
+  Contestacao,
+  ApontamentoImagem,
+} from "../../services/laudos";
 import { pdfService } from "../../services/pdfService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useQueueSocket } from "../../hooks/useQueueSocket";
@@ -317,6 +322,13 @@ export default function VisualizadorPdfLaudo() {
   // contestacaoRealizada=true com imagens, adicionamos 1+ páginas dedicadas
   // ao totalPaginas, ANTES do relatório.
   const [contestacao, setContestacao] = useState<Contestacao | null>(null);
+  // "Registro de Apontamentos" (carregado junto com o laudo). Quando há
+  // imagens marcadas como AVARIA, alocamos 1+ páginas dedicadas entre a
+  // Info Page e as páginas de Fotos (a galeria principal continua
+  // exibindo TODAS as imagens — nenhuma foto de avaria some daí).
+  const [apontamentos, setApontamentos] = useState<ApontamentoImagem[] | null>(
+    null,
+  );
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [paginaInput, setPaginaInput] = useState("1");
   const [totalPaginas, setTotalPaginas] = useState(0);
@@ -422,6 +434,22 @@ export default function VisualizadorPdfLaudo() {
     const count = contestacaoImagesCount ?? 0;
     if (count <= 0) return 0;
     return Math.ceil(count / FOTOS_POR_PAGINA_CONTESTACAO);
+  };
+
+  /**
+   * Mesmo cálculo do `calcularPaginasContestacao`, mas para a seção
+   * "Registro de Apontamentos". Mesma regra do backend de PDF: grid 3x3,
+   * 9 fotos por página. A contagem vem de `meta.apontamentosImagesCount`
+   * no mesmo round-trip do `getImagensPdf`, então não há "salto" no
+   * totalPaginas ao abrir o preview.
+   */
+  const FOTOS_POR_PAGINA_APONTAMENTOS = 9;
+  const calcularPaginasApontamentos = (
+    apontamentosImagesCount: number | undefined,
+  ): number => {
+    const count = apontamentosImagesCount ?? 0;
+    if (count <= 0) return 0;
+    return Math.ceil(count / FOTOS_POR_PAGINA_APONTAMENTOS);
   };
 
   const handleModoPreviewChange = async (modo: ModoPreview) => {
@@ -607,6 +635,20 @@ export default function VisualizadorPdfLaudo() {
             console.error("Erro ao carregar contestação:", err);
             setContestacao(null);
           }),
+        laudosService
+          .getApontamentos(id)
+          .then((ap) => {
+            // Mesmo padrão da contestação: payload completo (com URLs
+            // assinadas) só é necessário para RENDERIZAR a página de
+            // Registro de Apontamentos. A contagem de páginas entra
+            // via `meta.apontamentosImagesCount` no mesmo round-trip
+            // de `getImagensPdf`, então este atraso não atrasa a UI.
+            setApontamentos(ap?.imagens || []);
+          })
+          .catch((err) => {
+            console.error("Erro ao carregar apontamentos:", err);
+            setApontamentos([]);
+          }),
       ]);
     } catch (error) {
       console.error("Erro ao carregar laudo:", error);
@@ -625,18 +667,26 @@ export default function VisualizadorPdfLaudo() {
       );
       // +4 = capa + termos + relatório + assinaturas (com cover)
       // +N = páginas de Registros Complementares (grid 3x3, 9 fotos/página)
+      // +M = páginas de Registro de Apontamentos (grid 3x3, 9 fotos/página)
       //
-      // A contagem de páginas de contestação vem direto do `meta` retornado
-      // pelo backend no MESMO round-trip (`contestacaoImagesCount` /
-      // `contestacaoRealizada`). Antes isso dependia do estado `contestacao`
-      // que carregava em série após `getLaudo`, gerando o salto 1/5 → 1/7.
+      // As duas contagens vêm direto do `meta` retornado pelo backend no
+      // MESMO round-trip (`contestacaoImagesCount`/`contestacaoRealizada`
+      // e `apontamentosImagesCount`). Antes a de contestação dependia do
+      // estado `contestacao` que carregava em série após `getLaudo`,
+      // gerando o salto 1/5 → 1/7 — corrigido do mesmo jeito.
       const paginasContestacao = calcularPaginasContestacao(
         response.meta.contestacaoImagesCount,
         response.meta.contestacaoRealizada,
       );
+      const paginasApontamentos = calcularPaginasApontamentos(
+        response.meta.apontamentosImagesCount,
+      );
       const adicional = hasCover ? 4 : 0;
       const totalPaginasVisual =
-        response.meta.totalPages + adicional + paginasContestacao;
+        response.meta.totalPages +
+        adicional +
+        paginasContestacao +
+        paginasApontamentos;
 
       setTotalPaginas(totalPaginasVisual);
       setTotalImagens(response.meta.totalImages);
@@ -677,7 +727,28 @@ export default function VisualizadorPdfLaudo() {
     }
 
     // Calculo da página do backend (Pagina 1 do backend começa na página 3 do visualizador se tiver capa)
+    // IMPORTANTE: as páginas de "Registro de Apontamentos" ficam DEPOIS
+    // da galeria principal de Fotos e ANTES do Relatório. Quando o
+    // usuário está numa dessas páginas, NÃO chamamos `getImagensPdf` —
+    // elas são renderizadas a partir do estado `apontamentos` (carregado
+    // em paralelo com `getLaudo`). O `backendPage` só mapeia páginas
+    // de FOTOS, que sempre começam na página 3 (com cover), portanto
+    // NÃO descontamos nada aqui — o offset de apontamentos fica depois
+    // das fotos no novo layout.
+    const paginasApontamentosVisual = calcularPaginasApontamentos(
+      apontamentos?.length,
+    );
     const backendPage = hasCover ? paginaAtual - 2 : paginaAtual;
+    if (hasCover && paginasApontamentosVisual > 0) {
+      const inicioApontamentos = 3 + paginasFotosBackend;
+      const fimApontamentos = inicioApontamentos + paginasApontamentosVisual - 1;
+      if (paginaAtual >= inicioApontamentos && paginaAtual <= fimApontamentos) {
+        // Página de apontamentos: não chama backend, deixa o roteador
+        // de páginas renderizar `renderApontamentosPage()`.
+        setLoading(false);
+        return;
+      }
+    }
     const cacheKey = `${modoPreview}:${paginaAtual}`;
 
     if (pagesCache.current[cacheKey]) {
@@ -701,9 +772,12 @@ export default function VisualizadorPdfLaudo() {
         response.meta.contestacaoImagesCount,
         response.meta.contestacaoRealizada,
       );
+      const paginasApontamentos = calcularPaginasApontamentos(
+        response.meta.apontamentosImagesCount,
+      );
       const totalPaginasVisual = hasCover
-        ? response.meta.totalPages + 4 + paginasContestacao
-        : response.meta.totalPages + paginasContestacao;
+        ? response.meta.totalPages + 4 + paginasContestacao + paginasApontamentos
+        : response.meta.totalPages + paginasContestacao + paginasApontamentos;
 
       setTotalPaginas(totalPaginasVisual);
       setTotalImagens(response.meta.totalImages);
@@ -711,6 +785,14 @@ export default function VisualizadorPdfLaudo() {
       if (totalPaginas > 0 && totalPaginas !== totalPaginasVisual) {
         // Relatório e Assinaturas sempre vêm por último; as páginas de
         // Registros Complementares entram entre as fotos e o relatório.
+        // As páginas de Registro de Apontamentos ficam DEPOIS das fotos
+        // (entre fotos e relatório) — `getIdxRelatorio` continua sendo
+        // `totalPaginas - 1 - paginasContestacaoTotal` e não muda.
+        // `ultimaPaginaComImagem` é a ÚLTIMA página de fotos no
+        // visualizador: com cover, fotos começam na página 3 e o
+        // bloco de apontamentos vem DEPOIS, então a última página de
+        // fotos é simplesmente `paginasFotosBackend + 2` (sem offset
+        // de apontamentos).
         const idxRelatorio = hasCover
           ? totalPaginasVisual - 1 - paginasContestacao
           : totalPaginasVisual - paginasContestacao;
@@ -1610,6 +1692,179 @@ export default function VisualizadorPdfLaudo() {
   };
 
   /**
+   * Renderiza a(s) página(s) de "Registro de Apontamentos". Espelha o
+   * backend (`pdf.service.ts` → `getApontamentosHtml`): header "REGISTRO
+   * DE APONTAMENTOS" + meta na primeira página do bloco, grid 3x3 com
+   * fotos de altura fixa (200px), borda vermelha em todas (já que só
+   * entram aqui fotos marcadas como AVARIA), e legenda exibindo o
+   * nome do ambiente e a ordem da foto naquele ambiente. Quando a
+   * foto foi enviada com a flag `usarNomeArquivoComoLegenda`, suprime
+   * o prefixo "Nº amb (Nº foto)" — exatamente a mesma regra usada na
+   * galeria principal (linhas 2527–2534 deste arquivo) e no PDF
+   * gerado (`getPhotosHtml` do backend). Múltiplas páginas quando há
+   * >9 avarias.
+   *
+   * Estilo: usa EXATAMENTE os mesmos inline styles e classes Tailwind
+   * do card detalhado da galeria principal (linhas ~2620–2730 deste
+   * arquivo) — wrapper `border-[3px] border-red-500 mb-1`, imagem com
+   * `w-full object-cover` + `height: 200px`, labels com `font-bold
+   * uppercase` em 10px e caption em 9px. Isso garante que os cards
+   * do Registro de Apontamentos tenham exatamente o mesmo tamanho
+   * visual dos cards da galeria principal, sem o bloco `<style>` injetado
+   * (que estava deixando os cards menores por conflito com o CSS global).
+   */
+  const renderApontamentosPage = () => {
+    if (!apontamentos || apontamentos.length === 0) {
+      return null;
+    }
+    const total = apontamentos.length;
+    // No layout APÓS-FOTOS, o bloco "Registro de Apontamentos" começa
+    // logo após a última página de Fotos. Com cover, Fotos começam na
+    // página 3; somamos `paginasFotosBackend` para achar o início do
+    // bloco. (Antes era hardcoded em 3 — bug: retornava lote vazio
+    // quando havia 1+ foto.)
+    const inicioApontamentos = 3 + paginasFotosBackend;
+    const idxLote = paginaAtual - inicioApontamentos; // 0..N-1
+    const inicio = idxLote * FOTOS_POR_PAGINA_APONTAMENTOS;
+    const lote = apontamentos.slice(
+      inicio,
+      inicio + FOTOS_POR_PAGINA_APONTAMENTOS,
+    );
+    const plural =
+      total === 1 ? "1 imagem de avaria" : `${total} imagens de avaria`;
+
+    return (
+      <div
+        id="pdf-grid-preview"
+        className="bg-white"
+        style={{
+          width: "210mm",
+          padding: isModoCompacto
+            ? "18px 20px 28px"
+            : `${configuracoes.margemPagina}px`,
+          height: "297mm",
+          boxSizing: "border-box",
+          color: "black",
+          position: "relative",
+          fontFamily: '"Roboto", Arial, sans-serif',
+        }}
+      >
+        {/* Espaçador de 35px no topo, idêntico ao usado em
+            `renderContestacaoPage` e `renderRelatorioPage`, para alinhar
+            verticalmente o conteúdo principal com as demais páginas. */}
+        <div style={{ height: "35px" }}></div>
+
+        {/* Header "REGISTRO DE APONTAMENTOS" só na primeira página do bloco */}
+        {idxLote === 0 && (
+          <div
+            style={{
+              borderBottom: "2px solid #000",
+              paddingBottom: "6px",
+              marginBottom: "14px",
+            }}
+          >
+            <h1
+              style={{
+                fontSize: "18px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                margin: 0,
+                letterSpacing: "0.5px",
+                color: "#000",
+              }}
+            >
+              REGISTRO DE APONTAMENTOS
+            </h1>
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                fontSize: "11px",
+                color: "#555",
+                marginTop: "4px",
+              }}
+            >
+              <span>{plural}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Grid 3x3 com cards do MESMO tamanho dos da galeria principal:
+            mesmo `gap` (dinâmico via configuracoes), mesmo
+            `gridTemplateColumns: repeat(3, 1fr)`, mesma estrutura do
+            card detalhado (`border-[3px] border-red-500 mb-1` + imagem
+            `w-full object-cover` com `height: 200px`, ambiente
+            `font-bold uppercase` em 10px, caption em 9px com supressão
+            do prefixo "Nº amb (Nº foto)" quando
+            `usarNomeArquivoComoLegenda` for true). */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: isModoCompacto
+              ? "0 8px"
+              : `${configuracoes.espacamentoVertical}px ${configuracoes.espacamentoHorizontal}px`,
+            alignContent: "start",
+          }}
+        >
+          {lote.map((img) => {
+            const ambienteSemNumero =
+              img.ambiente?.replace(/^\d+\s*-\s*/, "") || img.ambiente || "";
+            const usarNomeArquivoComoLegenda =
+              !!img.usarNomeArquivoComoLegenda;
+            const textoLegenda = (img.legenda || "").trim();
+
+            return (
+              <div key={img.id}>
+                <div className="border-[3px] border-red-500 mb-1">
+                  <img
+                    src={img.url}
+                    alt={textoLegenda || ambienteSemNumero}
+                    className="w-full object-cover"
+                    style={{
+                      height: "200px",
+                      display: "block",
+                    }}
+                    crossOrigin="anonymous"
+                  />
+                </div>
+                <div
+                  className="font-bold uppercase"
+                  style={{
+                    fontSize: "10px",
+                    lineHeight: "1.2",
+                    textAlign: "left",
+                  }}
+                >
+                  {ambienteSemNumero}
+                </div>
+                <div
+                  className="text-left"
+                  style={{
+                    fontSize: "9px",
+                    lineHeight: "1.4",
+                  }}
+                >
+                  {!usarNomeArquivoComoLegenda && (
+                    <span className="font-bold mr-1">
+                      {img.numeroAmbiente} ({img.numeroImagemNoAmbiente})
+                    </span>
+                  )}
+                  {textoLegenda || (
+                    <span className="text-gray-400 italic">Sem legenda</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {renderPageFooter()}
+      </div>
+    );
+  };
+
+  /**
    * Renderiza a(s) página(s) de Registros Complementares. IDÊNTICA ao
    * backend (pdf.service.ts): header "REGISTROS COMPLEMENTARES" + meta
    * na primeira página do bloco, grid 3x3 com fotos de altura fixa
@@ -1685,12 +1940,25 @@ export default function VisualizadorPdfLaudo() {
   /**
    * Helpers de paginação: a página de Relatório fica logo APÓS as páginas
    * de Registros Complementares (se houver), e as Assinaturas ficam por
-   * último (quando há cover).
+   * último (quando há cover). As páginas de Registro de Apontamentos
+   * ficam DEPOIS das páginas de Fotos e ANTES do Relatório — não
+   * afetam `getIdxRelatorio` (que continua sendo `totalPaginas - 1 -
+   * paginasContestacaoTotal`). O bloco começa na primeira página após
+   * a última página de fotos, então o "início" é `3 + paginasFotosBackend`
+   * quando há cover. Como `totalPaginas` é a fonte da verdade do
+   * total de páginas (vem do `meta.totalPages` do backend somado aos
+   * blocos extras), derivamos `paginasFotosBackend` dele.
    */
   const paginasContestacaoTotal =
     contestacao?.contestacaoRealizada && contestacao.imagens?.length
       ? Math.ceil(contestacao.imagens.length / FOTOS_POR_PAGINA_CONTESTACAO)
       : 0;
+  const paginasApontamentosTotal = calcularPaginasApontamentos(
+    apontamentos?.length,
+  );
+  const paginasFotosBackend = hasCover
+    ? Math.max(0, totalPaginas - 4 - paginasContestacaoTotal - paginasApontamentosTotal)
+    : Math.max(0, totalPaginas - paginasContestacaoTotal - paginasApontamentosTotal);
   const getIdxRelatorio = (): number => {
     if (!hasCover) return totalPaginas; // sem cover: relatório é a última
     return totalPaginas - 1 - paginasContestacaoTotal;
@@ -1699,6 +1967,17 @@ export default function VisualizadorPdfLaudo() {
     if (!hasCover || paginasContestacaoTotal === 0) return false;
     const primeira = getIdxRelatorio() + 1;
     const ultima = primeira + paginasContestacaoTotal - 1;
+    return pagina >= primeira && pagina <= ultima;
+  };
+  /**
+   * Verifica se a página atual faz parte do bloco "Registro de
+   * Apontamentos". Com cover, o bloco começa logo após a última página
+   * de Fotos e ocupa `paginasApontamentosTotal` páginas.
+   */
+  const isApontamentosPage = (pagina: number): boolean => {
+    if (!hasCover || paginasApontamentosTotal === 0) return false;
+    const primeira = 3 + paginasFotosBackend;
+    const ultima = primeira + paginasApontamentosTotal - 1;
     return pagina >= primeira && pagina <= ultima;
   };
 
@@ -2484,6 +2763,8 @@ export default function VisualizadorPdfLaudo() {
             renderCoverPage()
           ) : hasCover && paginaAtual === 2 ? (
             renderInfoPage()
+          ) : hasCover && isApontamentosPage(paginaAtual) ? (
+            renderApontamentosPage()
           ) : hasCover && paginaAtual === totalPaginas ? (
             renderAssinaturasPage()
           ) : hasCover && isContestacaoPage(paginaAtual) ? (
