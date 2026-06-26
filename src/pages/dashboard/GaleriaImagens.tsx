@@ -340,9 +340,31 @@ function SortableImagemCard({
         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
       />
 
+      {/*
+        Ícone de lápis fixo no canto superior direito do card. Ao clicar,
+        abre a imagem no lightbox — exatamente o mesmo efeito de clicar
+        na imagem. Mantido sempre visível (não apenas em hover) para que
+        o usuário descubra a ação; `stopPropagation` impede que o
+        `onClick` do card (que também abre o lightbox) dispare em
+        duplicidade. O `isDragging` é respeitado para não abrir a imagem
+        durante um reordenamento por drag-and-drop.
+      */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isDragging) onOpen(index);
+        }}
+        aria-label="Abrir imagem"
+        title="Abrir imagem"
+        className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
+
       {img.imagemJaFoiAnalisadaPelaIa === "sim" && (
         <div
-          className={`absolute ${hideItemControls ? "top-2" : "top-10"} right-2 bg-green-500 rounded-full p-1.5 shadow-lg z-20`}
+          className="absolute top-10 right-2 bg-green-500 rounded-full p-1.5 shadow-lg z-20"
         >
           <CheckCircle className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
