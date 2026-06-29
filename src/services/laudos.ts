@@ -633,10 +633,15 @@ class LaudosService {
   async requestPdfGeneration(
     laudoId: string,
     modoPreviewPdf: "detalhado" | "compacto" = "detalhado",
+    layout?: {
+      margemPagina?: number;
+      espacamentoHorizontal?: number;
+      espacamentoVertical?: number;
+    },
   ): Promise<void> {
     return api.post(
       `/laudos/${laudoId}/pdf-request`,
-      { modoPreviewPdf },
+      { modoPreviewPdf, ...(layout ?? {}) },
       true,
     );
   }
