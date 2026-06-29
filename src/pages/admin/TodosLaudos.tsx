@@ -400,6 +400,19 @@ export default function TodosLaudos() {
                         <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
                         Preview
                       </Link>
+                      {/* Mariah Drive - Always Visible */}
+                      <Link
+                        to={`/dashboard/laudos/${laudo.id}/drive`}
+                        state={{ from: location.pathname }}
+                        className="w-full sm:w-auto px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 text-sm font-medium text-center whitespace-nowrap transition-colors shadow-sm flex items-center justify-center gap-2 group"
+                      >
+                        <img
+                          src="/google-drive.svg"
+                          alt=""
+                          className="w-4 h-4 group-hover:scale-110 transition-transform"
+                        />
+                        Drive
+                      </Link>
                       <button
                         onClick={() => setLaudoEditando(laudo)}
                         className="w-full sm:w-auto px-4 py-2 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-secondary)] text-sm font-medium whitespace-nowrap transition-all shadow-sm"

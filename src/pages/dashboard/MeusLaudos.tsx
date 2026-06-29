@@ -563,6 +563,22 @@ export default function MeusLaudos() {
                           </Button>
                         </Link>
 
+                        {/* Mariah Drive - Always Visible */}
+                        <Link to={`/dashboard/laudos/${laudo.id}/drive`}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-white border-0 shadow-lg shadow-black/20 transition-all duration-300 group"
+                          >
+                            <img
+                              src="/google-drive.svg"
+                              alt=""
+                              className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform"
+                            />
+                            Drive
+                          </Button>
+                        </Link>
+
                         {/* Iniciar Análise - Conditional */}
                         {status === "nao_iniciado" && (
                           <Button
