@@ -6,6 +6,7 @@ import {
   Folder,
   MoreVertical,
   Trash2,
+  Download,
   X,
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
@@ -20,6 +21,9 @@ import {
   type AmbienteWebInfo,
   type ImagemLaudo,
 } from "../../services/laudos";
+import { downloadService, type DownloadJobResponse } from "../../services/download";
+import { useDownloadSocket } from "../../hooks/useDownloadSocket";
+import { useAuth } from "../../contexts/AuthContext";
 
 /**
  * Mariah Drive — visualização das fotos de um laudo com UI fiel ao Google
@@ -42,6 +46,9 @@ export default function MariahDrive() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  // WebSocket de downloads: resolve a conclusão dos ZIPs (download:ready/error).
+  const { waitForJob } = useDownloadSocket(user?.id);
 
   // Nível 1: pastas (ambientes)
   const [ambientes, setAmbientes] = useState<AmbienteWebInfo[]>([]);
@@ -70,7 +77,81 @@ export default function MariahDrive() {
   // Lightbox
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // Downloads
+  // Fotos sendo baixadas individualmente (ids)
+  const [baixandoFotos, setBaixandoFotos] = useState<Set<string>>(new Set());
+  // ZIPs em geração, chaveados por alvo: "laudo" ou `ambiente:<nome>`
+  const [gerandoZips, setGerandoZips] = useState<Record<string, boolean>>({});
+
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // ===== Downloads =====
+  const handleDownloadFoto = async (img: ImagemLaudo) => {
+    if (baixandoFotos.has(img.id)) return;
+    setBaixandoFotos((prev) => new Set(prev).add(img.id));
+    try {
+      await downloadService.downloadImagem(img.id);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Não foi possível baixar a foto.");
+    } finally {
+      setBaixandoFotos((prev) => {
+        const next = new Set(prev);
+        next.delete(img.id);
+        return next;
+      });
+    }
+  };
+
+  const baixarZip = async (
+    chave: string,
+    request: () => Promise<DownloadJobResponse>,
+    labelGerando: string,
+  ) => {
+    if (gerandoZips[chave]) return;
+    setGerandoZips((prev) => ({ ...prev, [chave]: true }));
+    const toastId = toast.loading(labelGerando);
+    try {
+      // 1) Solicita o job. O backend pode já devolver `ready` (reaproveitamento)
+      //    ou um job em andamento, cuja conclusão chega via WebSocket.
+      const job = await request();
+      if (job.status === "error") {
+        throw new Error(job.erro || "Falha ao gerar o download.");
+      }
+      let url = job.url;
+      if (job.status !== "ready" || !url) {
+        // 2) Aguarda o evento `download:ready` (ou `download:error`) do socket.
+        url = await waitForJob(job.jobId);
+      }
+      downloadService.abrirDownload(url);
+      toast.success("Download iniciado.", { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Não foi possível gerar o download.", {
+        id: toastId,
+      });
+    } finally {
+      setGerandoZips((prev) => {
+        const next = { ...prev };
+        delete next[chave];
+        return next;
+      });
+    }
+  };
+
+  const handleDownloadAmbiente = (nomeAmbiente: string) => {
+    if (!id) return;
+    baixarZip(
+      `ambiente:${nomeAmbiente}`,
+      () => downloadService.requestAmbienteZip(id, nomeAmbiente),
+      `Gerando ZIP de "${nomeAmbiente}"...`,
+    );
+  };
+
+  const handleDownloadLaudo = () => {
+    if (!id) return;
+    baixarZip("laudo", () => downloadService.requestLaudoZip(id), "Gerando ZIP do laudo...");
+  };
 
   // Volta para a página de origem (laudos do usuário ou admin) ou fallback.
   const voltarOrigem = () => {
@@ -286,32 +367,67 @@ export default function MariahDrive() {
                 />
               ) : (
                 <>
-                  <p className="text-sm font-medium text-[#5f6368] mb-3">
-                    Pastas
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-[#5f6368]">Pastas</p>
+                    <button
+                      onClick={handleDownloadLaudo}
+                      disabled={gerandoZips["laudo"]}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                      title="Baixar todas as fotos do laudo (.zip)"
+                    >
+                      {gerandoZips["laudo"] ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {gerandoZips["laudo"] ? "Gerando..." : "Baixar tudo"}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                    {ambientes.map((amb) => (
-                      <button
-                        key={amb.nomeAmbiente}
-                        onClick={() => setAmbienteAberto(amb)}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#f0f4f9] hover:bg-[#e3e8ef] text-left transition-colors group"
-                      >
-                        <Folder
-                          className="w-6 h-6 text-[#5f6368] shrink-0"
-                          fill="#5f6368"
-                          strokeWidth={0}
-                        />
-                        <span className="flex-1 min-w-0">
-                          <span className="block truncate text-sm font-medium text-[#1f1f1f]">
-                            {amb.nomeAmbiente}
-                          </span>
-                          <span className="block text-xs text-[#5f6368]">
-                            {amb.totalImagens}{" "}
-                            {amb.totalImagens === 1 ? "item" : "itens"}
-                          </span>
-                        </span>
-                      </button>
-                    ))}
+                    {ambientes.map((amb) => {
+                      const baixandoAmb = !!gerandoZips[`ambiente:${amb.nomeAmbiente}`];
+                      return (
+                        <div
+                          key={amb.nomeAmbiente}
+                          className="relative flex items-center gap-3 px-4 py-3 rounded-lg bg-[#f0f4f9] hover:bg-[#e3e8ef] transition-colors group"
+                        >
+                          <button
+                            onClick={() => setAmbienteAberto(amb)}
+                            className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                          >
+                            <Folder
+                              className="w-6 h-6 text-[#5f6368] shrink-0"
+                              fill="#5f6368"
+                              strokeWidth={0}
+                            />
+                            <span className="flex-1 min-w-0">
+                              <span className="block truncate text-sm font-medium text-[#1f1f1f]">
+                                {amb.nomeAmbiente}
+                              </span>
+                              <span className="block text-xs text-[#5f6368]">
+                                {amb.totalImagens}{" "}
+                                {amb.totalImagens === 1 ? "item" : "itens"}
+                              </span>
+                            </span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadAmbiente(amb.nomeAmbiente);
+                            }}
+                            disabled={baixandoAmb}
+                            className="shrink-0 p-1.5 rounded-full text-[#5f6368] hover:bg-white/80 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity disabled:opacity-100"
+                            title={`Baixar "${amb.nomeAmbiente}" (.zip)`}
+                          >
+                            {baixandoAmb ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -333,9 +449,24 @@ export default function MariahDrive() {
                 />
               ) : (
                 <>
-                  <p className="text-sm font-medium text-[#5f6368] mb-3">
-                    Arquivos
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-[#5f6368]">Arquivos</p>
+                    <button
+                      onClick={() => handleDownloadAmbiente(ambienteAberto.nomeAmbiente)}
+                      disabled={!!gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                      title={`Baixar "${ambienteAberto.nomeAmbiente}" (.zip)`}
+                    >
+                      {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`] ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]
+                        ? "Gerando..."
+                        : "Baixar pasta"}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {imagens.map((img, index) => (
                       <div
@@ -387,6 +518,21 @@ export default function MariahDrive() {
                               className="absolute right-0 mt-1 w-40 rounded-lg bg-white shadow-lg border border-[#e0e0e0] py-1 z-20"
                               onClick={(e) => e.stopPropagation()}
                             >
+                              <button
+                                onClick={() => {
+                                  setMenuAbertoId(null);
+                                  handleDownloadFoto(img);
+                                }}
+                                disabled={baixandoFotos.has(img.id)}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                              >
+                                {baixandoFotos.has(img.id) ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Download className="w-4 h-4" />
+                                )}
+                                Baixar
+                              </button>
                               <button
                                 onClick={() => {
                                   setMenuAbertoId(null);
