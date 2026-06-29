@@ -95,9 +95,11 @@ export const downloadService = {
    * Enfileira a geração do ZIP de um ambiente do laudo.
    */
   async requestAmbienteZip(laudoId: string, ambiente: string): Promise<DownloadJobResponse> {
+    // body `{}` (e não undefined): o client envia Content-Type application/json
+    // e o Fastify rejeita POST com esse header e corpo vazio (400).
     return api.post<DownloadJobResponse>(
       `/download/laudo/${laudoId}/ambiente/${encodeURIComponent(ambiente)}`,
-      undefined,
+      {},
       true,
     );
   },
@@ -106,7 +108,7 @@ export const downloadService = {
    * Enfileira a geração do ZIP do laudo inteiro.
    */
   async requestLaudoZip(laudoId: string): Promise<DownloadJobResponse> {
-    return api.post<DownloadJobResponse>(`/download/laudo/${laudoId}`, undefined, true);
+    return api.post<DownloadJobResponse>(`/download/laudo/${laudoId}`, {}, true);
   },
 
   /**

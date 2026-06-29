@@ -121,7 +121,18 @@ export default function MariahDrive() {
       let url = job.url;
       if (job.status !== "ready" || !url) {
         // 2) Aguarda o evento `download:ready` (ou `download:error`) do socket.
-        url = await waitForJob(job.jobId);
+        try {
+          url = await waitForJob(job.jobId);
+        } catch (socketErr) {
+          // Rede de segurança: se o evento se perdeu (ex.: socket reconectando
+          // no momento da conclusão), confirma o estado uma vez via status.
+          const status = await downloadService.getJobStatus(job.jobId);
+          if (status.status === "ready" && status.url) {
+            url = status.url;
+          } else {
+            throw socketErr;
+          }
+        }
       }
       downloadService.abrirDownload(url);
       toast.success("Download iniciado.", { id: toastId });
