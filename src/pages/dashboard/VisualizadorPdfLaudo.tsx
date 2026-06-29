@@ -1150,7 +1150,14 @@ export default function VisualizadorPdfLaudo() {
       setMensagemGeracaoPdf(mensagem);
       wasTriggeredRef.current = true;
 
-      await laudosService.requestPdfGeneration(id, modoPreview);
+      // Envia os valores de layout EXATOS que o preview está usando para que
+      // o PDF gerado tenha o mesmo tamanho de imagem do preview, mesmo que o
+      // usuário ainda não tenha clicado em "Salvar Alterações".
+      await laudosService.requestPdfGeneration(id, modoPreview, {
+        margemPagina: configuracoes.margemPagina,
+        espacamentoHorizontal: configuracoes.espacamentoHorizontal,
+        espacamentoVertical: configuracoes.espacamentoVertical,
+      });
 
       toast.info(mensagem);
 
