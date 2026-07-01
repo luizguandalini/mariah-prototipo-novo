@@ -20,6 +20,7 @@ import Pagamentos from "./pages/dashboard/Pagamentos";
 
 import GaleriaImagens from "./pages/dashboard/GaleriaImagens";
 import MariahDrive from "./pages/dashboard/MariahDrive";
+import DriveLaudos from "./pages/dashboard/DriveLaudos";
 import VisualizadorPdfLaudo from "./pages/dashboard/VisualizadorPdfLaudo";
 
 // Dashboard Admin
@@ -73,6 +74,7 @@ function App() {
           <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
           <Route path="/admin/usuarios" element={<ProtectedRoute requireAdmin><Usuarios /></ProtectedRoute>} />
           <Route path="/admin/laudos" element={<ProtectedRoute requireAdmin><TodosLaudos /></ProtectedRoute>} />
+          <Route path="/admin/drive" element={<ProtectedRoute requireAdmin><DriveLaudos /></ProtectedRoute>} />
           <Route path="/admin/ambientes" element={<ProtectedRoute requireAdmin><GerenciarAmbientes /></ProtectedRoute>} />
           <Route
             path="/admin/detalhes-laudo"
