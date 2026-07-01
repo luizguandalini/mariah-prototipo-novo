@@ -106,6 +106,18 @@ export interface PaginatedResponse<T> {
 
 export type PaginatedLaudosResponse = PaginatedResponse<Laudo>;
 
+/** Item de ano do Drive: contagem de laudos por ano (TZ America/Sao_Paulo). */
+export interface DriveYear {
+  year: number;
+  count: number;
+}
+
+/** Item de mês do Drive: contagem de laudos por mês dentro de um ano. */
+export interface DriveMonth {
+  month: number;
+  count: number;
+}
+
 export interface Laudo {
   id: string;
   usuarioNome?: string;
@@ -292,6 +304,50 @@ class LaudosService {
 
     return api.get<PaginatedLaudosResponse>(
       `/laudos?${query.toString()}`,
+      true,
+    );
+  }
+
+  // ===== Drive (DEV/ADMIN) — navegação de todos os laudos como pastas =====
+
+  /** Modo lista: todos os laudos, mais recente primeiro, paginado. */
+  async getDriveLaudos(
+    page: number = 1,
+    limit: number = 24,
+  ): Promise<PaginatedLaudosResponse> {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    return api.get<PaginatedLaudosResponse>(
+      `/drive/laudos?${query.toString()}`,
+      true,
+    );
+  }
+
+  /** Anos que possuem laudos, com contagem, do mais recente para o mais antigo. */
+  async getDriveYears(): Promise<DriveYear[]> {
+    return api.get<DriveYear[]>(`/drive/years`, true);
+  }
+
+  /** Meses (1–12) com laudos dentro de um ano, com contagem. */
+  async getDriveMonths(year: number): Promise<DriveMonth[]> {
+    return api.get<DriveMonth[]>(`/drive/years/${year}/months`, true);
+  }
+
+  /** Laudos de um ano/mês específico, paginados, mais recente primeiro. */
+  async getDriveLaudosByMonth(
+    year: number,
+    month: number,
+    page: number = 1,
+    limit: number = 24,
+  ): Promise<PaginatedLaudosResponse> {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    return api.get<PaginatedLaudosResponse>(
+      `/drive/years/${year}/months/${month}/laudos?${query.toString()}`,
       true,
     );
   }

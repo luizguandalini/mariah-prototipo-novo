@@ -73,6 +73,12 @@ export default function DashboardLayout({
       label: "Todos os Laudos",
       roles: [UserRole.ADMIN, UserRole.DEV],
     },
+    {
+      path: "/admin/drive",
+      icon: "/google-drive.svg",
+      label: "Drive",
+      roles: [UserRole.ADMIN, UserRole.DEV],
+    },
 
     // 3. Configurações do Sistema (Admin/Dev)
     {
@@ -115,6 +121,12 @@ export default function DashboardLayout({
       roles: [UserRole.ADMIN, UserRole.DEV],
     },
   ];
+
+  // Identifica se o "icon" do menu é um caminho para imagem (svg/png/etc.)
+  // ou um emoji curto. Caminhos começam com "/" e contêm extensão de arquivo.
+  const isIconPath = (icon: string): boolean => {
+    return icon.startsWith("/") && /\.[a-zA-Z0-9]+$/.test(icon);
+  };
 
   const menuItems = allMenuItems.filter((item) => {
     if (!item.roles) return true;
@@ -196,7 +208,16 @@ export default function DashboardLayout({
                     : "text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                <span className="text-lg lg:text-xl">{item.icon}</span>
+                {isIconPath(item.icon) ? (
+                  <img
+                    src={item.icon}
+                    alt=""
+                    aria-hidden="true"
+                    className="w-5 h-5 lg:w-6 lg:h-6 object-contain"
+                  />
+                ) : (
+                  <span className="text-lg lg:text-xl">{item.icon}</span>
+                )}
                 <span className="text-sm lg:text-base font-medium flex items-center gap-2">
                   {item.label}
                   {item.roles && (

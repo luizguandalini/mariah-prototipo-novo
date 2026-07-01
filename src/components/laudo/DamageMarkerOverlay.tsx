@@ -55,6 +55,38 @@ export interface DamageMarkerOverlayProps {
    * Usado no preview do PDF (VisualizadorPdfLaudo).
    */
   disabled?: boolean;
+  /**
+   * Quando `true`, o componente renderiza o círculo e os handles de
+   * resize (sujeito a `disabled`, que prevalece). Quando `false`
+   * (default), o componente NÃO renderiza o círculo mesmo que receba
+   * um `marker` não-nulo — o container invisível continua montado
+   * para preservar a referência de coordenadas / ResizeObserver.
+   *
+   * Ortogonal a `disabled`:
+   * - `editing=false` → invisível (card da galeria em modo leitura).
+   * - `editing=true, disabled=false` → arrastável (galeria em modo edição).
+   * - `editing=true, disabled=true` → visível mas read-only (preview PDF).
+   * - `editing=false, disabled=true` → invisível (caso default).
+   */
+  editing?: boolean;
+  /**
+   * Quando `true`, se `marker` for `null` E `editing=true`, mostra um
+   * placeholder centralizado (`FALLBACK_MARKER`) para dar feedback
+   * visual de "este é o círculo, arraste para posicionar". Sem essa
+   * prop, o componente fica invisível quando `marker=null` mesmo em
+   * modo edição — o usuário só veria o círculo após o primeiro drag.
+   *
+   * Onde usar:
+   * - Lightbox em modo edição → `showPlaceholderOnEmpty` (precisa
+   *   de feedback visual para o usuário arrastar).
+   * - Card da galeria → NÃO passar (o card não tem interação de
+   *   drag no fluxo atual; placeholder no card confundiria).
+   * - Preview do PDF → NÃO passar (read-only, sem edição).
+   *
+   * O placeholder é puramente visual: se o usuário sair do modo
+   * edição sem arrastar, nada é persistido.
+   */
+  showPlaceholderOnEmpty?: boolean;
 }
 
 type DragKind = "move" | "resize";
@@ -112,16 +144,37 @@ export const DamageMarkerOverlay: React.FC<DamageMarkerOverlayProps> = ({
   marker,
   onChange,
   disabled,
+  editing = false,
+  showPlaceholderOnEmpty = false,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // Resolve o marker inicial. Se `marker` vier do banco, usa ele.
+  // Senão, se estamos em modo edição com placeholder permitido,
+  // usa o FALLBACK_MARKER (centralizado) — isso dá feedback visual
+  // imediato no lightbox quando o usuário entra em modo edição
+  // antes de ter um marker salvo.
+  const resolveInitialMarker = (
+    m: DamageMarker | null,
+    ed: boolean,
+    placeholder: boolean,
+  ): DamageMarker | null => {
+    if (m) return m;
+    if (ed && placeholder) return FALLBACK_MARKER;
+    return null;
+  };
+
   // `localMarker` (state) — render. Atualizado a cada pointermove.
-  const [localMarker, setLocalMarker] = useState<DamageMarker | null>(marker);
+  const [localMarker, setLocalMarker] = useState<DamageMarker | null>(() =>
+    resolveInitialMarker(marker, editing, showPlaceholderOnEmpty),
+  );
 
   // `localMarkerRef` (ref) — espelha o state para leitura síncrona
   // no `handlePointerUp` SEM passar por updater de useState
   // (anti-pattern que dispara múltiplos onChange em React 18 / Strict).
-  const localMarkerRef = useRef<DamageMarker | null>(marker);
+  const localMarkerRef = useRef<DamageMarker | null>(
+    resolveInitialMarker(marker, editing, showPlaceholderOnEmpty),
+  );
 
   const dragSessionRef = useRef<DragSession | null>(null);
   const handlersRef = useRef<{
@@ -138,12 +191,19 @@ export const DamageMarkerOverlay: React.FC<DamageMarkerOverlayProps> = ({
 
   // Sincroniza localMarker quando marker externo muda (após save
   // remoto ou troca de imagem). Só sincroniza quando NÃO está em drag.
+  //
+  // Regra de resolução:
+  // 1. Se `marker` (do banco) não é null → usa ele (fonte de verdade).
+  // 2. Senão, se `editing=true && showPlaceholderOnEmpty=true` →
+  //    usa FALLBACK_MARKER (placeholder centralizado, dá feedback
+  //    visual de "arraste para posicionar").
+  // 3. Senão → null (modo leitura, sem marker → sem círculo).
   useEffect(() => {
-    if (!dragSessionRef.current) {
-      localMarkerRef.current = marker;
-      setLocalMarker(marker);
-    }
-  }, [marker]);
+    if (dragSessionRef.current) return;
+    const next = resolveInitialMarker(marker, editing, showPlaceholderOnEmpty);
+    localMarkerRef.current = next;
+    setLocalMarker(next);
+  }, [marker, editing, showPlaceholderOnEmpty]);
 
   // Cleanup no unmount.
   useEffect(() => {
@@ -494,7 +554,7 @@ export const DamageMarkerOverlay: React.FC<DamageMarkerOverlayProps> = ({
         if (!disabled) e.stopPropagation();
       }}
     >
-      {canRender && localMarker && (
+      {canRender && editing && localMarker && (
         <>
           <div
             style={circleStyle}
