@@ -1885,6 +1885,7 @@ export default function VisualizadorPdfLaudo() {
                       /* read-only na preview */
                     }}
                     disabled
+                    editing
                   />
                 </div>
                 <div
@@ -2938,6 +2939,7 @@ export default function VisualizadorPdfLaudo() {
                               /* read-only no preview */
                             }}
                             disabled
+                            editing
                           />
                         </div>
                         <div
@@ -3012,6 +3014,7 @@ export default function VisualizadorPdfLaudo() {
                             /* read-only no preview */
                           }}
                           disabled
+                          editing
                         />
                       </div>
                       <div

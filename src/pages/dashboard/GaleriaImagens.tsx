@@ -249,6 +249,11 @@ interface SortableImagemCardProps {
   onMarcarItem: (imgId: string) => void;
   onDelete: (imgId: string) => void;
   onOpen: (index: number) => void;
+  // Entra/sai do modo de edição do marker de avaria. Chamado pelo
+  // lápis do card ao abrir o lightbox para uma foto AVARIA sem
+  // marker — abre o lightbox já em modo edição, com o placeholder
+  // centralizado visível.
+  onToggleEditMarker: (imgId: string) => void;
   formatDate: (dateString: string) => string;
   isDropTarget: boolean;
   // === Ações mobile (tap-to-show) ===
@@ -282,6 +287,7 @@ function SortableImagemCard({
   onMarcarItem,
   onDelete,
   onOpen,
+  onToggleEditMarker,
   formatDate,
   isDropTarget,
   mobileActionsImageId,
@@ -365,10 +371,26 @@ function SortableImagemCard({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          if (!isDragging) onOpen(index);
+          if (isDragging) return;
+          onOpen(index);
+          // Para fotos AVARIA sem marker salvo, abre o lightbox já
+          // em modo edição — o placeholder centralizado aparece e
+          // o usuário arrasta para posicionar. Para fotos com marker
+          // salvo, o círculo já está visível (regra end-to-end).
+          if (img.categoria === "AVARIA" && !img.damageMarker) {
+            onToggleEditMarker(img.id);
+          }
         }}
-        aria-label="Abrir imagem"
-        title="Abrir imagem"
+        aria-label={
+          img.categoria === "AVARIA" && !img.damageMarker
+            ? "Marcar a região da avaria"
+            : "Abrir imagem"
+        }
+        title={
+          img.categoria === "AVARIA" && !img.damageMarker
+            ? "Marcar a região da avaria"
+            : "Abrir imagem"
+        }
         className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
       >
         <Pencil className="w-3.5 h-3.5" />
@@ -405,8 +427,15 @@ function SortableImagemCard({
               posição salva". A posição (`damageMarker` no DB)
               continua persistida — só a renderização do overlay é
               gated pelo categoria.
-            - `disabled=false` aqui: no card da galeria o usuário pode
-              arrastar/redimensionar.
+            - `editing` controla visibilidade + draggability. Regra
+              end-to-end: o círculo aparece no card se (a) o usuário
+              está em modo edição DESTE card OU (b) já existe um
+              `damageMarker` salvo no DB. Isso garante consistência
+              com o lightbox e o preview do PDF: marker salvo →
+              visível em todas as views; sem marker → invisível em
+              todas as views.
+            - `disabled=false` aqui: card permite arrastar quando o
+              círculo está visível (já tem marker ou está em edição).
             - As coords do marker são em relação à IMAGEM ORIGINAL
               (não ao container), por isso a posição fica idêntica em
               qualquer view (card, lightbox, preview). */}
@@ -416,6 +445,7 @@ function SortableImagemCard({
             img.categoria === "AVARIA" ? img.damageMarker ?? null : null
           }
           onChange={(m) => onMarkerChange(img.id, m)}
+          editing={!!img.damageMarker}
         />
       </div>
 
@@ -735,6 +765,19 @@ export default function GaleriaImagens() {
   const [mobileActionsImageId, setMobileActionsImageId] = useState<
     string | null
   >(null);
+  // `editingImageId` guarda o id da foto cujo overlay de avaria está em
+  // modo de edição (círculo arrastável visível). Apenas uma foto por vez
+  // pode estar em modo edição. Só faz sentido para fotos com
+  // `categoria === 'AVARIA'`. Sai automaticamente ao trocar de foto no
+  // lightbox ou ao fechar o lightbox — ver handlers `goToNext/goToPrev`
+  // e `closeLightbox`. Estado efêmero: não persiste no DB.
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  // Toggle do modo edição de marker. Recebe o id da foto; se já está em
+  // modo edição, sai (null). Caso contrário, define como a foto em edição
+  // (uma de cada vez — clicar em outra foto troca automaticamente).
+  const toggleEditMarker = useCallback((imgId: string) => {
+    setEditingImageId((prev) => (prev === imgId ? null : imgId));
+  }, []);
   // `hoverSupportedRef` é true quando o dispositivo principal de entrada
   // consegue :hover (mouse / trackpad). Ref em vez de state porque o valor
   // praticamente não muda durante a sessão — evita re-render dos cards.
@@ -1346,19 +1389,23 @@ export default function GaleriaImagens() {
 
   const handleToggleAvaria = async (imgId: string, marcarAvaria: boolean) => {
     const novaCategoria = marcarAvaria ? "AVARIA" : "VISTORIA";
-    // Quando o usuário MARCA uma foto como AVARIA pela primeira vez e
-    // ainda não há marker persistido, centralizamos um círculo default
-    // para que o overlay apareça imediatamente — o usuário já pode
-    // arrastá-lo/redimensioná-lo. Quando DESMARCA, mantemos o marker
-    // persistido (escondido na UI pela checagem `categoria === 'AVARIA'`);
-    // se ele re-marcar depois, o círculo reaparece na última posição.
-    const imgAtual = imagens.find((i) => i.id === imgId);
-    const payload: {
-      categoria: string;
-      damageMarker?: DamageMarker | null;
-    } = { categoria: novaCategoria };
-    if (marcarAvaria && !imgAtual?.damageMarker) {
-      payload.damageMarker = { x: 0.5, y: 0.5, r: 0.12 };
+    // Marcar como AVARIA: apenas persiste `categoria`. NÃO criamos
+    // um `damageMarker` padrão automaticamente — o círculo só aparece
+    // depois que o usuário entra explicitamente em modo de edição
+    // (botão de lápis) e arrasta/redimensiona o overlay. Isso evita o
+    // "marker fantasma" no centro da foto sem que o usuário tenha
+    // interagido.
+    //
+    // Desmarcar como AVARIA: além de mudar a categoria, apaga o
+    // `damageMarker` salvo. Regra end-to-end: ao desmarcar avaria, a
+    // foto volta ao estado "como se nunca tivesse sido circulada" —
+    // sem posição salva, sem círculo. Se o usuário marcar novamente,
+    // começa do zero.
+    const payload: { categoria: string; damageMarker?: null } = {
+      categoria: novaCategoria,
+    };
+    if (!marcarAvaria) {
+      payload.damageMarker = null;
     }
     try {
       setLoadingCategoriaChange(imgId);
@@ -1370,7 +1417,7 @@ export default function GaleriaImagens() {
                 ...img,
                 categoria: novaCategoria,
                 imagemJaFoiAnalisadaPelaIa: "nao",
-                damageMarker: payload.damageMarker ?? img.damageMarker,
+                damageMarker: marcarAvaria ? img.damageMarker : null,
               }
             : img,
         ),
@@ -1508,6 +1555,9 @@ export default function GaleriaImagens() {
     setLightboxLegendaSalva("");
     setLightboxLegendaErro(false);
     setLightboxSaving(false);
+    // Sai do modo de edição do marker de avaria ao fechar o lightbox
+    // — estado efêmero da galeria, não persiste entre aberturas.
+    setEditingImageId(null);
   }, [lightboxIndex, lightboxLegenda, lightboxLegendaSalva, imagens]);
 
   // Persiste imediatamente a legenda atual (sem aguardar o debounce).
@@ -1626,6 +1676,11 @@ export default function GaleriaImagens() {
       setLightboxLegendaErro(false);
       setLightboxSaving(false);
       setLightboxImageLoading(true);
+      // Sai do modo edição ao trocar de foto no lightbox — a foto
+      // nova começa em modo leitura (com ou sem marker, conforme
+      // regra abaixo). Se o usuário arrastar na nova, abre modo
+      // edição explicitamente.
+      setEditingImageId(null);
     },
     [flushLegendaSave, imagens, lightboxIndex],
   );
@@ -3021,6 +3076,7 @@ export default function GaleriaImagens() {
                               setConfirmDelete({ isOpen: true, imagemId })
                             }
                             onOpen={openLightbox}
+                            onToggleEditMarker={toggleEditMarker}
                             formatDate={formatDate}
                             isDropTarget={
                               !!activeImagemId &&
@@ -3233,6 +3289,12 @@ export default function GaleriaImagens() {
                 )}
               </div>
               <div className="flex items-center gap-1">
+                {/* O botão de lápis/editar do header do lightbox foi
+                    removido: o usuário já entra em modo edição ao
+                    clicar no lápis do card (que abre o lightbox com
+                    o placeholder centralizado visível). Arrastar e
+                    soltar salva o marker automaticamente — não há
+                    passo de "confirmar" no lightbox. */}
                 <button
                   type="button"
                   onClick={closeLightbox}
@@ -3266,18 +3328,19 @@ export default function GaleriaImagens() {
                   </div>
                 )}
                 {/*
-                  Wrapper inline-block ao redor da imagem do lightbox:
-                  ele "abraça" o tamanho real renderizado do `<img>` (que
-                  usa `max-w-full max-h-full object-contain`, então pode
-                  deixar barras pretas nos lados quando a proporção não
-                  bate com o viewport). O `DamageMarkerOverlay` é
-                  posicionado dentro deste wrapper em `inset-0` para
-                  cobrir exatamente a área da foto — não a área toda do
-                  viewport. `disabled` é FALSE aqui: o lightbox é onde o
-                  usuário edita a legenda, faz sentido ser editável
-                  também para o marcador de avaria.
+                  Wrapper do lightbox. Mesma lógica da Mariah Drive:
+                  a imagem é limitada a `max-w-[90vw] max-h-[80vh]`
+                  para sempre caber no viewport — sem isso, imagens
+                  grandes (ex.: 4000×3000) renderizam no tamanho
+                  natural e estouram o viewport, deixando o círculo
+                  e os controles fora da área visível. Wrapper também
+                  é limitado para o `DamageMarkerOverlay` (absolute
+                  inset-0) cobrir exatamente a área renderizada da
+                  foto, não o viewport inteiro. `disabled` é FALSE
+                  aqui: o lightbox é onde o usuário edita a legenda,
+                  faz sentido ser editável também para o marker.
                 */}
-                <div className="relative inline-block">
+                <div className="relative max-w-[90vw] max-h-[80vh]">
                   <motion.img
                     ref={lightboxImgRef}
                     key={imagens[lightboxIndex].id}
@@ -3288,9 +3351,24 @@ export default function GaleriaImagens() {
                     transition={{ duration: 0.18 }}
                     onLoad={() => setLightboxImageLoading(false)}
                     onError={() => setLightboxImageLoading(false)}
-                    className="max-w-full max-h-full object-contain select-none block"
+                    className="max-w-[90vw] max-h-[80vh] object-contain select-none block rounded-lg"
                     draggable={false}
                   />
+                  {/* Regra de visibilidade do overlay no lightbox:
+                      - Foto AVARIA COM marker salvo → editing=true
+                        por default (lightbox é a view de detalhe,
+                        mostra o círculo na posição persistida).
+                      - Foto AVARIA SEM marker salvo → editing=false;
+                        usuário precisa clicar no lápis do header
+                        para entrar em modo edição e posicionar.
+                      - Foto NÃO AVARIA → marker=null, overlay
+                        invisível.
+                      Quando editing=true, o overlay é arrastável e
+                      chama handleMarkerChange no pointerup.
+                      `showPlaceholderOnEmpty` faz com que ao entrar
+                      em modo edição sem marker salvo, um placeholder
+                      centralizado (FALLBACK_MARKER) apareça para o
+                      usuário saber onde está posicionando. */}
                   <DamageMarkerOverlay
                     imageRef={lightboxImgRef}
                     marker={
@@ -3301,6 +3379,12 @@ export default function GaleriaImagens() {
                     onChange={(m) =>
                       handleMarkerChange(imagens[lightboxIndex].id, m)
                     }
+                    editing={
+                      imagens[lightboxIndex].categoria === "AVARIA" &&
+                      (editingImageId === imagens[lightboxIndex].id ||
+                        !!imagens[lightboxIndex].damageMarker)
+                    }
+                    showPlaceholderOnEmpty
                   />
                 </div>
               </div>
