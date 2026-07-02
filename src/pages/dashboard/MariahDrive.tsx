@@ -94,12 +94,14 @@ export default function MariahDrive() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // ===== Downloads =====
+  // Liberalizado pela change `enable-download-in-visualization` no
+  // backend: anônimo e logado não-dono podem baixar (foto individual e
+  // ZIPs de pasta/laudo). O front não bloqueia mais — o servidor já
+  // decide quem pode o quê e responde `200/202` ou `403` quando
+  // aplicável. `viewer.canDownload*` agora é `true` para todos que
+  // conseguem ler a drive view, então os botões sempre aparecem.
   const handleDownloadFoto = async (img: ImagemLaudo) => {
     if (baixandoFotos.has(img.id)) return;
-    if (!viewer?.canDownloadFoto) {
-      toast.error("Você está em modo visualização. O download requer ser dono do laudo.");
-      return;
-    }
     setBaixandoFotos((prev) => new Set(prev).add(img.id));
     try {
       await downloadService.downloadImagem(img.id);
@@ -164,10 +166,6 @@ export default function MariahDrive() {
 
   const handleDownloadAmbiente = (nomeAmbiente: string) => {
     if (!id) return;
-    if (!viewer?.canRequestAmbienteZip) {
-      toast.error("Você está em modo visualização. O download do ZIP requer ser dono do laudo.");
-      return;
-    }
     baixarZip(
       `ambiente:${nomeAmbiente}`,
       () => downloadService.requestAmbienteZip(id, nomeAmbiente),
@@ -177,10 +175,6 @@ export default function MariahDrive() {
 
   const handleDownloadLaudo = () => {
     if (!id) return;
-    if (!viewer?.canRequestLaudoZip) {
-      toast.error("Você está em modo visualização. O download do laudo requer ser dono.");
-      return;
-    }
     baixarZip("laudo", () => downloadService.requestLaudoZip(id), "Gerando ZIP do laudo...");
   };
 
@@ -431,21 +425,19 @@ export default function MariahDrive() {
                 <>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium text-[#5f6368]">Pastas</p>
-                    {viewer?.canRequestLaudoZip && (
-                      <button
-                        onClick={handleDownloadLaudo}
-                        disabled={gerandoZips["laudo"]}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
-                        title="Baixar todas as fotos do laudo (.zip)"
-                      >
-                        {gerandoZips["laudo"] ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Download className="w-4 h-4" />
-                        )}
-                        {gerandoZips["laudo"] ? "Gerando..." : "Baixar tudo"}
-                      </button>
-                    )}
+                    <button
+                      onClick={handleDownloadLaudo}
+                      disabled={gerandoZips["laudo"]}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                      title="Baixar todas as fotos do laudo (.zip)"
+                    >
+                      {gerandoZips["laudo"] ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {gerandoZips["laudo"] ? "Gerando..." : "Baixar tudo"}
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     {ambientes.map((amb) => {
@@ -474,23 +466,21 @@ export default function MariahDrive() {
                               </span>
                             </span>
                           </button>
-                          {viewer?.canRequestAmbienteZip && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadAmbiente(amb.nomeAmbiente);
-                              }}
-                              disabled={baixandoAmb}
-                              className="shrink-0 p-1.5 rounded-full text-[#5f6368] hover:bg-white/80 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity disabled:opacity-100"
-                              title={`Baixar "${amb.nomeAmbiente}" (.zip)`}
-                            >
-                              {baixandoAmb ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Download className="w-4 h-4" />
-                              )}
-                            </button>
-                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadAmbiente(amb.nomeAmbiente);
+                            }}
+                            disabled={baixandoAmb}
+                            className="shrink-0 p-1.5 rounded-full text-[#5f6368] hover:bg-white/80 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity disabled:opacity-100"
+                            title={`Baixar "${amb.nomeAmbiente}" (.zip)`}
+                          >
+                            {baixandoAmb ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
                       );
                     })}
@@ -517,23 +507,21 @@ export default function MariahDrive() {
                 <>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium text-[#5f6368]">Arquivos</p>
-                    {viewer?.canRequestAmbienteZip && (
-                      <button
-                        onClick={() => handleDownloadAmbiente(ambienteAberto.nomeAmbiente)}
-                        disabled={!!gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
-                        title={`Baixar "${ambienteAberto.nomeAmbiente}" (.zip)`}
-                      >
-                        {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`] ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Download className="w-4 h-4" />
-                        )}
-                        {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]
-                          ? "Gerando..."
-                          : "Baixar pasta"}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleDownloadAmbiente(ambienteAberto.nomeAmbiente)}
+                      disabled={!!gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                      title={`Baixar "${ambienteAberto.nomeAmbiente}" (.zip)`}
+                    >
+                      {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`] ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]
+                        ? "Gerando..."
+                        : "Baixar pasta"}
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {imagens.map((img, index) => (
