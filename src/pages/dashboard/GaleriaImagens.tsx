@@ -392,7 +392,7 @@ function SortableImagemCard({
             ? "Marcar a região da avaria"
             : "Abrir imagem"
         }
-        className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+        className="absolute bottom-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
       >
         <Pencil className="w-3.5 h-3.5" />
       </button>
