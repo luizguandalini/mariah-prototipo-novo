@@ -15,11 +15,14 @@ import { motion } from "framer-motion";
 import Button from "../../components/ui/Button";
 import { DamageMarkerOverlay } from "../../components/laudo/DamageMarkerOverlay";
 import { QRCodeSVG } from "qrcode.react";
-import { Save, Check, Loader2, Type, X } from "lucide-react";
+import { Save, Check, Loader2, Type, X, Pencil } from "lucide-react";
 import LogoCapaEditavel, {
   LogoCapaValue,
 } from "../../components/laudo/LogoCapaEditavel";
 import RodapeEditor from "../../components/laudo/RodapeEditor";
+import EditImagemModal from "../../components/laudo/EditImagemModal";
+import PhotoCardActionsOverlay from "../../components/laudo/PhotoCardActionsOverlay";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
 const normalizeSectionName = (name: string): string => {
@@ -341,6 +344,65 @@ export default function VisualizadorPdfLaudo() {
   const [modoPreview, setModoPreview] = useState<ModoPreview>("detalhado");
   const [loading, setLoading] = useState(true);
   const isModoCompacto = modoPreview === "compacto";
+
+  // === Ações rápidas de foto no preview (reutiliza lógica da galeria) ===
+  // `hoverSupportedRef.current` reflete o estado de
+  // `matchMedia("(hover: hover)")` e é atualizado pelo effect abaixo.
+  // Usamos um ref (e não state) para evitar re-render dos cards a cada
+  // mudança de capacidade de hover.
+  const hoverSupportedRef = useRef<boolean>(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(hover: hover)");
+    hoverSupportedRef.current = mq.matches;
+    const handler = (e: MediaQueryListEvent) => {
+      hoverSupportedRef.current = e.matches;
+    };
+    if (mq.addEventListener) {
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
+    }
+    mq.addListener(handler); // fallback Safari antigo
+    return () => mq.removeListener(handler);
+  }, []);
+  // ID da imagem com overlay de ações mobile aberto (touch-only).
+  const [mobileActionsImageId, setMobileActionsImageId] = useState<string | null>(
+    null,
+  );
+  // Spinners durante as mutations. Quando === img.id, o botão exibe
+  // `Loader2` em vez do ícone normal.
+  const [loadingCategoriaChange, setLoadingCategoriaChange] = useState<
+    string | null
+  >(null);
+  const [loadingItemFlagChange, setLoadingItemFlagChange] = useState<
+    string | null
+  >(null);
+  // Confirmação de exclusão via `ConfirmModal` (mesma UX da galeria).
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Dismiss do overlay de ações mobile (touch-only) quando o usuário
+  // toca fora do card ativo. Mesmo padrão da `GaleriaImagens`.
+  useEffect(() => {
+    if (!mobileActionsImageId) return;
+    const selector = `[data-image-actions-trigger="${mobileActionsImageId}"]`;
+    const isInside = (target: EventTarget | null): boolean => {
+      if (!(target instanceof Element)) return false;
+      return !!target.closest(selector);
+    };
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!isInside(e.target)) setMobileActionsImageId(null);
+    };
+    const handleTouchStart = (e: TouchEvent) => {
+      if (!isInside(e.target)) setMobileActionsImageId(null);
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, [mobileActionsImageId]);
   const imagensPorPagina = PREVIEW_LAYOUTS[modoPreview].imagensPorPagina;
   const LOGO_DEFAULTS = {
     mostrarLogoCapa: true,
@@ -415,6 +477,12 @@ export default function VisualizadorPdfLaudo() {
     "Estamos processando as imagens e organizando o laudo completo..."
   );
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Imagem selecionada para edição via `EditImagemModal`. Diferente
+  // do `editingId` acima (que é o modo inline de legenda deste preview
+  // — clicar na imagem e editar a legenda diretamente na grade):
+  // `editingImage` é o objeto que alimenta o modal compartilhado com
+  // a galeria, aberto pelo botão de lápis.
+  const [editingImage, setEditingImage] = useState<any | null>(null);
   const wasTriggeredRef = useRef(false);
   const isConfigLoadedRef = useRef(false);
   // Mapa de `<img>` no preview (galeria + apontamentos). STATE
@@ -1029,6 +1097,218 @@ export default function VisualizadorPdfLaudo() {
       console.error(error);
     }
   };
+
+  // === Handlers do `EditImagemModal` (botão de lápis no PDF preview) ===
+  // Persistência do marker de avaria arrastado no modal. Atualização
+  // otimista local (o modal já reflete visualmente a nova posição);
+  // se o backend falhar, mantém o local e loga — o usuário pode
+  // re-arrastar para forçar nova tentativa.
+  const handleEditModalMarkerChange = useCallback(
+    async (imagemId: string, marker: { x: number; y: number; r: number } | null) => {
+      setImagensComUrls((prev) =>
+        prev.map((img) =>
+          img.id === imagemId ? { ...img, damageMarker: marker } : img,
+        ),
+      );
+      setEditingImage((prev: any) =>
+        prev && prev.id === imagemId
+          ? { ...prev, damageMarker: marker }
+          : prev,
+      );
+      try {
+        await laudosService.updateImagemMetadata(imagemId, {
+          damageMarker: marker,
+        } as any);
+      } catch (err) {
+        console.error(
+          "[VisualizadorPdfLaudo] Falha ao persistir marcador de avaria:",
+          err,
+        );
+      }
+    },
+    [],
+  );
+
+  // Persistência da legenda editada no modal. Mesmo padrão da galeria:
+  // atualização otimista + PATCH; o debounce fica dentro do modal.
+  const handleEditModalLegendaChange = useCallback(
+    async (imagemId: string, novaLegenda: string) => {
+      setImagensComUrls((prev) =>
+        prev.map((img) =>
+          img.id === imagemId ? { ...img, legenda: novaLegenda } : img,
+        ),
+      );
+      setEditingImage((prev: any) =>
+        prev && prev.id === imagemId
+          ? { ...prev, legenda: novaLegenda }
+          : prev,
+      );
+      try {
+        await laudosService.updateLegenda(imagemId, novaLegenda);
+      } catch (err) {
+        toast.error("Erro ao salvar legenda");
+      }
+    },
+    [],
+  );
+
+  const handleEditModalClose = useCallback(() => {
+    setEditingImage(null);
+  }, []);
+
+  // === Ações rápidas de foto (Marcar/Desmarcar avaria, Marcar como
+  // item, Excluir) — reusam exatamente a mesma lógica/payload da
+  // GaleriaImagens, apenas mirando `imagensComUrls` (o state local do
+  // preview) em vez do state da galeria. Toast é o mesmo.
+
+  /**
+   * Marca ou desmarca a foto como AVARIA. Mesma regra end-to-end da
+   * galeria: ao desmarcar, apaga também o `damageMarker` salvo (a foto
+   * volta a "como se nunca tivesse sido circulada"). Ao marcar, mantém
+   * qualquer marker existente (a posição persistida é preservada; só
+   * a RENDERIZAÇÃO no preview é gated por `categoria === "AVARIA"`).
+   */
+  const handlePreviewToggleAvaria = useCallback(
+    async (imgId: string, marcarAvaria: boolean) => {
+      const novaCategoria = marcarAvaria ? "AVARIA" : "VISTORIA";
+      const payload: { categoria: string; damageMarker?: null } = {
+        categoria: novaCategoria,
+      };
+      if (!marcarAvaria) {
+        payload.damageMarker = null;
+      }
+      try {
+        setLoadingCategoriaChange(imgId);
+        await laudosService.updateImagemMetadata(imgId, payload);
+        setImagensComUrls((prev) =>
+          prev.map((img) =>
+            img.id === imgId
+              ? {
+                  ...img,
+                  categoria: novaCategoria,
+                  damageMarker: marcarAvaria ? img.damageMarker : null,
+                }
+              : img,
+          ),
+        );
+        toast.success(
+          marcarAvaria
+            ? "Imagem marcada como avaria. A IA usará o prompt de avaria."
+            : "Imagem marcada como vistoria.",
+        );
+      } catch (err) {
+        toast.error("Erro ao atualizar categoria da imagem.");
+      } finally {
+        setLoadingCategoriaChange(null);
+      }
+    },
+    [],
+  );
+
+  /**
+   * Aplica o prefixo "ITEM " na legenda da foto. Mesma regra da
+   * galeria: idempotente (remove prefixo anterior se houver), respeita
+   * o limite de 200 caracteres do VARCHAR.
+   */
+  const handlePreviewMarcarItem = useCallback(
+    async (imgId: string) => {
+      const imagem = imagensComUrls.find((i) => i.id === imgId);
+      const legendaAtual = (imagem?.legenda || "").trim();
+      const semPrefixo = legendaAtual
+        .replace(/^ITEM\s*[-–—:]*\s*/i, "")
+        .trim();
+      const prefixo = "ITEM ";
+      const espacoUtil = 200 - prefixo.length;
+      const corpo =
+        semPrefixo.length > espacoUtil
+          ? semPrefixo.slice(0, espacoUtil).trimEnd()
+          : semPrefixo;
+      const novaLegenda = `${prefixo}${corpo}`;
+      try {
+        setLoadingItemFlagChange(imgId);
+        await laudosService.updateLegenda(imgId, novaLegenda);
+        setImagensComUrls((prev) =>
+          prev.map((img) =>
+            img.id === imgId ? { ...img, legenda: novaLegenda } : img,
+          ),
+        );
+        toast.success("Imagem marcada como item.");
+      } catch (err) {
+        toast.error("Erro ao marcar imagem como item.");
+      } finally {
+        setLoadingItemFlagChange(null);
+      }
+    },
+    [imagensComUrls],
+  );
+
+  /**
+   * Abre o `ConfirmModal` para confirmar exclusão. O delete em si é
+   * disparado por `handleConfirmPreviewDelete` (onConfirm do modal).
+   * Mesma UX da galeria: confirmação obrigatória, atualização
+   * otimista, rollback em caso de erro.
+   */
+  const handlePreviewAskDelete = useCallback((imgId: string) => {
+    setPendingDeleteId(imgId);
+  }, []);
+
+  const handleConfirmPreviewDelete = useCallback(async () => {
+    const imgId = pendingDeleteId;
+    if (!imgId) return;
+    const imagemDeletada = imagensComUrls.find((img) => img.id === imgId);
+    const indexOriginal = imagensComUrls.findIndex(
+      (img) => img.id === imgId,
+    );
+    // Otimista: remove imediatamente do state para o preview refletir
+    // instantaneamente. O modal fecha junto (o "Excluir" do overlay já
+    // foi disparado; o ConfirmModal assume o fluxo).
+    setImagensComUrls((prev) => prev.filter((img) => img.id !== imgId));
+    setPendingDeleteId(null);
+    try {
+      setDeletingId(imgId);
+      await laudosService.deleteImagem(imgId);
+      toast.success("Imagem deletada com sucesso!");
+    } catch (err) {
+      // Rollback: reinsere na posição original para o usuário não
+      // perder a referência visual.
+      if (imagemDeletada) {
+        setImagensComUrls((prev) => {
+          const novaLista = [...prev];
+          novaLista.splice(indexOriginal, 0, imagemDeletada);
+          return novaLista;
+        });
+      }
+      toast.error("Erro ao deletar imagem.");
+    } finally {
+      setDeletingId(null);
+    }
+  }, [pendingDeleteId, imagensComUrls]);
+
+  // Navegação entre imagens dentro do modal — mesma mecânica da
+  // galeria (Tab, setas ←/→, setas flutuantes). Wrap-around: da
+  // última volta pra primeira e vice-versa. O escopo é a página
+  // atual do preview (`imagensComUrls`) — é o conjunto de imagens
+  // que o usuário está vendo no momento.
+  const findEditingIndex = useCallback(() => {
+    if (!editingImage) return -1;
+    return imagensComUrls.findIndex((img) => img.id === editingImage.id);
+  }, [editingImage, imagensComUrls]);
+
+  const handleEditModalPrev = useCallback(() => {
+    if (imagensComUrls.length < 2 || !editingImage) return;
+    const idx = findEditingIndex();
+    if (idx < 0) return;
+    const prev = (idx - 1 + imagensComUrls.length) % imagensComUrls.length;
+    setEditingImage(imagensComUrls[prev]);
+  }, [editingImage, findEditingIndex, imagensComUrls]);
+
+  const handleEditModalNext = useCallback(() => {
+    if (imagensComUrls.length < 2 || !editingImage) return;
+    const idx = findEditingIndex();
+    if (idx < 0) return;
+    const next = (idx + 1) % imagensComUrls.length;
+    setEditingImage(imagensComUrls[next]);
+  }, [editingImage, findEditingIndex, imagensComUrls]);
 
   const handleGerarPdfPagina = async () => {
     try {
@@ -1887,6 +2167,28 @@ export default function VisualizadorPdfLaudo() {
                     disabled
                     editing
                   />
+                  {/* Botão de lápis para abrir o EditImagemModal
+                      (mesma affordance da galeria). */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingImage(img);
+                    }}
+                    aria-label={
+                      isAvaria && !img.damageMarker
+                        ? "Marcar a região da avaria"
+                        : "Abrir imagem"
+                    }
+                    title={
+                      isAvaria && !img.damageMarker
+                        ? "Marcar a região da avaria"
+                        : "Abrir imagem"
+                    }
+                    className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <div
                   className="font-bold uppercase"
@@ -1980,12 +2282,26 @@ export default function VisualizadorPdfLaudo() {
             const legenda = (img.legenda || "").trim();
             return (
               <div key={img.id} className="contestacao-card">
-                <div className="contestacao-card-foto">
+                <div className="contestacao-card-foto" style={{ position: "relative" }}>
                   <img
                     src={img.url}
                     alt={legenda}
                     crossOrigin="anonymous"
                   />
+                  {/* Botão de lápis também na página de Contestação —
+                      mesmo overlay usado nas demais páginas do preview. */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingImage(img);
+                    }}
+                    aria-label="Abrir imagem"
+                    title="Abrir imagem"
+                    className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <div className="contestacao-card-legenda">{legenda}</div>
               </div>
@@ -2887,8 +3203,8 @@ export default function VisualizadorPdfLaudo() {
                   const isAvaria =
                     (img.categoria || "").trim().toUpperCase() === "AVARIA";
                   const wrapperClass = isAvaria
-                    ? "border-[3px] border-red-500"
-                    : "border border-gray-300";
+                    ? "group border-[3px] border-red-500"
+                    : "group border border-gray-300";
 
                   if (isModoCompacto) {
                     return (
@@ -2941,6 +3257,40 @@ export default function VisualizadorPdfLaudo() {
                             disabled
                             editing
                           />
+                          {/* Botão de lápis para abrir o EditImagemModal
+                              (mesma affordance da galeria). */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingImage(img);
+                            }}
+                            aria-label={
+                              isAvaria && !img.damageMarker
+                                ? "Marcar a região da avaria"
+                                : "Abrir imagem"
+                            }
+                            title={
+                              isAvaria && !img.damageMarker
+                                ? "Marcar a região da avaria"
+                                : "Abrir imagem"
+                            }
+                            className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <PhotoCardActionsOverlay
+                            img={img}
+                            isTouchOnly={!hoverSupportedRef.current}
+                            showActionsOnMobile={mobileActionsImageId === img.id}
+                            anyMobileActionsOpen={mobileActionsImageId !== null}
+                            onMobileActionsChange={setMobileActionsImageId}
+                            onToggleAvaria={handlePreviewToggleAvaria}
+                            onMarcarItem={handlePreviewMarcarItem}
+                            onDelete={handlePreviewAskDelete}
+                            loadingCategoriaChange={loadingCategoriaChange}
+                            loadingItemFlagChange={loadingItemFlagChange}
+                          />
                         </div>
                         <div
                           className="font-bold"
@@ -2975,8 +3325,8 @@ export default function VisualizadorPdfLaudo() {
 
                   const isEditing = editingId === img.id;
                   const detailedWrapperClass = isAvaria
-                    ? "border-[3px] border-red-500 mb-1"
-                    : "border border-gray-400 mb-1";
+                    ? "group border-[3px] border-red-500 mb-1"
+                    : "group border border-gray-400 mb-1";
 
                   return (
                     <div key={img.id}>
@@ -3015,6 +3365,41 @@ export default function VisualizadorPdfLaudo() {
                           }}
                           disabled
                           editing
+                        />
+                        {/* Botão de lápis para abrir o EditImagemModal
+                            (mesma affordance da galeria). stopPropagation
+                            impede que o clique propague para o wrapper. */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingImage(img);
+                          }}
+                          aria-label={
+                            isAvaria && !img.damageMarker
+                              ? "Marcar a região da avaria"
+                              : "Abrir imagem"
+                          }
+                          title={
+                            isAvaria && !img.damageMarker
+                              ? "Marcar a região da avaria"
+                              : "Abrir imagem"
+                          }
+                          className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <PhotoCardActionsOverlay
+                          img={img}
+                          isTouchOnly={!hoverSupportedRef.current}
+                          showActionsOnMobile={mobileActionsImageId === img.id}
+                          anyMobileActionsOpen={mobileActionsImageId !== null}
+                          onMobileActionsChange={setMobileActionsImageId}
+                          onToggleAvaria={handlePreviewToggleAvaria}
+                          onMarcarItem={handlePreviewMarcarItem}
+                          onDelete={handlePreviewAskDelete}
+                          loadingCategoriaChange={loadingCategoriaChange}
+                          loadingItemFlagChange={loadingItemFlagChange}
                         />
                       </div>
                       <div
@@ -3264,6 +3649,46 @@ export default function VisualizadorPdfLaudo() {
           </motion.div>
         </div>
       )}
+
+      {/* Modal compartilhado de edição — aberto pelo botão de lápis
+          em cada `<img>` do preview (galeria, apontamentos,
+          contestação). Componente único consumido também pela galeria.
+          Tab/←/→/setas flutuantes navegam entre as imagens da
+          página atual do preview (mesma UX do lightbox da galeria,
+          com wrap-around). */}
+      <EditImagemModal
+        open={!!editingImage}
+        imagem={editingImage}
+        onClose={handleEditModalClose}
+        onMarkerChange={handleEditModalMarkerChange}
+        onLegendaChange={handleEditModalLegendaChange}
+        onLegendaFlush={handleEditModalLegendaChange}
+        onPrev={
+          imagensComUrls.length > 1 ? handleEditModalPrev : undefined
+        }
+        onNext={
+          imagensComUrls.length > 1 ? handleEditModalNext : undefined
+        }
+        hasPrev={imagensComUrls.length > 1}
+        hasNext={imagensComUrls.length > 1}
+      />
+      {/* Confirmação obrigatória de exclusão — mesma UX da galeria.
+          Aberto por `handlePreviewAskDelete` (acionado pelo botão
+          "Excluir" no overlay de ações do preview). */}
+      <ConfirmModal
+        isOpen={pendingDeleteId !== null}
+        onClose={() => {
+          if (!deletingId) setPendingDeleteId(null);
+        }}
+        onConfirm={handleConfirmPreviewDelete}
+        title="Excluir imagem"
+        message="Tem certeza que deseja excluir esta imagem? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        variant="danger"
+        isLoading={deletingId !== null}
+        loadingLabel="Excluindo..."
+      />
     </div>
   );
 }
