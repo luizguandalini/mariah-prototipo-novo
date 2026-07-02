@@ -128,7 +128,7 @@ export default function Usuarios() {
   const handleDeletarUsuario = async (userId: string, nome: string) => {
     if (
       !window.confirm(
-        `Tem certeza que deseja deletar o usuário ${nome}? Esta ação não pode ser desfeita.`
+        `Tem certeza que deseja remover o usuário ${nome}? Os laudos, imagens e demais registros do usuário serão preservados e continuarão apontando para o cadastro original. O mesmo email pode ser usado em um novo cadastro depois.`
       )
     ) {
       return;
@@ -137,11 +137,23 @@ export default function Usuarios() {
     try {
       setLoading(true);
       await usersService.deletarUsuario(userId);
-      toast.success("Usuário deletado com sucesso!");
+      toast.success("Usuário removido com sucesso!");
       await carregarUsuarios();
     } catch (error: any) {
       console.error("Erro ao deletar usuário:", error);
-      toast.error(error.response?.data?.message || "Erro ao deletar usuário");
+      const msg =
+        error?.response?.data?.message || "Erro ao deletar usuário";
+      if (typeof msg === "string") {
+        if (msg.includes("próprio")) {
+          toast.error("Você não pode deletar seu próprio usuário.");
+        } else if (msg.includes("DEV")) {
+          toast.error("Não é permitido deletar um usuário DEV.");
+        } else {
+          toast.error(msg);
+        }
+      } else {
+        toast.error("Erro ao deletar usuário");
+      }
     } finally {
       setLoading(false);
     }
@@ -427,38 +439,39 @@ export default function Usuarios() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end items-center gap-2">
-                            {canEditRoleOf(actorRole, user.role as AnyRole) && (
-                              <select
-                                aria-label={`Alterar nível de acesso de ${user.nome}`}
-                                value={
-                                  pendingRoleSelections[user.id] ?? user.role
-                                }
-                                disabled={roleChangeInFlight}
-                                onChange={(e) =>
-                                  handleRoleSelectChange(
-                                    user,
-                                    e.target.value as AnyRole,
-                                  )
-                                }
-                                className="px-2 py-1.5 text-xs font-bold uppercase rounded-md bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] focus:ring-2 focus:ring-primary outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <option value={user.role as AnyRole}>
-                                  {user.role}
-                                </option>
-                                {allowedRoleTransitions(
-                                  actorRole,
-                                  user.role as AnyRole,
-                                ).map((target) => (
-                                  <option
-                                    key={target}
-                                    value={target}
-                                    className="text-[var(--text-primary)]"
-                                  >
-                                    {target}
+                            {canEditRoleOf(actorRole, user.role as AnyRole) &&
+                              !user.isSelf && (
+                                <select
+                                  aria-label={`Alterar nível de acesso de ${user.nome}`}
+                                  value={
+                                    pendingRoleSelections[user.id] ?? user.role
+                                  }
+                                  disabled={roleChangeInFlight}
+                                  onChange={(e) =>
+                                    handleRoleSelectChange(
+                                      user,
+                                      e.target.value as AnyRole,
+                                    )
+                                  }
+                                  className="px-2 py-1.5 text-xs font-bold uppercase rounded-md bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] focus:ring-2 focus:ring-primary outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <option value={user.role as AnyRole}>
+                                    {user.role}
                                   </option>
-                                ))}
-                              </select>
-                            )}
+                                  {allowedRoleTransitions(
+                                    actorRole,
+                                    user.role as AnyRole,
+                                  ).map((target) => (
+                                    <option
+                                      key={target}
+                                      value={target}
+                                      className="text-[var(--text-primary)]"
+                                    >
+                                      {target}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
 
                             {user.role !== "DEV" && user.role !== "ADMIN" && (
                               <Button
@@ -471,7 +484,7 @@ export default function Usuarios() {
                               </Button>
                             )}
 
-                            {currentUser?.role === "DEV" && user.role !== "DEV" && (
+                            {user.canDelete && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -538,34 +551,35 @@ export default function Usuarios() {
                           )}
                         </div>
 
-                        {canEditRoleOf(actorRole, user.role as AnyRole) && (
-                          <select
-                            aria-label={`Alterar nível de acesso de ${user.nome}`}
-                            value={
-                              pendingRoleSelections[user.id] ?? user.role
-                            }
-                            disabled={roleChangeInFlight}
-                            onChange={(e) =>
-                              handleRoleSelectChange(
-                                user,
-                                e.target.value as AnyRole,
-                              )
-                            }
-                            className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] focus:ring-2 focus:ring-primary outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <option value={user.role as AnyRole}>
-                              {user.role}
-                            </option>
-                            {allowedRoleTransitions(
-                              actorRole,
-                              user.role as AnyRole,
-                            ).map((target) => (
-                              <option key={target} value={target}>
-                                {target}
+                        {canEditRoleOf(actorRole, user.role as AnyRole) &&
+                          !user.isSelf && (
+                            <select
+                              aria-label={`Alterar nível de acesso de ${user.nome}`}
+                              value={
+                                pendingRoleSelections[user.id] ?? user.role
+                              }
+                              disabled={roleChangeInFlight}
+                              onChange={(e) =>
+                                handleRoleSelectChange(
+                                  user,
+                                  e.target.value as AnyRole,
+                                )
+                              }
+                              className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] focus:ring-2 focus:ring-primary outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value={user.role as AnyRole}>
+                                {user.role}
                               </option>
-                            ))}
-                          </select>
-                        )}
+                              {allowedRoleTransitions(
+                                actorRole,
+                                user.role as AnyRole,
+                              ).map((target) => (
+                                <option key={target} value={target}>
+                                  {target}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                       </div>
 
                       {user.role !== "DEV" && user.role !== "ADMIN" && (
@@ -579,7 +593,7 @@ export default function Usuarios() {
                         </Button>
                       )}
 
-                      {currentUser?.role === "DEV" && user.role !== "DEV" && (
+                      {user.canDelete && (
                         <Button
                           variant="outline"
                           size="sm"
