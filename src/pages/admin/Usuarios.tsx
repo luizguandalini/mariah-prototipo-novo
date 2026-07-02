@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import Button from "../../components/ui/Button";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import { usersService } from "../../services/users";
 import { User } from "../../types/auth";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
+import {
+  AnyRole,
+  EditableRole,
+  allowedRoleTransitions,
+  canEditRoleOf,
+} from "../../utils/role-policy";
 
 export default function Usuarios() {
   const { user: currentUser } = useAuth();
@@ -31,6 +38,15 @@ export default function Usuarios() {
     senha: "",
     role: "USUARIO" as "ADMIN" | "USUARIO",
   });
+
+  // Role-edit state
+  const [roleChangeUser, setRoleChangeUser] = useState<User | null>(null);
+  const [roleChangeTarget, setRoleChangeTarget] =
+    useState<EditableRole | null>(null);
+  const [roleChangeInFlight, setRoleChangeInFlight] = useState(false);
+  const [pendingRoleSelections, setPendingRoleSelections] = useState<
+    Record<string, AnyRole>
+  >({});
 
   const limit = 10;
 
@@ -173,6 +189,71 @@ export default function Usuarios() {
       }
     }
   };
+
+  /**
+   * Stage a role change for confirmation. The actual PATCH is fired only
+   * after the user confirms in the modal (see handleConfirmRoleChange).
+   */
+  const handleRoleSelectChange = (user: User, newRole: AnyRole) => {
+    if (newRole === user.role) return;
+    setPendingRoleSelections((prev) => ({ ...prev, [user.id]: newRole }));
+    if (newRole === "DEV") return; // DEV never allowed; ignore visually
+    setRoleChangeUser(user);
+    setRoleChangeTarget(newRole as EditableRole);
+  };
+
+  const handleConfirmRoleChange = async () => {
+    if (!roleChangeUser || !roleChangeTarget) return;
+    setRoleChangeInFlight(true);
+    try {
+      await usersService.changeRole(roleChangeUser.id, roleChangeTarget);
+      toast.success(
+        roleChangeTarget === "ADMIN"
+          ? `Usuário ${roleChangeUser.nome} promovido a ADMIN.`
+          : `Usuário ${roleChangeUser.nome} rebaixado para USUARIO.`,
+      );
+      setPendingRoleSelections((prev) => {
+        const next = { ...prev };
+        delete next[roleChangeUser.id];
+        return next;
+      });
+      await carregarUsuarios();
+    } catch (error: any) {
+      console.error("Erro ao alterar role:", error);
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Não foi possível alterar o nível de acesso.";
+      toast.error(
+        typeof msg === "string" ? msg : "Não foi possível alterar o nível de acesso.",
+      );
+      // Reverte a seleção pendente
+      setPendingRoleSelections((prev) => {
+        const next = { ...prev };
+        delete next[roleChangeUser.id];
+        return next;
+      });
+    } finally {
+      setRoleChangeInFlight(false);
+      setRoleChangeUser(null);
+      setRoleChangeTarget(null);
+    }
+  };
+
+  const cancelRoleChange = () => {
+    if (roleChangeInFlight) return;
+    if (roleChangeUser) {
+      setPendingRoleSelections((prev) => {
+        const next = { ...prev };
+        delete next[roleChangeUser.id];
+        return next;
+      });
+    }
+    setRoleChangeUser(null);
+    setRoleChangeTarget(null);
+  };
+
+  const actorRole: AnyRole = (currentUser?.role as AnyRole) ?? "USUARIO";
 
   return (
     <DashboardLayout>
@@ -345,7 +426,40 @@ export default function Usuarios() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end items-center gap-2">
+                            {canEditRoleOf(actorRole, user.role as AnyRole) && (
+                              <select
+                                aria-label={`Alterar nível de acesso de ${user.nome}`}
+                                value={
+                                  pendingRoleSelections[user.id] ?? user.role
+                                }
+                                disabled={roleChangeInFlight}
+                                onChange={(e) =>
+                                  handleRoleSelectChange(
+                                    user,
+                                    e.target.value as AnyRole,
+                                  )
+                                }
+                                className="px-2 py-1.5 text-xs font-bold uppercase rounded-md bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] focus:ring-2 focus:ring-primary outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <option value={user.role as AnyRole}>
+                                  {user.role}
+                                </option>
+                                {allowedRoleTransitions(
+                                  actorRole,
+                                  user.role as AnyRole,
+                                ).map((target) => (
+                                  <option
+                                    key={target}
+                                    value={target}
+                                    className="text-[var(--text-primary)]"
+                                  >
+                                    {target}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+
                             {user.role !== "DEV" && user.role !== "ADMIN" && (
                               <Button
                                 variant="outline"
@@ -423,8 +537,37 @@ export default function Usuarios() {
                             <span>{user.quantidadeImagens} imgs</span>
                           )}
                         </div>
+
+                        {canEditRoleOf(actorRole, user.role as AnyRole) && (
+                          <select
+                            aria-label={`Alterar nível de acesso de ${user.nome}`}
+                            value={
+                              pendingRoleSelections[user.id] ?? user.role
+                            }
+                            disabled={roleChangeInFlight}
+                            onChange={(e) =>
+                              handleRoleSelectChange(
+                                user,
+                                e.target.value as AnyRole,
+                              )
+                            }
+                            className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] focus:ring-2 focus:ring-primary outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <option value={user.role as AnyRole}>
+                              {user.role}
+                            </option>
+                            {allowedRoleTransitions(
+                              actorRole,
+                              user.role as AnyRole,
+                            ).map((target) => (
+                              <option key={target} value={target}>
+                                {target}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
-                      
+
                       {user.role !== "DEV" && user.role !== "ADMIN" && (
                         <Button
                           variant="outline"
@@ -668,6 +811,31 @@ export default function Usuarios() {
             </motion.div>
           </div>
         )}
+
+        {/* Confirmação de mudança de role */}
+        <ConfirmModal
+          isOpen={!!roleChangeUser && !!roleChangeTarget}
+          onClose={cancelRoleChange}
+          onConfirm={handleConfirmRoleChange}
+          title={
+            roleChangeTarget === "ADMIN"
+              ? "Promover usuário a ADMIN?"
+              : "Rebaixar usuário para USUARIO?"
+          }
+          message={
+            roleChangeUser && roleChangeTarget
+              ? `O nível de acesso de ${roleChangeUser.nome} será alterado de ${roleChangeUser.role} para ${roleChangeTarget}. O saldo de imagens do usuário será preservado. Esta ação fica registrada no log do sistema.`
+              : ""
+          }
+          confirmLabel={
+            roleChangeTarget === "ADMIN" ? "Promover" : "Rebaixar"
+          }
+          variant={roleChangeTarget === "ADMIN" ? "primary" : "danger"}
+          isLoading={roleChangeInFlight}
+          loadingLabel="Aplicando..."
+          closeOnConfirm={false}
+          disableClose={roleChangeInFlight}
+        />
       </div>
     </DashboardLayout>
   );

@@ -5,6 +5,9 @@
 import { api } from "./api";
 import { User } from "../types/auth";
 
+export type EditableRole = "ADMIN" | "USUARIO";
+export type AnyRole = "DEV" | "ADMIN" | "USUARIO";
+
 export interface UsuariosResponse {
   data: User[];
   total: number;
@@ -87,6 +90,15 @@ class UsersService {
    */
   async addQuantidadeImagens(id: string, quantidade: number): Promise<User> {
     return api.put<User>(`/users/${id}/imagens/add/${quantidade}`, {}, true);
+  }
+
+  /**
+   * Alterar o role (nível de acesso) de um usuário.
+   * Apenas ADMIN/DEV podem chamar; apenas transições USUARIO ↔ ADMIN
+   * são aceitas. O contador de imagens é preservado pelo backend.
+   */
+  async changeRole(id: string, role: EditableRole): Promise<User> {
+    return api.patch<User>(`/users/${id}/role`, { role }, true);
   }
 
   /**
