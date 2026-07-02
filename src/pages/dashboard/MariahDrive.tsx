@@ -12,6 +12,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Loader2,
   ImageOff,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "../../components/layout/DashboardLayout";
@@ -20,6 +21,7 @@ import {
   laudosService,
   type AmbienteWebInfo,
   type ImagemLaudo,
+  type DriveViewer,
 } from "../../services/laudos";
 import { downloadService, type DownloadJobResponse } from "../../services/download";
 import { useDownloadSocket } from "../../hooks/useDownloadSocket";
@@ -54,6 +56,12 @@ export default function MariahDrive() {
   const [ambientes, setAmbientes] = useState<AmbienteWebInfo[]>([]);
   const [loadingAmbientes, setLoadingAmbientes] = useState(true);
   const [erroAmbientes, setErroAmbientes] = useState<string | null>(null);
+  // Permissões do chamador (vem do backend na resposta). `null` enquanto
+  // carrega — nesse caso tratamos como "sem permissões" para não exibir
+  // botões de ação prematuramente. A trava REAL de escrita é server-side
+  // — `viewer` é só a sinalização para a UI.
+  const [viewer, setViewer] = useState<DriveViewer | null>(null);
+  const isReadonly = !!viewer && !viewer.isOwner && !viewer.isAdmin;
 
   // Nível 2: fotos do ambiente aberto
   const [ambienteAberto, setAmbienteAberto] = useState<AmbienteWebInfo | null>(
@@ -88,6 +96,10 @@ export default function MariahDrive() {
   // ===== Downloads =====
   const handleDownloadFoto = async (img: ImagemLaudo) => {
     if (baixandoFotos.has(img.id)) return;
+    if (!viewer?.canDownloadFoto) {
+      toast.error("Você está em modo visualização. O download requer ser dono do laudo.");
+      return;
+    }
     setBaixandoFotos((prev) => new Set(prev).add(img.id));
     try {
       await downloadService.downloadImagem(img.id);
@@ -152,6 +164,10 @@ export default function MariahDrive() {
 
   const handleDownloadAmbiente = (nomeAmbiente: string) => {
     if (!id) return;
+    if (!viewer?.canRequestAmbienteZip) {
+      toast.error("Você está em modo visualização. O download do ZIP requer ser dono do laudo.");
+      return;
+    }
     baixarZip(
       `ambiente:${nomeAmbiente}`,
       () => downloadService.requestAmbienteZip(id, nomeAmbiente),
@@ -161,11 +177,23 @@ export default function MariahDrive() {
 
   const handleDownloadLaudo = () => {
     if (!id) return;
+    if (!viewer?.canRequestLaudoZip) {
+      toast.error("Você está em modo visualização. O download do laudo requer ser dono.");
+      return;
+    }
     baixarZip("laudo", () => downloadService.requestLaudoZip(id), "Gerando ZIP do laudo...");
   };
 
-  // Volta para a página de origem (laudos do usuário ou admin) ou fallback.
+  // Para visitantes anônimos (que chegaram via QR/PDF), não há
+  // página de origem autenticada para voltar. Levamos para a home
+  // pública (landing) em vez de tentar ir para `/dashboard/laudos`
+  // (que os redirecionaria para o login e seria UX ruim).
+  const isAnonymous = !user;
   const voltarOrigem = () => {
+    if (isAnonymous) {
+      navigate("/");
+      return;
+    }
     const from = (location.state as { from?: string } | null)?.from;
     navigate(from || "/dashboard/laudos");
   };
@@ -184,6 +212,7 @@ export default function MariahDrive() {
           (a, b) => a.ordem - b.ordem,
         );
         setAmbientes(ordenados);
+        if (res.viewer) setViewer(res.viewer);
       } catch (err) {
         console.error(err);
         if (ativo) setErroAmbientes("Não foi possível carregar as pastas.");
@@ -217,6 +246,7 @@ export default function MariahDrive() {
         });
         setHasMore(res.page < res.lastPage);
         setPaginaAtual(res.page);
+        if (res.viewer) setViewer(res.viewer);
       } catch (err) {
         console.error(err);
         toast.error("Não foi possível carregar as imagens.");
@@ -275,6 +305,11 @@ export default function MariahDrive() {
   const handleConfirmDelete = async () => {
     const imagem = confirmDelete.imagem;
     if (!imagem) return;
+    if (!viewer?.canDelete) {
+      toast.error("Você está em modo visualização. A exclusão requer ser dono do laudo.");
+      setConfirmDelete({ isOpen: false, imagem: null });
+      return;
+    }
     try {
       setExcluindo(true);
       await laudosService.deleteImagem(imagem.id);
@@ -319,10 +354,14 @@ export default function MariahDrive() {
   const nomeFoto = (img: ImagemLaudo, index: number) =>
     (img.legenda && img.legenda.trim()) || `Foto ${index + 1}`;
 
-  return (
-    <DashboardLayout>
-      {/* Container estilo Google Drive: fundo claro, cantos arredondados */}
-      <div className="min-h-[calc(100vh-7rem)] rounded-2xl bg-white text-[#1f1f1f] shadow-sm border border-[#e0e0e0] overflow-hidden">
+  // Para visitantes anônimos (chegam via QR/PDF) NÃO embrulhamos
+  // em <DashboardLayout>: a sidebar, o header com nome do usuário
+  // e o botão "Sair" ficam escondidos. O conteúdo é o mesmo, só
+  // o chrome muda. O `voltarOrigem` acima também já desvia para
+  // a home pública quando o usuário é anônimo.
+  const pageContent = (
+    <>
+      <div className="rounded-2xl bg-white text-[#1f1f1f] shadow-sm border border-[#e0e0e0] overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-[#e0e0e0]">
           <button
@@ -339,7 +378,7 @@ export default function MariahDrive() {
         </div>
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-1 px-6 py-3 text-[#5f6368]">
+        <div className="flex items-center gap-2 px-6 py-3 text-[#5f6368]">
           <button
             onClick={() => setAmbienteAberto(null)}
             className={`text-xl font-normal hover:underline ${
@@ -355,6 +394,18 @@ export default function MariahDrive() {
                 {ambienteAberto.nomeAmbiente}
               </span>
             </>
+          )}
+          {/* Badge discreto quando o chamador não é dono nem admin/dev
+              (anônimo OU logado não-dono). Mostra que está em modo
+              somente leitura. A trava real de escrita é server-side. */}
+          {isReadonly && (
+            <span
+              className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#e8f0fe] text-[#1967d2]"
+              title="Você está vendo este drive em modo visualização. As ações de edição estão desabilitadas."
+            >
+              <Eye className="w-3.5 h-3.5" />
+              Modo visualização
+            </span>
           )}
         </div>
 
@@ -380,19 +431,21 @@ export default function MariahDrive() {
                 <>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium text-[#5f6368]">Pastas</p>
-                    <button
-                      onClick={handleDownloadLaudo}
-                      disabled={gerandoZips["laudo"]}
-                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
-                      title="Baixar todas as fotos do laudo (.zip)"
-                    >
-                      {gerandoZips["laudo"] ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Download className="w-4 h-4" />
-                      )}
-                      {gerandoZips["laudo"] ? "Gerando..." : "Baixar tudo"}
-                    </button>
+                    {viewer?.canRequestLaudoZip && (
+                      <button
+                        onClick={handleDownloadLaudo}
+                        disabled={gerandoZips["laudo"]}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                        title="Baixar todas as fotos do laudo (.zip)"
+                      >
+                        {gerandoZips["laudo"] ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                        {gerandoZips["laudo"] ? "Gerando..." : "Baixar tudo"}
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     {ambientes.map((amb) => {
@@ -421,21 +474,23 @@ export default function MariahDrive() {
                               </span>
                             </span>
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownloadAmbiente(amb.nomeAmbiente);
-                            }}
-                            disabled={baixandoAmb}
-                            className="shrink-0 p-1.5 rounded-full text-[#5f6368] hover:bg-white/80 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity disabled:opacity-100"
-                            title={`Baixar "${amb.nomeAmbiente}" (.zip)`}
-                          >
-                            {baixandoAmb ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4" />
-                            )}
-                          </button>
+                          {viewer?.canRequestAmbienteZip && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadAmbiente(amb.nomeAmbiente);
+                              }}
+                              disabled={baixandoAmb}
+                              className="shrink-0 p-1.5 rounded-full text-[#5f6368] hover:bg-white/80 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity disabled:opacity-100"
+                              title={`Baixar "${amb.nomeAmbiente}" (.zip)`}
+                            >
+                              {baixandoAmb ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       );
                     })}
@@ -462,21 +517,23 @@ export default function MariahDrive() {
                 <>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium text-[#5f6368]">Arquivos</p>
-                    <button
-                      onClick={() => handleDownloadAmbiente(ambienteAberto.nomeAmbiente)}
-                      disabled={!!gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]}
-                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
-                      title={`Baixar "${ambienteAberto.nomeAmbiente}" (.zip)`}
-                    >
-                      {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`] ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Download className="w-4 h-4" />
-                      )}
-                      {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]
-                        ? "Gerando..."
-                        : "Baixar pasta"}
-                    </button>
+                    {viewer?.canRequestAmbienteZip && (
+                      <button
+                        onClick={() => handleDownloadAmbiente(ambienteAberto.nomeAmbiente)}
+                        disabled={!!gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-[#dadce0] text-sm font-medium text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                        title={`Baixar "${ambienteAberto.nomeAmbiente}" (.zip)`}
+                      >
+                        {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`] ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                        {gerandoZips[`ambiente:${ambienteAberto.nomeAmbiente}`]
+                          ? "Gerando..."
+                          : "Baixar pasta"}
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {imagens.map((img, index) => (
@@ -510,56 +567,64 @@ export default function MariahDrive() {
                           </span>
                         </div>
 
-                        {/* Botão de menu "⋮" (aparece no hover) */}
-                        <div className="absolute top-2 right-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMenuAbertoId(
-                                menuAbertoId === img.id ? null : img.id,
-                              );
-                            }}
-                            className="p-1.5 rounded-full bg-white/90 text-[#5f6368] shadow-sm opacity-0 group-hover:opacity-100 hover:bg-white transition-opacity"
-                            title="Mais ações"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          {menuAbertoId === img.id && (
-                            <div
-                              className="absolute right-0 mt-1 w-40 rounded-lg bg-white shadow-lg border border-[#e0e0e0] py-1 z-20"
-                              onClick={(e) => e.stopPropagation()}
+                        {/* Botão de menu "⋮" (aparece no hover) — só
+                            renderiza se o chamador tem pelo menos uma
+                            ação permitida (Baixar foto ou Remover). */}
+                        {(viewer?.canDelete || viewer?.canDownloadFoto) && (
+                          <div className="absolute top-2 right-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuAbertoId(
+                                  menuAbertoId === img.id ? null : img.id,
+                                );
+                              }}
+                              className="p-1.5 rounded-full bg-white/90 text-[#5f6368] shadow-sm opacity-0 group-hover:opacity-100 hover:bg-white transition-opacity"
+                              title="Mais ações"
                             >
-                              <button
-                                onClick={() => {
-                                  setMenuAbertoId(null);
-                                  handleDownloadFoto(img);
-                                }}
-                                disabled={baixandoFotos.has(img.id)}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            {menuAbertoId === img.id && (
+                              <div
+                                className="absolute right-0 mt-1 w-40 rounded-lg bg-white shadow-lg border border-[#e0e0e0] py-1 z-20"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                {baixandoFotos.has(img.id) ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Download className="w-4 h-4" />
+                                {viewer?.canDownloadFoto && (
+                                  <button
+                                    onClick={() => {
+                                      setMenuAbertoId(null);
+                                      handleDownloadFoto(img);
+                                    }}
+                                    disabled={baixandoFotos.has(img.id)}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#1f1f1f] hover:bg-[#f1f3f4] transition-colors disabled:opacity-60"
+                                  >
+                                    {baixandoFotos.has(img.id) ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Download className="w-4 h-4" />
+                                    )}
+                                    Baixar
+                                  </button>
                                 )}
-                                Baixar
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setMenuAbertoId(null);
-                                  setConfirmDelete({
-                                    isOpen: true,
-                                    imagem: img,
-                                  });
-                                }}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Remover
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                                {viewer?.canDelete && (
+                                  <button
+                                    onClick={() => {
+                                      setMenuAbertoId(null);
+                                      setConfirmDelete({
+                                        isOpen: true,
+                                        imagem: img,
+                                      });
+                                    }}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Remover
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -664,6 +729,20 @@ export default function MariahDrive() {
         loadingLabel="Removendo..."
         closeOnConfirm={false}
       />
+    </>
+  );
+
+  if (isAnonymous) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] flex justify-center pt-6 px-3 md:px-6">
+        <div className="w-full max-w-6xl">{pageContent}</div>
+      </div>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="min-h-[calc(100vh-7rem)]">{pageContent}</div>
     </DashboardLayout>
   );
 }

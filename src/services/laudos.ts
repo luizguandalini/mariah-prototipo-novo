@@ -95,6 +95,29 @@ export interface AmbienteWebInfo {
   totalImagens: number;
 }
 
+/**
+ * Permissões do chamador sobre um laudo, embutidas nas respostas das
+ * DUAS leituras abertas da drive view
+ * (`GET /laudos/:id/ambientes-web` e
+ * `GET /uploads/laudo/:laudoId/ambiente/:ambiente/imagens`).
+ *
+ * Backend: change `add-drive-readonly-mode-for-non-owners`.
+ * Quando `can*` é `false`, o chamador está em modo visualização
+ * (anônimo ou logado não-dono não-admin) e a UI deve esconder ou
+ * desabilitar os botões correspondentes. A trava REAL de escrita
+ * continua server-side — `viewer` é uma sinalização, não a única
+ * linha de defesa.
+ */
+export interface DriveViewer {
+  isOwner: boolean;
+  isAdmin: boolean;
+  canWrite: boolean;
+  canDelete: boolean;
+  canDownloadFoto: boolean;
+  canRequestAmbienteZip: boolean;
+  canRequestLaudoZip: boolean;
+}
+
 export type EstrategiaConflitoAmbienteWeb = "erro" | "deslocar";
 
 export interface PaginatedResponse<T> {
@@ -497,13 +520,16 @@ class LaudosService {
   }
 
   /**
-   * Obtém ambientes web do laudo (do JSON + contagem de imagens)
+   * Obtém ambientes web do laudo (do JSON + contagem de imagens).
+   * Aberta para anônimos — o backend devolve `viewer` com permissões
+   * plenas ou todas `false` conforme o chamador.
    */
   async getAmbientesWeb(laudoId: string): Promise<{
     ambientes: AmbienteWebInfo[];
     tipoUso?: string;
     tipoImovel?: string;
     usarNomeArquivoComoLegenda: boolean;
+    viewer: DriveViewer;
   }> {
     return api.get(`/laudos/${laudoId}/ambientes-web`, true);
   }
@@ -573,14 +599,15 @@ class LaudosService {
   }
 
   /**
-   * Obtém as imagens de um ambiente específico (paginado)
+   * Obtém as imagens de um ambiente específico (paginado).
+   * Aberta para anônimos — `viewer` no payload controla ações.
    */
   async getImagensByAmbiente(
     laudoId: string,
     ambiente: string,
     page: number = 1,
     limit: number = 20,
-  ): Promise<PaginatedResponse<ImagemLaudo>> {
+  ): Promise<PaginatedResponse<ImagemLaudo> & { viewer: DriveViewer }> {
     return api.get(
       `/uploads/laudo/${laudoId}/ambiente/${encodeURIComponent(
         ambiente,

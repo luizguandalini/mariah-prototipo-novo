@@ -57,8 +57,12 @@ function App() {
             element={<ProtectedRoute><GaleriaImagens /></ProtectedRoute>}
           />
           <Route
+            // Rota liberada: a Mariah Drive aceita visitantes anônimos
+            // (via link do QR/PDF) em modo visualização. O backend
+            // (OptionalJwtAuthGuard + viewer no payload) controla o que
+            // cada chamador pode fazer.
             path="/dashboard/laudos/:id/drive"
-            element={<ProtectedRoute><MariahDrive /></ProtectedRoute>}
+            element={<MariahDrive />}
           />
           <Route
             path="/dashboard/laudos/:id/pdf"

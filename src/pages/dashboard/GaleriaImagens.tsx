@@ -1430,13 +1430,16 @@ export default function GaleriaImagens() {
    *   re-arrastar para forçar nova tentativa.
    */
   const handleMarkerChange = useCallback(
-    async (imgId: string, marker: DamageMarker) => {
+    async (imgId: string, marker: DamageMarker | null) => {
       // Atualização otimista local: o overlay já está visualmente na
-      // posição escolhida, então refletimos no estado da galeria
-      // imediatamente para o card refletir.
+      // posição escolhida (ou já foi removido, quando marker === null),
+      // então refletimos no estado da galeria imediatamente para o
+      // card refletir.
       setImagens((prev) =>
         prev.map((img) =>
-          img.id === imgId ? { ...img, damageMarker: marker } : img,
+          img.id === imgId
+            ? { ...img, damageMarker: marker ?? null }
+            : img,
         ),
       );
       try {
