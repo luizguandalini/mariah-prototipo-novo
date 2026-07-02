@@ -15,11 +15,12 @@ import { motion } from "framer-motion";
 import Button from "../../components/ui/Button";
 import { DamageMarkerOverlay } from "../../components/laudo/DamageMarkerOverlay";
 import { QRCodeSVG } from "qrcode.react";
-import { Save, Check, Loader2, Type, X } from "lucide-react";
+import { Save, Check, Loader2, Type, X, Pencil } from "lucide-react";
 import LogoCapaEditavel, {
   LogoCapaValue,
 } from "../../components/laudo/LogoCapaEditavel";
 import RodapeEditor from "../../components/laudo/RodapeEditor";
+import EditImagemModal from "../../components/laudo/EditImagemModal";
 
 // Função auxiliar para normalizar nomes de seções (cópia simplificada de LaudoDetalhes)
 const normalizeSectionName = (name: string): string => {
@@ -415,6 +416,12 @@ export default function VisualizadorPdfLaudo() {
     "Estamos processando as imagens e organizando o laudo completo..."
   );
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Imagem selecionada para edição via `EditImagemModal`. Diferente
+  // do `editingId` acima (que é o modo inline de legenda deste preview
+  // — clicar na imagem e editar a legenda diretamente na grade):
+  // `editingImage` é o objeto que alimenta o modal compartilhado com
+  // a galeria, aberto pelo botão de lápis.
+  const [editingImage, setEditingImage] = useState<any | null>(null);
   const wasTriggeredRef = useRef(false);
   const isConfigLoadedRef = useRef(false);
   // Mapa de `<img>` no preview (galeria + apontamentos). STATE
@@ -1029,6 +1036,90 @@ export default function VisualizadorPdfLaudo() {
       console.error(error);
     }
   };
+
+  // === Handlers do `EditImagemModal` (botão de lápis no PDF preview) ===
+  // Persistência do marker de avaria arrastado no modal. Atualização
+  // otimista local (o modal já reflete visualmente a nova posição);
+  // se o backend falhar, mantém o local e loga — o usuário pode
+  // re-arrastar para forçar nova tentativa.
+  const handleEditModalMarkerChange = useCallback(
+    async (imagemId: string, marker: { x: number; y: number; r: number } | null) => {
+      setImagensComUrls((prev) =>
+        prev.map((img) =>
+          img.id === imagemId ? { ...img, damageMarker: marker } : img,
+        ),
+      );
+      setEditingImage((prev: any) =>
+        prev && prev.id === imagemId
+          ? { ...prev, damageMarker: marker }
+          : prev,
+      );
+      try {
+        await laudosService.updateImagemMetadata(imagemId, {
+          damageMarker: marker,
+        } as any);
+      } catch (err) {
+        console.error(
+          "[VisualizadorPdfLaudo] Falha ao persistir marcador de avaria:",
+          err,
+        );
+      }
+    },
+    [],
+  );
+
+  // Persistência da legenda editada no modal. Mesmo padrão da galeria:
+  // atualização otimista + PATCH; o debounce fica dentro do modal.
+  const handleEditModalLegendaChange = useCallback(
+    async (imagemId: string, novaLegenda: string) => {
+      setImagensComUrls((prev) =>
+        prev.map((img) =>
+          img.id === imagemId ? { ...img, legenda: novaLegenda } : img,
+        ),
+      );
+      setEditingImage((prev: any) =>
+        prev && prev.id === imagemId
+          ? { ...prev, legenda: novaLegenda }
+          : prev,
+      );
+      try {
+        await laudosService.updateLegenda(imagemId, novaLegenda);
+      } catch (err) {
+        toast.error("Erro ao salvar legenda");
+      }
+    },
+    [],
+  );
+
+  const handleEditModalClose = useCallback(() => {
+    setEditingImage(null);
+  }, []);
+
+  // Navegação entre imagens dentro do modal — mesma mecânica da
+  // galeria (Tab, setas ←/→, setas flutuantes). Wrap-around: da
+  // última volta pra primeira e vice-versa. O escopo é a página
+  // atual do preview (`imagensComUrls`) — é o conjunto de imagens
+  // que o usuário está vendo no momento.
+  const findEditingIndex = useCallback(() => {
+    if (!editingImage) return -1;
+    return imagensComUrls.findIndex((img) => img.id === editingImage.id);
+  }, [editingImage, imagensComUrls]);
+
+  const handleEditModalPrev = useCallback(() => {
+    if (imagensComUrls.length < 2 || !editingImage) return;
+    const idx = findEditingIndex();
+    if (idx < 0) return;
+    const prev = (idx - 1 + imagensComUrls.length) % imagensComUrls.length;
+    setEditingImage(imagensComUrls[prev]);
+  }, [editingImage, findEditingIndex, imagensComUrls]);
+
+  const handleEditModalNext = useCallback(() => {
+    if (imagensComUrls.length < 2 || !editingImage) return;
+    const idx = findEditingIndex();
+    if (idx < 0) return;
+    const next = (idx + 1) % imagensComUrls.length;
+    setEditingImage(imagensComUrls[next]);
+  }, [editingImage, findEditingIndex, imagensComUrls]);
 
   const handleGerarPdfPagina = async () => {
     try {
@@ -1887,6 +1978,28 @@ export default function VisualizadorPdfLaudo() {
                     disabled
                     editing
                   />
+                  {/* Botão de lápis para abrir o EditImagemModal
+                      (mesma affordance da galeria). */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingImage(img);
+                    }}
+                    aria-label={
+                      isAvaria && !img.damageMarker
+                        ? "Marcar a região da avaria"
+                        : "Abrir imagem"
+                    }
+                    title={
+                      isAvaria && !img.damageMarker
+                        ? "Marcar a região da avaria"
+                        : "Abrir imagem"
+                    }
+                    className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <div
                   className="font-bold uppercase"
@@ -1980,12 +2093,26 @@ export default function VisualizadorPdfLaudo() {
             const legenda = (img.legenda || "").trim();
             return (
               <div key={img.id} className="contestacao-card">
-                <div className="contestacao-card-foto">
+                <div className="contestacao-card-foto" style={{ position: "relative" }}>
                   <img
                     src={img.url}
                     alt={legenda}
                     crossOrigin="anonymous"
                   />
+                  {/* Botão de lápis também na página de Contestação —
+                      mesmo overlay usado nas demais páginas do preview. */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingImage(img);
+                    }}
+                    aria-label="Abrir imagem"
+                    title="Abrir imagem"
+                    className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <div className="contestacao-card-legenda">{legenda}</div>
               </div>
@@ -2941,6 +3068,28 @@ export default function VisualizadorPdfLaudo() {
                             disabled
                             editing
                           />
+                          {/* Botão de lápis para abrir o EditImagemModal
+                              (mesma affordance da galeria). */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingImage(img);
+                            }}
+                            aria-label={
+                              isAvaria && !img.damageMarker
+                                ? "Marcar a região da avaria"
+                                : "Abrir imagem"
+                            }
+                            title={
+                              isAvaria && !img.damageMarker
+                                ? "Marcar a região da avaria"
+                                : "Abrir imagem"
+                            }
+                            className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                         <div
                           className="font-bold"
@@ -3016,6 +3165,29 @@ export default function VisualizadorPdfLaudo() {
                           disabled
                           editing
                         />
+                        {/* Botão de lápis para abrir o EditImagemModal
+                            (mesma affordance da galeria). stopPropagation
+                            impede que o clique propague para o wrapper. */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingImage(img);
+                          }}
+                          aria-label={
+                            isAvaria && !img.damageMarker
+                              ? "Marcar a região da avaria"
+                              : "Abrir imagem"
+                          }
+                          title={
+                            isAvaria && !img.damageMarker
+                              ? "Marcar a região da avaria"
+                              : "Abrir imagem"
+                          }
+                          className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/55 hover:bg-black/70 border border-white/25 text-white shadow-md backdrop-blur-sm transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                       <div
                         className="font-bold uppercase"
@@ -3264,6 +3436,29 @@ export default function VisualizadorPdfLaudo() {
           </motion.div>
         </div>
       )}
+
+      {/* Modal compartilhado de edição — aberto pelo botão de lápis
+          em cada `<img>` do preview (galeria, apontamentos,
+          contestação). Componente único consumido também pela galeria.
+          Tab/←/→/setas flutuantes navegam entre as imagens da
+          página atual do preview (mesma UX do lightbox da galeria,
+          com wrap-around). */}
+      <EditImagemModal
+        open={!!editingImage}
+        imagem={editingImage}
+        onClose={handleEditModalClose}
+        onMarkerChange={handleEditModalMarkerChange}
+        onLegendaChange={handleEditModalLegendaChange}
+        onLegendaFlush={handleEditModalLegendaChange}
+        onPrev={
+          imagensComUrls.length > 1 ? handleEditModalPrev : undefined
+        }
+        onNext={
+          imagensComUrls.length > 1 ? handleEditModalNext : undefined
+        }
+        hasPrev={imagensComUrls.length > 1}
+        hasNext={imagensComUrls.length > 1}
+      />
     </div>
   );
 }

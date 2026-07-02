@@ -53,6 +53,7 @@ import {
   type DamageMarker,
 } from "../../services/laudos";
 import { DamageMarkerOverlay } from "../../components/laudo/DamageMarkerOverlay";
+import EditImagemModal from "../../components/laudo/EditImagemModal";
 import { ambientesService } from "../../services/ambientes";
 import { queueService } from "../../services/queue";
 import { configService } from "../../services/config";
@@ -799,28 +800,12 @@ export default function GaleriaImagens() {
   }, []);
 
   // === Estado do Lightbox (visualização expandida) ===
+  // O modal agora vive em `EditImagemModal` (compartilhado com o
+  // preview de PDF). A galeria só precisa saber QUAL imagem está
+  // aberta; estado de caption/marker/erros/scroll-lock é interno
+  // ao modal.
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [lightboxLegenda, setLightboxLegenda] = useState("");
-  const [lightboxLegendaSalva, setLightboxLegendaSalva] = useState("");
-  const [lightboxSaving, setLightboxSaving] = useState(false);
-  const [lightboxLegendaErro, setLightboxLegendaErro] = useState(false);
-  const [lightboxImageLoading, setLightboxImageLoading] = useState(false);
-  const lightboxRef = useRef<HTMLDivElement | null>(null);
-  // Ref do `<img>` do lightbox, usada pelo `DamageMarkerOverlay` para
-  // medir a área renderizada da foto (que pode ter barras pretas nos
-  // lados por causa de `object-contain`).
-  const lightboxImgRef = useRef<HTMLImageElement | null>(null);
-  const lightboxLegendaInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const lightboxSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  // ID da última requisição de salvamento — respostas de chamadas anteriores
-  // são ignoradas para evitar race conditions quando o usuário digita rápido.
-  const lightboxSaveRequestIdRef = useRef(0);
-  // Versão da legenda local — incrementa a cada flush (navegação/fechar) para
-  // distinguir "salvou essa exata string" e não confundir o indicador.
-  const lightboxLegendaVersaoRef = useRef(0);
 
   // === Contar imagens não identificadas ===
   const totalImagensSemItem = imagens.filter((img) =>
@@ -1497,192 +1482,63 @@ export default function GaleriaImagens() {
   };
 
   // ========== LIGHTBOX (visualização expandida) ==========
-  const LEGENDA_MAX = 200;
-  const LEGENDA_DEBOUNCE_MS = 700;
+  // `LEGENDA_MAX` e `LEGENDA_DEBOUNCE_MS` ficaram dentro do componente
+  // compartilhado `EditImagemModal` — a galeria não gerencia mais o
+  // textarea da legenda.
 
   const openLightbox = useCallback(
     (index: number) => {
       if (index < 0 || index >= imagens.length) return;
-      const img = imagens[index];
       setLightboxIndex(index);
-      setLightboxLegenda(img.legenda || "");
-      setLightboxLegendaSalva(img.legenda || "");
-      setLightboxLegendaErro(false);
-      setLightboxSaving(false);
-      setLightboxImageLoading(true);
+      // Para fotos AVARIA sem marker salvo, abre o lightbox já em
+      // modo edição — o placeholder centralizado do `EditImagemModal`
+      // aparece e o usuário arrasta para posicionar.
       setLightboxOpen(true);
     },
     [imagens],
   );
 
   const closeLightbox = useCallback(() => {
-    // Cancela timer pendente; se havia mudança não salva, dispara flush fire-and-forget
-    if (lightboxSaveTimerRef.current) {
-      clearTimeout(lightboxSaveTimerRef.current);
-      lightboxSaveTimerRef.current = null;
-    }
-    if (lightboxIndex !== null) {
-      const img = imagens[lightboxIndex];
-      if (
-        img &&
-        lightboxLegenda !== lightboxLegendaSalva
-      ) {
-        const versao = ++lightboxLegendaVersaoRef.current;
-        const pending = lightboxLegenda;
-        const imagemId = img.id;
-        // best-effort: não bloqueia o fechamento do modal
-        laudosService
-          .updateLegenda(imagemId, pending)
-          .then(() => {
-            if (versao === lightboxLegendaVersaoRef.current) {
-              setImagens((prev) =>
-                prev.map((i) =>
-                  i.id === imagemId ? { ...i, legenda: pending } : i,
-                ),
-              );
-            }
-          })
-          .catch(() => {
-            if (versao === lightboxLegendaVersaoRef.current) {
-              toast.error("Erro ao salvar legenda");
-            }
-          });
-      }
-    }
-    setLightboxOpen(false);
-    setLightboxIndex(null);
-    setLightboxLegenda("");
-    setLightboxLegendaSalva("");
-    setLightboxLegendaErro(false);
-    setLightboxSaving(false);
     // Sai do modo de edição do marker de avaria ao fechar o lightbox
     // — estado efêmero da galeria, não persiste entre aberturas.
+    // O flush da legenda é responsabilidade do `EditImagemModal`
+    // (que dispara `onLegendaFlush` antes de chamar `onClose`).
+    setLightboxOpen(false);
+    setLightboxIndex(null);
     setEditingImageId(null);
-  }, [lightboxIndex, lightboxLegenda, lightboxLegendaSalva, imagens]);
+  }, []);
 
-  // Persiste imediatamente a legenda atual (sem aguardar o debounce).
-  // Chamado ao navegar entre imagens ou fechar o modal.
-  const flushLegendaSave = useCallback(() => {
-    if (lightboxSaveTimerRef.current) {
-      clearTimeout(lightboxSaveTimerRef.current);
-      lightboxSaveTimerRef.current = null;
-    }
-    if (lightboxIndex === null) return;
-    const img = imagens[lightboxIndex];
-    if (!img) return;
-    if (lightboxLegenda === lightboxLegendaSalva) return;
-    const versao = ++lightboxLegendaVersaoRef.current;
-    const pending = lightboxLegenda;
-    const imagemId = img.id;
-    setLightboxSaving(true);
-    laudosService
-      .updateLegenda(imagemId, pending)
-      .then(() => {
-        if (versao === lightboxLegendaVersaoRef.current) {
-          setImagens((prev) =>
-            prev.map((i) =>
-              i.id === imagemId ? { ...i, legenda: pending } : i,
-            ),
-          );
-          setLightboxLegendaSalva(pending);
-          setLightboxLegendaErro(false);
-        }
-      })
-      .catch(() => {
-        if (versao === lightboxLegendaVersaoRef.current) {
-          setLightboxLegendaErro(true);
-          toast.error("Erro ao salvar legenda");
-        }
-      })
-      .finally(() => {
-        if (versao === lightboxLegendaVersaoRef.current) {
-          setLightboxSaving(false);
-        }
-      });
-  }, [lightboxIndex, lightboxLegenda, lightboxLegendaSalva, imagens]);
-
-  // Agenda salvamento com debounce. Só salva se houver mudança real
-  // e usa requestId para descartar respostas de chamadas antigas (race-safe).
-  const scheduleLegendaSave = useCallback(
-    (imagemId: string, newLegenda: string) => {
-      if (lightboxSaveTimerRef.current) {
-        clearTimeout(lightboxSaveTimerRef.current);
-      }
-      lightboxSaveTimerRef.current = setTimeout(() => {
-        lightboxSaveTimerRef.current = null;
-        if (newLegenda === lightboxLegendaSalva) {
-          setLightboxSaving(false);
-          return;
-        }
-        const requestId = ++lightboxSaveRequestIdRef.current;
-        setLightboxSaving(true);
-        setLightboxLegendaErro(false);
-        laudosService
-          .updateLegenda(imagemId, newLegenda)
-          .then(() => {
-            if (requestId === lightboxSaveRequestIdRef.current) {
-              setImagens((prev) =>
-                prev.map((i) =>
-                  i.id === imagemId ? { ...i, legenda: newLegenda } : i,
-                ),
-              );
-              setLightboxLegendaSalva(newLegenda);
-              setLightboxLegendaErro(false);
-            }
-          })
-          .catch(() => {
-            if (requestId === lightboxSaveRequestIdRef.current) {
-              setLightboxLegendaErro(true);
-              toast.error("Erro ao salvar legenda");
-            }
-          })
-          .finally(() => {
-            if (requestId === lightboxSaveRequestIdRef.current) {
-              setLightboxSaving(false);
-            }
-          });
-      }, LEGENDA_DEBOUNCE_MS);
-    },
-    [lightboxLegendaSalva],
-  );
-
-  // Mudou a legenda do textarea: atualiza local + agenda save com debounce.
-  const handleLightboxLegendaChange = useCallback(
-    (value: string) => {
-      if (lightboxIndex === null) return;
-      const img = imagens[lightboxIndex];
-      if (!img) return;
-      const limited = value.slice(0, LEGENDA_MAX);
-      setLightboxLegenda(limited);
-      // Reflete imediatamente na listagem da galeria (otimista), para o usuário
-      // ver a mudança no card em tempo real, sem aguardar o backend.
+  // Persistência simples de legenda chamada pelo `EditImagemModal`.
+  // Atualiza otimisticamente a galeria e dispara o PATCH. Sem
+  // debounce aqui — o modal já tem seu próprio debounce interno.
+  const handleLegendaChangeApi = useCallback(
+    async (imagemId: string, novaLegenda: string) => {
       setImagens((prev) =>
-        prev.map((i) => (i.id === img.id ? { ...i, legenda: limited } : i)),
+        prev.map((img) =>
+          img.id === imagemId ? { ...img, legenda: novaLegenda } : img,
+        ),
       );
-      scheduleLegendaSave(img.id, limited);
+      try {
+        await laudosService.updateLegenda(imagemId, novaLegenda);
+      } catch (err) {
+        toast.error("Erro ao salvar legenda");
+      }
     },
-    [lightboxIndex, imagens, scheduleLegendaSave],
+    [],
   );
 
   const goToLightboxImage = useCallback(
     (newIndex: number) => {
       if (newIndex < 0 || newIndex >= imagens.length) return;
       if (newIndex === lightboxIndex) return;
-      flushLegendaSave();
-      const newImg = imagens[newIndex];
       setLightboxIndex(newIndex);
-      setLightboxLegenda(newImg.legenda || "");
-      setLightboxLegendaSalva(newImg.legenda || "");
-      setLightboxLegendaErro(false);
-      setLightboxSaving(false);
-      setLightboxImageLoading(true);
       // Sai do modo edição ao trocar de foto no lightbox — a foto
-      // nova começa em modo leitura (com ou sem marker, conforme
-      // regra abaixo). Se o usuário arrastar na nova, abre modo
-      // edição explicitamente.
+      // nova começa em modo leitura (com ou sem marker). O
+      // `EditImagemModal` recria o estado interno (caption,
+      // loading, erros) a partir do `imagem` recebido via prop.
       setEditingImageId(null);
     },
-    [flushLegendaSave, imagens, lightboxIndex],
+    [imagens, lightboxIndex],
   );
 
   const goToNextLightboxImage = useCallback(() => {
@@ -1696,68 +1552,6 @@ export default function GaleriaImagens() {
     const prev = (lightboxIndex - 1 + imagens.length) % imagens.length;
     goToLightboxImage(prev);
   }, [goToLightboxImage, lightboxIndex, imagens.length]);
-
-  const handleLightboxKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        closeLightbox();
-        return;
-      }
-      // Tab sempre navega entre imagens, mesmo com foco na textarea da
-      // legenda — o usuário pediu explicitamente esse comportamento.
-      if (e.key === "Tab") {
-        e.preventDefault();
-        if (e.shiftKey) {
-          goToPreviousLightboxImage();
-        } else {
-          goToNextLightboxImage();
-        }
-        return;
-      }
-      // Setas só navegam entre imagens quando o foco NÃO está na textarea,
-      // para não bloquear a navegação do cursor durante a edição.
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      const isEditingText = tag === "TEXTAREA" || tag === "INPUT";
-      if (isEditingText) return;
-
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        goToPreviousLightboxImage();
-        return;
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        goToNextLightboxImage();
-      }
-    },
-    [closeLightbox, goToNextLightboxImage, goToPreviousLightboxImage],
-  );
-
-  // Foca o container do lightbox ao abrir (para que as setas funcionem
-  // imediatamente, sem precisar clicar).
-  useEffect(() => {
-    if (lightboxOpen && lightboxRef.current) {
-      // pequeno delay para garantir que o elemento está montado
-      const id = window.setTimeout(() => {
-        lightboxRef.current?.focus();
-      }, 30);
-      return () => window.clearTimeout(id);
-    }
-  }, [lightboxOpen]);
-
-  // Bloqueia scroll do body enquanto o lightbox está aberto.
-  useEffect(() => {
-    if (lightboxOpen) {
-      const original = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = original;
-      };
-    }
-  }, [lightboxOpen]);
 
   // Dismiss do overlay de ações mobile quando o usuário toca fora do card
   // ativo. Disparamos em `mousedown`/`touchstart` para fechar ANTES do
@@ -3252,225 +3046,26 @@ export default function GaleriaImagens() {
           </div>
         )}
 
-        {/* ========== LIGHTBOX (visualização expandida) ========== */}
+        {/* ========== LIGHTBOX (visualização expandida) — agora compartilhado */}
         {lightboxOpen && lightboxIndex !== null && imagens[lightboxIndex] && (
-          <div
-            ref={lightboxRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Visualização expandida da imagem"
-            tabIndex={-1}
-            onKeyDown={handleLightboxKeyDown}
-            onClick={(e) => {
-              // Clicar no backdrop (não na imagem nem nos controles) fecha
-              if (e.target === e.currentTarget) {
-                closeLightbox();
-              }
-            }}
-            className="fixed inset-0 z-[110] bg-black/95 flex flex-col text-white outline-none"
-          >
-            {/* Top bar */}
-            <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6 flex-shrink-0">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="px-2.5 py-1 rounded-full bg-white/10 font-semibold tabular-nums">
-                  {lightboxIndex + 1} / {imagens.length}
-                </span>
-                {imagens[lightboxIndex].tipo &&
-                  !isTipoNaoIdentificado(imagens[lightboxIndex].tipo) && (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-xs">
-                      <Tag className="w-3 h-3" />
-                      {formatTipoLabel(imagens[lightboxIndex].tipo)}
-                    </span>
-                  )}
-                {imagens[lightboxIndex].categoria === "AVARIA" && (
-                  <span className="px-2.5 py-1 rounded-full bg-red-500/80 text-xs font-semibold">
-                    Avaria
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {/* O botão de lápis/editar do header do lightbox foi
-                    removido: o usuário já entra em modo edição ao
-                    clicar no lápis do card (que abre o lightbox com
-                    o placeholder centralizado visível). Arrastar e
-                    soltar salva o marker automaticamente — não há
-                    passo de "confirmar" no lightbox. */}
-                <button
-                  type="button"
-                  onClick={closeLightbox}
-                  aria-label="Fechar (Esc)"
-                  title="Fechar (Esc)"
-                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Imagem + setas de navegação */}
-            <div className="flex-1 relative flex items-center justify-center min-h-0 px-2 sm:px-4">
-              {imagens.length > 1 && (
-                <button
-                  type="button"
-                  onClick={goToPreviousLightboxImage}
-                  aria-label="Imagem anterior (←)"
-                  title="Imagem anterior (←)"
-                  className="absolute left-2 sm:left-4 z-10 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/70 border border-white/20 transition-colors"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-              )}
-
-              <div className="relative flex items-center justify-center w-full h-full min-h-0">
-                {lightboxImageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <Loader2 className="w-10 h-10 animate-spin text-white/70" />
-                  </div>
-                )}
-                {/*
-                  Wrapper do lightbox. Mesma lógica da Mariah Drive:
-                  a imagem é limitada a `max-w-[90vw] max-h-[80vh]`
-                  para sempre caber no viewport — sem isso, imagens
-                  grandes (ex.: 4000×3000) renderizam no tamanho
-                  natural e estouram o viewport, deixando o círculo
-                  e os controles fora da área visível. Wrapper também
-                  é limitado para o `DamageMarkerOverlay` (absolute
-                  inset-0) cobrir exatamente a área renderizada da
-                  foto, não o viewport inteiro. `disabled` é FALSE
-                  aqui: o lightbox é onde o usuário edita a legenda,
-                  faz sentido ser editável também para o marker.
-                */}
-                <div className="relative max-w-[90vw] max-h-[80vh]">
-                  <motion.img
-                    ref={lightboxImgRef}
-                    key={imagens[lightboxIndex].id}
-                    src={imagens[lightboxIndex].url}
-                    alt={imagens[lightboxIndex].tipo || "Imagem do laudo"}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.18 }}
-                    onLoad={() => setLightboxImageLoading(false)}
-                    onError={() => setLightboxImageLoading(false)}
-                    className="max-w-[90vw] max-h-[80vh] object-contain select-none block rounded-lg"
-                    draggable={false}
-                  />
-                  {/* Regra de visibilidade do overlay no lightbox:
-                      - Foto AVARIA COM marker salvo → editing=true
-                        por default (lightbox é a view de detalhe,
-                        mostra o círculo na posição persistida).
-                      - Foto AVARIA SEM marker salvo → editing=false;
-                        usuário precisa clicar no lápis do header
-                        para entrar em modo edição e posicionar.
-                      - Foto NÃO AVARIA → marker=null, overlay
-                        invisível.
-                      Quando editing=true, o overlay é arrastável e
-                      chama handleMarkerChange no pointerup.
-                      `showPlaceholderOnEmpty` faz com que ao entrar
-                      em modo edição sem marker salvo, um placeholder
-                      centralizado (FALLBACK_MARKER) apareça para o
-                      usuário saber onde está posicionando. */}
-                  <DamageMarkerOverlay
-                    imageRef={lightboxImgRef}
-                    marker={
-                      imagens[lightboxIndex].categoria === "AVARIA"
-                        ? imagens[lightboxIndex].damageMarker ?? null
-                        : null
-                    }
-                    onChange={(m) =>
-                      handleMarkerChange(imagens[lightboxIndex].id, m)
-                    }
-                    editing={
-                      imagens[lightboxIndex].categoria === "AVARIA" &&
-                      (editingImageId === imagens[lightboxIndex].id ||
-                        !!imagens[lightboxIndex].damageMarker)
-                    }
-                    showPlaceholderOnEmpty
-                  />
-                </div>
-              </div>
-
-              {imagens.length > 1 && (
-                <button
-                  type="button"
-                  onClick={goToNextLightboxImage}
-                  aria-label="Próxima imagem (→ ou Tab)"
-                  title="Próxima imagem (→ ou Tab)"
-                  className="absolute right-2 sm:right-4 z-10 p-2 sm:p-3 rounded-full bg-black/50 hover:bg-black/70 border border-white/20 transition-colors"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              )}
-            </div>
-
-            {/* Caption editável + indicador de salvamento */}
-            <div className="flex-shrink-0 px-4 sm:px-6 pb-5 pt-3 bg-gradient-to-t from-black/80 to-black/0">
-              <div className="max-w-3xl mx-auto">
-                <div className="flex items-center justify-between gap-2 mb-1.5 text-xs text-white/70">
-                  <span className="font-medium">Legenda</span>
-                  <div className="flex items-center gap-1.5">
-                    {lightboxSaving && (
-                      <span className="inline-flex items-center gap-1 text-amber-300">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Salvando...
-                      </span>
-                    )}
-                    {!lightboxSaving &&
-                      !lightboxLegendaErro &&
-                      lightboxLegenda === lightboxLegendaSalva &&
-                      lightboxLegenda.length > 0 && (
-                        <span className="inline-flex items-center gap-1 text-emerald-300">
-                          <Check className="w-3 h-3" />
-                          Salvo
-                        </span>
-                      )}
-                    {lightboxLegendaErro && (
-                      <span className="inline-flex items-center gap-1 text-red-300">
-                        <AlertCircle className="w-3 h-3" />
-                        Erro ao salvar
-                      </span>
-                    )}
-                    <span
-                      className={`tabular-nums ${lightboxLegenda.length >= LEGENDA_MAX ? "text-red-300" : ""}`}
-                    >
-                      {lightboxLegenda.length}/{LEGENDA_MAX}
-                    </span>
-                  </div>
-                </div>
-                <textarea
-                  ref={lightboxLegendaInputRef}
-                  value={lightboxLegenda}
-                  onChange={(e) => handleLightboxLegendaChange(e.target.value)}
-                  maxLength={LEGENDA_MAX}
-                  rows={2}
-                  placeholder="Adicione uma legenda para esta imagem..."
-                  className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/15 focus:ring-2 focus:ring-white/40 border border-white/20 rounded-lg px-3 py-2 text-sm sm:text-base text-white placeholder-white/50 outline-none resize-none transition-colors"
-                />
-                <div className="mt-1.5 text-[11px] text-white/50 hidden sm:flex items-center justify-center gap-3 flex-wrap">
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-[10px] font-mono">
-                      ←
-                    </kbd>
-                    <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-[10px] font-mono ml-1">
-                      →
-                    </kbd>{" "}
-                    navegar
-                  </span>
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-[10px] font-mono">
-                      Tab
-                    </kbd>{" "}
-                    próxima
-                  </span>
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-[10px] font-mono">
-                      Esc
-                    </kbd>{" "}
-                    fechar
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <EditImagemModal
+            open={lightboxOpen}
+            imagem={imagens[lightboxIndex]}
+            onClose={closeLightbox}
+            onMarkerChange={handleMarkerChange}
+            onLegendaChange={handleLegendaChangeApi}
+            onLegendaFlush={handleLegendaChangeApi}
+            onPrev={
+              lightboxIndex > 0 ? goToPreviousLightboxImage : undefined
+            }
+            onNext={
+              lightboxIndex < imagens.length - 1
+                ? goToNextLightboxImage
+                : undefined
+            }
+            hasPrev={lightboxIndex > 0}
+            hasNext={lightboxIndex < imagens.length - 1}
+          />
         )}
       </div>
     </DashboardLayout>
