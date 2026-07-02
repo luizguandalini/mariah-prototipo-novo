@@ -94,6 +94,12 @@ export default function MariahDrive() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // ===== Downloads =====
+  // Liberalizado pela change `enable-download-in-visualization` no
+  // backend: anônimo e logado não-dono podem baixar (foto individual e
+  // ZIPs de pasta/laudo). O front não bloqueia mais — o servidor já
+  // decide quem pode o quê e responde `200/202` ou `403` quando
+  // aplicável. `viewer.canDownload*` agora é `true` para todos que
+  // conseguem ler a drive view, então os botões sempre aparecem.
   const handleDownloadFoto = async (img: ImagemLaudo) => {
     if (baixandoFotos.has(img.id)) return;
     if (!viewer?.canDownloadFoto) {
