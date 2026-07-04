@@ -153,10 +153,9 @@ export default function DashboardLayout({
         className={`
         fixed lg:sticky top-0 left-0 h-screen w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] overflow-y-auto z-40
         transition-all duration-300 ease-in-out
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        ${sidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full lg:translate-x-0 lg:pointer-events-auto pointer-events-none"}
       `}
         aria-hidden={!sidebarOpen}
-        inert={!sidebarOpen ? true : undefined}
       >
         {/* Logo */}
         <div className="p-4 lg:p-6 border-b border-[var(--border-color)]">
