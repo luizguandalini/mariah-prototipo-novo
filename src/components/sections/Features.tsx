@@ -39,8 +39,8 @@ export default function Features() {
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
           className="text-center mb-10 md:mb-16"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 text-[var(--text-primary)]">
@@ -57,9 +57,8 @@ export default function Features() {
             <motion.div
               key={feature.title}
               initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
               whileHover={{ y: -5 }}
               className="bg-[var(--bg-secondary)] rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-xl border border-[var(--border-color)] transition-all"
             >

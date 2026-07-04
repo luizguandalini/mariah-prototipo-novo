@@ -3030,8 +3030,8 @@ export default function VisualizadorPdfLaudo() {
         </div>
 
         {/* Paginação */}
-        <div className="flex flex-col lg:flex-row items-center justify-between bg-white rounded-lg shadow-sm p-4 gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+        <div className="flex flex-col gap-4 bg-white rounded-lg shadow-sm p-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
             <div className="text-sm text-gray-600 text-center sm:text-left">
               Página {paginaAtual} de {totalPaginas} • {totalImagens} imagens
               no total • {imagensPorPagina} por página
@@ -3063,28 +3063,53 @@ export default function VisualizadorPdfLaudo() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
-            <button
-              onClick={() => irParaPagina(1)}
-              disabled={paginaAtual === 1 || loading || totalPaginas === 0}
-              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              « Primeira
-            </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <button
+                onClick={() => irParaPagina(1)}
+                disabled={paginaAtual === 1 || loading || totalPaginas === 0}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                aria-label="Primeira página"
+              >
+                « Primeira
+              </button>
 
-            <button
-              onClick={() => irParaPagina(paginaAtual - 1)}
-              disabled={paginaAtual === 1 || loading || totalPaginas === 0}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex-1 sm:flex-none justify-center"
-            >
-              ← Anterior
-            </button>
+              <button
+                onClick={() => irParaPagina(paginaAtual - 1)}
+                disabled={paginaAtual === 1 || loading || totalPaginas === 0}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+              >
+                ← Anterior
+              </button>
 
-            <span className="px-4 py-2 text-gray-700 whitespace-nowrap">
-              {paginaAtual} / {totalPaginas}
-            </span>
+              <span className="px-3 py-2 text-gray-700 whitespace-nowrap text-sm font-medium">
+                {paginaAtual} / {totalPaginas}
+              </span>
 
-            <div className="flex items-center gap-2">
+              <button
+                onClick={() => irParaPagina(paginaAtual + 1)}
+                disabled={
+                  paginaAtual === totalPaginas || loading || totalPaginas === 0
+                }
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+              >
+                Próxima →
+              </button>
+
+              <button
+                onClick={() => irParaPagina(totalPaginas)}
+                disabled={
+                  paginaAtual === totalPaginas || loading || totalPaginas === 0
+                }
+                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                aria-label="Última página"
+              >
+                Última »
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-sm text-gray-600">Ir para:</span>
               <input
                 type="number"
                 min={1}
@@ -3097,36 +3122,16 @@ export default function VisualizadorPdfLaudo() {
                   }
                 }}
                 disabled={loading || totalPaginas === 0}
-                className="w-20 px-2 py-2 rounded-lg border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-16 px-2 py-2 rounded-lg border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               />
               <button
                 onClick={handleIrParaPaginaInput}
                 disabled={loading || totalPaginas === 0}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
               >
                 Ir
               </button>
             </div>
-
-            <button
-              onClick={() => irParaPagina(paginaAtual + 1)}
-              disabled={
-                paginaAtual === totalPaginas || loading || totalPaginas === 0
-              }
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex-1 sm:flex-none justify-center"
-            >
-              Próxima →
-            </button>
-
-            <button
-              onClick={() => irParaPagina(totalPaginas)}
-              disabled={
-                paginaAtual === totalPaginas || loading || totalPaginas === 0
-              }
-              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              Última »
-            </button>
           </div>
         </div>
       </div>

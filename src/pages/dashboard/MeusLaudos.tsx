@@ -481,21 +481,21 @@ export default function MeusLaudos() {
                                 {laudo.bairro}
                               </div>
                             )}
-                            <div className="flex gap-4">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1">
                               {laudo.cidade && (
-                                <span>
+                                <span className="whitespace-nowrap">
                                   <span className="opacity-70">Cidade:</span>{" "}
                                   {laudo.cidade}
                                 </span>
                               )}
                               {laudo.estado && (
-                                <span>
+                                <span className="whitespace-nowrap">
                                   <span className="opacity-70">Estado:</span>{" "}
                                   {laudo.estado}
                                 </span>
                               )}
                               {laudo.cep && (
-                                <span>
+                                <span className="whitespace-nowrap">
                                   <span className="opacity-70">CEP:</span>{" "}
                                   {laudo.cep}
                                 </span>

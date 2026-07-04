@@ -271,7 +271,7 @@ export default function TodosLaudos() {
                         {(mapStatus(laudo.status) === "processando" ||
                           progressMap[laudo.id]) &&
                           mapStatus(laudo.status) !== "concluido" && (
-                            <div className="flex-1 min-w-[200px] max-w-xs sm:ml-4">
+                            <div className="flex-1 min-w-0 sm:min-w-[200px] max-w-xs sm:ml-4">
                               <div className="flex justify-between text-xs mb-1 text-[var(--text-secondary)]">
                                 <span>
                                   Analisando... (
@@ -313,9 +313,9 @@ export default function TodosLaudos() {
                               {laudo.bairro}
                             </div>
                           )}
-                          <div className="flex flex-wrap gap-4">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1">
                             {laudo.cidade && (
-                              <span>
+                              <span className="whitespace-nowrap">
                                 <span className="text-[var(--text-secondary)] opacity-60">
                                   Cidade:
                                 </span>{" "}
@@ -323,7 +323,7 @@ export default function TodosLaudos() {
                               </span>
                             )}
                             {laudo.estado && (
-                              <span>
+                              <span className="whitespace-nowrap">
                                 <span className="text-[var(--text-secondary)] opacity-60">
                                   Estado:
                                 </span>{" "}
@@ -331,7 +331,7 @@ export default function TodosLaudos() {
                               </span>
                             )}
                             {laudo.cep && (
-                              <span>
+                              <span className="whitespace-nowrap">
                                 <span className="text-[var(--text-secondary)] opacity-60">
                                   CEP:
                                 </span>{" "}

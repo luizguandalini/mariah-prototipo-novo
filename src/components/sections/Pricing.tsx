@@ -54,8 +54,8 @@ export default function Pricing() {
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
           className="text-center mb-10 md:mb-16"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 text-[var(--text-primary)]">
@@ -71,9 +71,8 @@ export default function Pricing() {
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
               className={`relative rounded-2xl p-6 md:p-8 transition-all duration-300 bg-[var(--bg-primary)] border border-[var(--border-color)] flex flex-col h-full hover:shadow-lg hover:border-primary/50`}
             >
               <div className="mb-4 md:mb-6">
