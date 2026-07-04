@@ -155,6 +155,8 @@ export default function DashboardLayout({
         transition-all duration-300 ease-in-out
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
+        aria-hidden={!sidebarOpen}
+        inert={!sidebarOpen ? true : undefined}
       >
         {/* Logo */}
         <div className="p-4 lg:p-6 border-b border-[var(--border-color)]">
