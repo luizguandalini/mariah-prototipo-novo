@@ -259,11 +259,11 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Header */}
         <header className="sticky top-0 z-20 bg-[var(--bg-secondary)] border-b border-[var(--border-color)] transition-colors duration-300">
-          <div className="px-3 md:px-6 py-3 md:py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 md:gap-4">
+          <div className="px-3 md:px-6 py-3 md:py-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-[var(--bg-primary)] rounded-lg transition-colors lg:hidden text-[var(--text-secondary)]"
+                className="p-2 hover:bg-[var(--bg-primary)] rounded-lg transition-colors lg:hidden text-[var(--text-secondary)] flex-shrink-0"
               >
                 <svg
                   className="w-5 h-5 md:w-6 md:h-6"
@@ -279,14 +279,14 @@ export default function DashboardLayout({
                   />
                 </svg>
               </button>
-              <h1 className="text-base md:text-xl font-semibold text-[var(--text-primary)] truncate">
+              <h1 className="text-base md:text-xl font-semibold text-[var(--text-primary)] truncate min-w-0">
                 {menuItems.find((item) => item.path === location.pathname)
                   ?.label || "Dashboard"}
               </h1>
             </div>
 
             {/* User Info & Theme Toggle */}
-            <div className="flex items-center gap-2 md:gap-6">
+            <div className="flex items-center gap-2 md:gap-6 flex-shrink-0">
               <div className="flex items-center gap-2 border-r border-[var(--border-color)] pr-2 md:pr-4">
                 <ThemeToggle />
               </div>
