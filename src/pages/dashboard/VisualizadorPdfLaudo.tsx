@@ -516,6 +516,29 @@ export default function VisualizadorPdfLaudo() {
   const originalLegendasRef = useRef<Record<string, string>>({});
   const pagesCache = useRef<Record<string, any[]>>({});
 
+  const abrirPdf = useCallback(
+    (url?: string | null, fallbackMesmaAba = true) => {
+      if (!url) {
+        toast.error("PDF ainda não está pronto para download.");
+        return;
+      }
+
+      const opened = window.open(url, "_blank");
+      if (opened) {
+        opened.opener = null;
+        return;
+      }
+
+      if (fallbackMesmaAba) {
+        window.location.assign(url);
+        return;
+      }
+
+      toast.info("PDF pronto. Clique em Baixar PDF para abrir.");
+    },
+    []
+  );
+
   const hasCover = true;
 
   /**
@@ -1400,7 +1423,7 @@ export default function VisualizadorPdfLaudo() {
 
         // Abre automaticamente se foi acionado pelo usuário nesta sessão
         if (wasTriggeredRef.current && update.url) {
-          window.open(update.url, "_blank");
+          abrirPdf(update.url, false);
           wasTriggeredRef.current = false;
         }
       } else if (update.status === "ERROR") {
@@ -1414,16 +1437,13 @@ export default function VisualizadorPdfLaudo() {
         setLaudo((prev) => (prev ? { ...prev, pdfStatus: "ERROR" } : null));
       }
     }
-  }, [pdfProgressMap, id, laudo?.pdfStatus, laudo?.pdfUrl, modoPreview]);
+  }, [abrirPdf, pdfProgressMap, id, laudo?.pdfStatus, laudo?.pdfUrl, modoPreview]);
 
   const handleGerarPdfCompleto = async () => {
     if (!id || !laudo) return;
 
-    const modoPdfGerado = laudo.pdfModoPreview || "detalhado";
-    const pdfEstaNoModoAtual = modoPdfGerado === modoPreview;
-
-    if (laudo.pdfUrl && laudo.pdfStatus === "COMPLETED" && pdfEstaNoModoAtual) {
-      window.open(laudo.pdfUrl, "_blank");
+    if (laudo.pdfUrl && laudo.pdfStatus === "COMPLETED") {
+      abrirPdf(laudo.pdfUrl);
       return;
     }
 
