@@ -186,6 +186,16 @@ const PREVIEW_LAYOUTS: Record<
   },
 };
 
+const getPdfProgressMessage = (progress: number) => {
+  if (progress >= 95) return "Enviando o PDF finalizado...";
+  if (progress >= 94) return "Compondo o arquivo PDF. Em laudos grandes isso pode levar alguns minutos...";
+  if (progress >= 90) return "Preparando o layout de impressão...";
+  if (progress >= 80) return "Abrindo o renderizador do PDF...";
+  if (progress >= 60) return "Montando as páginas do laudo...";
+  if (progress >= 10) return "Otimizando imagens para deixar o PDF mais leve...";
+  return "Colocando a geração do PDF na fila...";
+};
+
 const isModoPreviewValido = (modo: unknown): modo is ModoPreview =>
   modo === "detalhado" || modo === "compacto";
 
@@ -1344,10 +1354,13 @@ export default function VisualizadorPdfLaudo() {
     // Verificar estado inicial do laudo (se já estava processando quando carregou)
     if (laudo.pdfStatus === "PROCESSING" || laudo.pdfStatus === "PENDING") {
       setGerandoPdf(true);
-      if (laudo.pdfProgress) setProgresso(laudo.pdfProgress);
+      const progress = laudo.pdfProgress || 0;
+      setProgresso(progress);
+      setMensagemGeracaoPdf(getPdfProgressMessage(progress));
     } else if (laudo.pdfStatus === "COMPLETED") {
       setGerandoPdf(false);
       setProgresso(100);
+      setMensagemGeracaoPdf("PDF pronto para download.");
     }
 
     const update = pdfProgressMap[id];
@@ -1355,9 +1368,13 @@ export default function VisualizadorPdfLaudo() {
       if (update.status === "PROCESSING" || update.status === "PENDING") {
         setGerandoPdf(true);
         setProgresso(update.progress);
+        setMensagemGeracaoPdf(
+          update.message || getPdfProgressMessage(update.progress)
+        );
       } else if (update.status === "COMPLETED") {
         setGerandoPdf(false);
         setProgresso(100);
+        setMensagemGeracaoPdf(update.message || "PDF pronto para download.");
 
         const isFirstLoad = !laudo.pdfUrl && update.url;
         const isUpdated = update.url && laudo.pdfUrl !== update.url;
@@ -1389,6 +1406,7 @@ export default function VisualizadorPdfLaudo() {
       } else if (update.status === "ERROR") {
         setGerandoPdf(false);
         setProgresso(0);
+        setMensagemGeracaoPdf("Não foi possível finalizar o PDF.");
         wasTriggeredRef.current = false;
         toast.error(
           `Erro na geração do PDF: ${update.error || "Desconhecido"}`
@@ -3019,7 +3037,7 @@ export default function VisualizadorPdfLaudo() {
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
                   {progresso > 0
-                    ? `Processando ${progresso}%`
+                    ? `Gerando PDF ${progresso}%`
                     : "Solicitando..."}
                 </>
               ) : (
