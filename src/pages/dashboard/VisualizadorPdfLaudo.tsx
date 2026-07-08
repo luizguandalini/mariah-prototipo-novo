@@ -294,10 +294,14 @@ const PdfWrapper = ({ children }: { children: React.ReactNode }) => {
         width: "100%",
         // Ajusta a altura do container baseado na escala
         // 297mm é a altura fixa da página A4
-        height: scale < 1 ? `calc(297mm * ${scale})` : "297mm",
+        height:
+          scale < 1 ? `calc((297mm * ${scale}) + 48px)` : "calc(297mm + 48px)",
         display: "flex",
+        alignItems: "flex-start",
         justifyContent: "center",
-        overflow: "hidden",
+        overflow: "visible",
+        padding: "18px 0 30px",
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -307,6 +311,9 @@ const PdfWrapper = ({ children }: { children: React.ReactNode }) => {
           width: "210mm",
           height: "297mm", // Altura fixa A4
           flexShrink: 0,
+          backgroundColor: "#fff",
+          boxShadow:
+            "0 30px 70px rgba(15, 23, 42, 0.22), 0 12px 30px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(15, 23, 42, 0.08)",
         }}
       >
         {children}
